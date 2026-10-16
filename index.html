@@ -9,6 +9,7 @@
 </head>
 <body>
 <div id="coins">🪙 50</div>
+<div id="roomInfo"></div>
 <div id="cross"></div>
 <div id="msg"></div>
 <div id="hotbar"></div>
@@ -19,7 +20,37 @@
 <div class="btn" id="bBreak">Kır</div>
 <div class="btn" id="bPlace">Koy</div>
 <div class="btn" id="bMarket">🏪 Pazar</div>
+<div class="btn" id="bLeave">🚪 Çık</div>
 <div id="market"><div id="panel"></div></div>
+
+<div id="menu">
+  <div class="mbox">
+    <h1>Ticarium</h1>
+    <div id="sMain">
+      <input id="nameIn" maxlength="14" placeholder="Oyuncu adın">
+      <button id="mCreate">Oda Kur</button>
+      <button id="mList">Açık Odalar</button>
+      <button id="mJoin">Kodla Katıl</button>
+      <button id="mSolo" class="alt">Tek Oyunculu</button>
+    </div>
+    <div id="sCreate">
+      <input id="cName" maxlength="24" placeholder="Oda adı">
+      <label class="chk"><input type="checkbox" id="cPublic" checked> Herkese açık (listede görünsün)</label>
+      <button id="cDo">Odayı Kur</button>
+      <button class="back alt">Geri</button>
+    </div>
+    <div id="sList">
+      <div id="roomList"></div>
+      <button class="back alt">Geri</button>
+    </div>
+    <div id="sJoin">
+      <input id="jCode" maxlength="6" placeholder="6 haneli kod" style="text-transform:uppercase">
+      <button id="jDo">Katıl</button>
+      <button class="back alt">Geri</button>
+    </div>
+    <div id="mErr"></div>
+  </div>
+</div>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>
