@@ -74,8 +74,14 @@ function loop(now) {
 }
 requestAnimationFrame(loop);
 
-// Firebase testi (bağlanamazsa oyun yine çalışır)
+// Firebase testi: sonuç ekranda kalır
+const dbg = document.createElement('div');
+dbg.style.cssText = 'position:fixed;top:56px;left:8px;right:8px;background:#000c;color:#fff;padding:8px;border-radius:8px;font-size:12px;z-index:50;word-break:break-all';
+dbg.textContent = 'Firebase bağlanıyor...';
+document.body.appendChild(dbg);
+dbg.onclick = () => dbg.remove();
+
 import('./firebase.js')
   .then(m => m.login())
-  .then(id => toast('Online bağlandı ✓ ' + id.slice(0, 6)))
-  .catch(e => toast('Firebase hata: ' + (e.code || e.message)));
+  .then(id => { dbg.textContent = '✅ Online bağlandı: ' + id.slice(0, 8); setTimeout(() => dbg.remove(), 4000); })
+  .catch(e => { dbg.style.background = '#b3261e'; dbg.textContent = '❌ ' + (e.code || '') + ' ' + (e.message || e); });
