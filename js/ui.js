@@ -1,5 +1,5 @@
 import { TYPES } from './world.js';
-import { eco, sell, buy } from './economy.js';
+import { eco, sell, buy, priceOf, buyCost } from './economy.js';
 
 const css = c => '#' + c.toString(16).padStart(6, '0');
 let marketOpen = false;
@@ -33,8 +33,8 @@ export function drawMarket() {
   for (const t in TYPES) {
     const tr = eco.trend[t] > 0 ? `<span class="up">▲${eco.trend[t]}</span>`
              : eco.trend[t] < 0 ? `<span class="down">▼${-eco.trend[t]}</span>` : '';
-    h += `<div class="row"><div class="n">${TYPES[t].name}
-      <small>Fiyat: 🪙 ${eco.price[t]} ${tr} · Sende: ${eco.inv[t]}</small></div>
+    h += `<div class="row"><div class="n">${TYPES[t].name} ${tr}
+      <small>Sat: 🪙 ${priceOf(t)} · Al: 🪙 ${buyCost(t)} · Sende: ${eco.inv[t]}</small></div>
       <button class="sell" data-act="sell" data-t="${t}">Sat</button>
       <button class="buy" data-act="buy" data-t="${t}">Al</button></div>`;
   }
@@ -48,14 +48,13 @@ export function toggleMarket() {
   if (marketOpen) drawMarket();
 }
 
-// Pazar butonları (tek yerden dinleme)
 document.getElementById('panel').addEventListener('click', e => {
   const b = e.target.closest('button');
   if (!b) return;
   if (b.id === 'close') return toggleMarket();
   const t = +b.dataset.t;
-  if (b.dataset.act === 'sell') sell(t);
-  if (b.dataset.act === 'buy' && !buy(t)) toast('Yetersiz bakiye (alış: fiyat+1)');
+  if (b.dataset.act === 'sell' && !sell(t)) toast(TYPES[t].name + ' yok');
+  if (b.dataset.act === 'buy' && !buy(t)) toast('Yetersiz bakiye');
   drawMarket();
   drawHud();
 });
