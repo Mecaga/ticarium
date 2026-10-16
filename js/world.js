@@ -1,13 +1,12 @@
 export const N = 40, H = 24;
 
 export const TYPES = {
-  1: { name: 'Çim',    color: 0x5fae45, base: 3 },
-  2: { name: 'Toprak', color: 0x8b5a2b, base: 2 },
-  3: { name: 'Taş',    color: 0x8a8a8a, base: 5 },
-  4: { name: 'Odun',   color: 0x6b4423, base: 8 },
-  5: { name: 'Yaprak', color: 0x2f7d32, base: 2 }
+  1: { name: 'Çim',    color: 0x5fae45, base: 10 },
+  2: { name: 'Toprak', color: 0x8b5a2b, base: 6 },
+  3: { name: 'Taş',    color: 0x8a8a8a, base: 15 },
+  4: { name: 'Odun',   color: 0x6b4423, base: 25 },
+  5: { name: 'Yaprak', color: 0x2f7d32, base: 5 }
 };
-
 const world = new Uint8Array(N * H * N);
 const idx = (x, y, z) => (y * N + z) * N + x;
 const inb = (x, y, z) => x >= 0 && x < N && y >= 0 && y < H && z >= 0 && z < N;
