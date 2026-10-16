@@ -73,3 +73,9 @@ function loop(now) {
   renderer.render(scene, camera);
 }
 requestAnimationFrame(loop);
+
+// Firebase testi (bağlanamazsa oyun yine çalışır)
+import('./firebase.js')
+  .then(m => m.login())
+  .then(id => toast('Online bağlandı ✓ ' + id.slice(0, 6)))
+  .catch(e => toast('Firebase hata: ' + (e.code || e.message)));
