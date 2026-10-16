@@ -51,6 +51,18 @@
     <div id="mErr"></div>
   </div>
 </div>
-<script type="module" src="js/main.js"></script>
+
+<script type="module">
+function showErr(t) {
+  const d = document.createElement('div');
+  d.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#b3261e;color:#fff;padding:10px;font-size:12px;z-index:99;word-break:break-all';
+  d.textContent = '❌ ' + t + ' (kapatmak için dokun)';
+  d.onclick = () => d.remove();
+  document.body.appendChild(d);
+}
+addEventListener('error', e => showErr((e.message || 'Hata') + ' ' + (e.filename || '') + ':' + (e.lineno || '')));
+addEventListener('unhandledrejection', e => showErr(String(e.reason && (e.reason.message || e.reason))));
+import('./js/main.js').catch(e => showErr('Yükleme hatası: ' + (e.message || e)));
+</script>
 </body>
 </html>
