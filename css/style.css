@@ -32,3 +32,20 @@ canvas{display:block}
 .up{color:#6f6}
 .down{color:#f77}
 #msg{position:fixed;top:56px;left:50%;transform:translateX(-50%);background:#000a;color:#fff;padding:6px 12px;border-radius:8px;opacity:0;transition:opacity .3s;pointer-events:none;font-size:13px}
+#roomInfo{position:fixed;top:44px;left:8px;background:#000a;color:#fff;padding:4px 10px;border-radius:8px;font-size:12px}
+#roomInfo:empty{display:none}
+#bLeave{top:56px;right:8px;width:auto;height:36px;border-radius:10px;padding:0 14px;background:#b3261eaa}
+#menu{position:fixed;inset:0;z-index:30;background:linear-gradient(#87ceeb,#3d8f3a);display:flex;align-items:center;justify-content:center;overflow:auto;touch-action:pan-y}
+.mbox{background:#1d2330;color:#fff;border-radius:16px;padding:18px;width:min(92vw,380px)}
+.mbox h1{margin:0 0 12px;text-align:center}
+.mbox input[type=text],.mbox input:not([type]){width:100%;padding:12px;border-radius:8px;border:0;margin-bottom:8px;font-size:16px;-webkit-user-select:text;user-select:text}
+.mbox button{width:100%;padding:12px;margin-top:8px;border:0;border-radius:8px;background:#2e7d32;color:#fff;font-weight:700;font-size:15px}
+.mbox button.alt{background:#444}
+.mbox button:disabled{opacity:.5}
+#sCreate,#sList,#sJoin{display:none}
+.chk{display:flex;gap:8px;align-items:center;font-size:13px;margin:4px 0}
+#roomList{max-height:50vh;overflow:auto;touch-action:pan-y}
+#roomList button{text-align:left;background:#1565c0}
+#roomList small{display:block;font-weight:400;opacity:.8}
+#roomList p{opacity:.7;text-align:center}
+#mErr{color:#ff8a80;font-size:13px;margin-top:8px;min-height:16px}
