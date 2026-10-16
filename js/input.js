@@ -5,6 +5,7 @@ export const input = { jx: 0, jy: 0, keys: {} };
 export function initInput(canvas, actions) {
   // Klavye
   addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
     input.keys[e.code] = true;
     if (e.code === 'KeyE') actions.market();
     if (e.code >= 'Digit1' && e.code <= 'Digit5') actions.select(+e.code.slice(5));
