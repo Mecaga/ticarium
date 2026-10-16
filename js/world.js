@@ -7,6 +7,7 @@ export const TYPES = {
   4: { name: 'Odun',   color: 0x6b4423, base: 25 },
   5: { name: 'Yaprak', color: 0x2f7d32, base: 5 }
 };
+
 const world = new Uint8Array(N * H * N);
 const idx = (x, y, z) => (y * N + z) * N + x;
 const inb = (x, y, z) => x >= 0 && x < N && y >= 0 && y < H && z >= 0 && z < N;
@@ -18,13 +19,24 @@ export function heightAt(x, z) {
   return Math.max(2, Math.min(H - 8, Math.floor(h)));
 }
 
-export function generate() {
+function mulberry(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+export function generate(seed = 1) {
+  world.fill(0);
+  const rnd = mulberry(seed);
   for (let x = 0; x < N; x++) for (let z = 0; z < N; z++) {
     const h = heightAt(x, z);
     for (let y = 0; y <= h; y++) set(x, y, z, y === h ? 1 : y >= h - 2 ? 2 : 3);
   }
   for (let i = 0; i < 28; i++) {
-    const x = 3 + Math.floor(Math.random() * (N - 6)), z = 3 + Math.floor(Math.random() * (N - 6));
+    const x = 3 + Math.floor(rnd() * (N - 6)), z = 3 + Math.floor(rnd() * (N - 6));
     if (Math.abs(x - N / 2) < 3 && Math.abs(z - N / 2) < 3) continue;
     const h = heightAt(x, z);
     for (let y = 1; y <= 4; y++) set(x, h + y, z, 4);
