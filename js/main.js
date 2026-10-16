@@ -1,9 +1,9 @@
-import { get, set, generate, initRender, rebuild, updateTarget, target, prev } from './world.js';
+import { get, set, generate, initRender, rebuild, updateTarget, target, prev, TYPES, heightAt, N } from './world.js';
 import { P, collides, updatePlayer, jump } from './player.js';
 import { eco, startPriceTicker } from './economy.js';
 import { initInput } from './input.js';
 import { drawHud, drawMarket, toast, toggleMarket, isMarketOpen } from './ui.js';
-import { TYPES } from './world.js';
+import { initMenu, showMenu, isMenuOpen, leaveToMenu } from './menu.js';
 
 // Sahne
 const scene = new THREE.Scene();
@@ -26,10 +26,6 @@ addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
 });
 
-// Dünya
-generate();
-initRender(scene);
-
 // Eylemler
 function breakBlock() {
   if (!target || target[1] === 0) return;
@@ -49,14 +45,35 @@ function placeBlock() {
   rebuild(); drawHud();
 }
 
+// Odaya / oyuna giriş
+function enterGame(info) {
+  generate(info.seed);
+  rebuild();
+  P.x = N / 2 + 0.5; P.z = N / 2 + 0.5;
+  P.y = heightAt(N / 2, N / 2) + 2; P.vy = 0;
+  eco.coins = 50;
+  for (const t in eco.inv) eco.inv[t] = 0;
+  document.getElementById('roomInfo').textContent =
+    info.solo ? 'Tek oyunculu' : 'Oda: ' + info.code + ' · ' + info.name;
+  drawHud();
+}
+
+// Başlat
+generate(1);
+initRender(scene);
+
 initInput(renderer.domElement, {
-  jump,
-  breakBlock,
-  placeBlock,
+  jump, breakBlock, placeBlock,
   market: toggleMarket,
   select: n => { eco.sel = n; drawHud(); }
 });
 
+const bLeave = document.getElementById('bLeave');
+bLeave.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); leaveToMenu(); }, { passive: false });
+bLeave.addEventListener('mousedown', e => { e.stopPropagation(); leaveToMenu(); });
+
+initMenu(enterGame);
+showMenu();
 startPriceTicker(() => { if (isMarketOpen()) drawMarket(); });
 drawHud();
 
@@ -66,22 +83,10 @@ function loop(now) {
   requestAnimationFrame(loop);
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  updatePlayer(dt, isMarketOpen());
+  updatePlayer(dt, isMarketOpen() || isMenuOpen());
   camera.position.set(P.x, P.y + 1.6, P.z);
   camera.rotation.set(P.pitch, P.yaw, 0);
   updateTarget(camera);
   renderer.render(scene, camera);
 }
 requestAnimationFrame(loop);
-
-// Firebase testi: sonuç ekranda kalır
-const dbg = document.createElement('div');
-dbg.style.cssText = 'position:fixed;top:56px;left:8px;right:8px;background:#000c;color:#fff;padding:8px;border-radius:8px;font-size:12px;z-index:50;word-break:break-all';
-dbg.textContent = 'Firebase bağlanıyor...';
-document.body.appendChild(dbg);
-dbg.onclick = () => dbg.remove();
-
-import('./firebase.js')
-  .then(m => m.login())
-  .then(id => { dbg.textContent = '✅ Online bağlandı: ' + id.slice(0, 8); setTimeout(() => dbg.remove(), 4000); })
-  .catch(e => { dbg.style.background = '#b3261e'; dbg.textContent = '❌ ' + (e.code || '') + ' ' + (e.message || e); });
