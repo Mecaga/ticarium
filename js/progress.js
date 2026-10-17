@@ -5,6 +5,7 @@ import { drawHud, toast } from './ui.js';
 import { saveSolo } from './save.js';
 import { flushGravity } from './gravity.js';
 import { isDead } from './health.js';
+import { food, setFood } from './hunger.js';
 import { G } from './state.js';
 
 // Başkasının odasında envanter/konum kaydı tutulsun mu? (false: sadece kendi dünyan kaydolur)
@@ -38,7 +39,10 @@ function snapshotState() {
   const inv = {};
   for (const t in TYPES) inv['t' + t] = eco.inv[t] || 0;
   const r = n => +n.toFixed(2);
-  return { inv, hotbar: eco.hotbar.slice(), hsel: eco.hsel, x: r(P.x), y: r(P.y), z: r(P.z), yaw: r(P.yaw), pitch: r(P.pitch), t: Date.now() };
+  return {
+    inv, hotbar: eco.hotbar.slice(), hsel: eco.hsel, food: food.cur,
+    x: r(P.x), y: r(P.y), z: r(P.z), yaw: r(P.yaw), pitch: r(P.pitch), t: Date.now()
+  };
 }
 
 export function applyState(s) {
@@ -49,6 +53,7 @@ export function applyState(s) {
   }
   eco.hsel = Math.min(Math.max(0, s.hsel | 0), eco.hotbar.length - 1);
   eco.sel = eco.hotbar[eco.hsel];
+  if (typeof s.food === 'number') setFood(s.food);
   if (typeof s.x === 'number' && inBounds(Math.floor(s.x), Math.floor(s.y), Math.floor(s.z)) && !collides(s.x, s.y, s.z)) {
     P.x = s.x; P.y = s.y; P.z = s.z; P.vy = 0; P.kx = 0; P.kz = 0;
     P.yaw = s.yaw || 0; P.pitch = s.pitch || 0;
