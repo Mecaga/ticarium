@@ -6,19 +6,23 @@ const ready = () => loginP || (loginP = login().then(id => (myUid = id)));
 let current = null;
 const CH = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const genCode = () => Array.from({ length: 6 }, () => CH[Math.floor(Math.random() * CH.length)]).join('');
+const STALE = 5 * 60 * 1000;
 
 async function enterRoom(code, meta, playerName) {
   const pref = ref(db, `rooms/${code}/players/${myUid}`);
   await set(pref, { name: playerName, joined: Date.now() });
   const od = onDisconnect(pref);
   od.remove();
+
   const isOwner = meta.owner === myUid;
-  let odPub = null;
+  let beat = null;
   if (isOwner && meta.public) {
-    odPub = onDisconnect(ref(db, `publicRooms/${code}`));
-    odPub.remove();
+    const pubRef = ref(db, `publicRooms/${code}`);
+    const pub = () => ({ owner: myUid, name: meta.name, ownerName: playerName, created: meta.created, updated: Date.now() });
+    await set(pubRef, pub());
+    beat = setInterval(() => { set(pubRef, pub()).catch(() => {}); }, 30000);
   }
-  current = { code, isOwner, pref, od, odPub };
+  current = { code, isOwner, pref, od, beat };
   return { code, name: meta.name, seed: meta.seed, isOwner, solo: false };
 }
 
@@ -33,9 +37,6 @@ export async function createRoom({ name, isPublic, playerName }) {
   if (!code) throw new Error('Kod üretilemedi, tekrar dene');
   const meta = { owner: myUid, name, public: !!isPublic, seed: Math.floor(Math.random() * 1e9), created: Date.now() };
   await set(ref(db, `rooms/${code}/meta`), meta);
-  if (isPublic) {
-    await set(ref(db, `publicRooms/${code}`), { owner: myUid, name, ownerName: playerName, created: meta.created });
-  }
   return enterRoom(code, meta, playerName);
 }
 
@@ -52,7 +53,8 @@ export async function leaveRoom() {
   if (!current) return;
   const c = current;
   current = null;
-  try { c.od.cancel(); if (c.odPub) c.odPub.cancel(); } catch (e) {}
+  if (c.beat) clearInterval(c.beat);
+  try { c.od.cancel(); } catch (e) {}
   try { await remove(c.pref); } catch (e) {}
   if (c.isOwner) { try { await remove(ref(db, `publicRooms/${c.code}`)); } catch (e) {} }
 }
@@ -61,8 +63,12 @@ export async function watchPublicRooms(cb) {
   await ready();
   return onValue(ref(db, 'publicRooms'), snap => {
     const arr = [];
-    snap.forEach(ch => { arr.push({ code: ch.key, ...ch.val() }); });
+    const now = Date.now();
+    snap.forEach(ch => {
+      const v = ch.val() || {};
+      if (now - (v.updated || v.created || 0) < STALE) arr.push({ code: ch.key, ...v });
+    });
     arr.sort((a, b) => b.created - a.created);
     cb(arr, null);
   }, e => cb(null, e));
-                                                             }
+}
