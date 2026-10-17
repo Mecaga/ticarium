@@ -1,11 +1,16 @@
 export const N = 40, H = 24;
 
 export const TYPES = {
-  1: { name: 'Çim',    color: 0x5fae45, base: 10 },
-  2: { name: 'Toprak', color: 0x8b5a2b, base: 6 },
-  3: { name: 'Taş',    color: 0x8a8a8a, base: 15 },
-  4: { name: 'Odun',   color: 0x6b4423, base: 25 },
-  5: { name: 'Yaprak', color: 0x2f7d32, base: 5 }
+  1:  { name: 'Çim',    color: 0x5fae45, base: 10 },
+  2:  { name: 'Toprak', color: 0x8b5a2b, base: 6 },
+  3:  { name: 'Taş',    color: 0x8a8a8a, base: 15 },
+  4:  { name: 'Odun',   color: 0x6b4423, base: 25 },
+  5:  { name: 'Yaprak', color: 0x2f7d32, base: 5 },
+  6:  { name: 'Kum',    color: 0xe6d690, base: 8 },
+  7:  { name: 'Tuğla',  color: 0xb5493a, base: 30 },
+  8:  { name: 'Kar',    color: 0xf5f5f5, base: 12 },
+  9:  { name: 'Cam',    color: 0x9fd8e8, base: 20 },
+  10: { name: 'Altın',  color: 0xffd700, base: 80 }
 };
 
 const world = new Uint8Array(N * H * N);
@@ -78,10 +83,11 @@ function exposed(x, y, z) {
 }
 
 export function rebuild() {
-  const c = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  const c = {};
+  for (const t in TYPES) c[t] = 0;
   for (let y = 0; y < H; y++) for (let z = 0; z < N; z++) for (let x = 0; x < N; x++) {
     const t = get(x, y, z);
-    if (!t || !exposed(x, y, z) || c[t] >= MAXI) continue;
+    if (!t || !meshes[t] || !exposed(x, y, z) || c[t] >= MAXI) continue;
     dummy.position.set(x + 0.5, y + 0.5, z + 0.5);
     dummy.updateMatrix();
     const m = meshes[t], i = c[t]++;
