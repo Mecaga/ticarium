@@ -10,7 +10,7 @@ export function resetHealth() {
   changed();
 }
 
-// src: { name, id } (oyuncu) | { fall: true } | { void: true }
+// src: { name, id } (oyuncu) | { fall: true } | { void: true } | { starve: true }
 export function hurt(d, src = {}) {
   if (hp.dead || d <= 0) return false;
   if (Date.now() < hp.protectUntil) return false;
@@ -39,8 +39,9 @@ export function respawnHealth() {
   changed();
 }
 
-export function tickHealth(dt) {
-  if (hp.dead || hp.cur >= hp.max) return;
+// canRegen: açlık yeterliyse can dolar
+export function tickHealth(dt, canRegen = true) {
+  if (hp.dead || hp.cur >= hp.max || !canRegen) return;
   hp.regen += dt;
   if (hp.regen >= 4) { hp.regen = 0; hp.cur++; changed(); }
 }
