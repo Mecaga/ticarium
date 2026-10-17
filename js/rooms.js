@@ -29,7 +29,7 @@ async function enterRoom(code, meta, playerName) {
     cur.beat = setInterval(() => { set(cur.pubRef, pubObj()).catch(() => {}); }, 30000);
     // Oyuncu sayısı değişince listedeki kaydı güncelle
     cur.offCount = onValue(ref(db, `rooms/${code}/players`), s => {
-      cur.cnt = s.numChildren();
+      cur.cnt = s.size;
       update(cur.pubRef, { count: cur.cnt, updated: Date.now() }).catch(() => {});
     });
   }
