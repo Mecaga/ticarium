@@ -4,13 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Ticarium 3D</title>
-<link rel="stylesheet" href="css/style.css?v=12">
+<link rel="stylesheet" href="css/style.css?v=13">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 <div id="flash"></div>
-<div id="coins">🪙 50</div>
+<div id="coord"></div>
 <div id="roomInfo"></div>
+<div id="coins">🪙 50</div>
 <div id="cross"></div>
 <div id="msg"></div>
 <div id="hearts"></div>
@@ -23,25 +24,30 @@
 <div class="btn" id="bPlace">Koy</div>
 <div class="btn" id="bAttack">⚔️</div>
 <div class="btn" id="bMarket">🏪 Pazar</div>
-<div class="btn" id="bLeave">🚪 Çık</div>
+<div class="btn" id="bPlayers">👥</div>
 <div class="btn" id="bSettings">⚙️ Ayarlar</div>
+<div class="btn" id="bLeave">🚪 Çık</div>
 <div id="market"><div id="panel"></div></div>
 <div id="settings"><div id="setBox"></div></div>
+<div id="players"><div id="plBox"></div></div>
 
 <div id="menu">
   <div class="mbox">
     <h1>Ticarium</h1>
     <div id="sMain">
       <input id="nameIn" maxlength="14" placeholder="Oyuncu adın">
+      <button id="mSoloCont" style="display:none">💾 Kayıtlı Dünyama Devam Et</button>
       <button id="mCreate">Oda Kur</button>
       <button id="mList">Açık Odalar</button>
       <button id="mJoin">Kodla Katıl</button>
-      <button id="mSolo" class="alt">Tek Oyunculu</button>
+      <button id="mMine">Odalarım (kayıtlı)</button>
+      <button id="mSolo" class="alt">Yeni Tek Oyunculu Dünya</button>
     </div>
     <div id="sCreate">
       <input id="cName" maxlength="24" placeholder="Oda adı">
       <label class="chk"><input type="checkbox" id="cPublic" checked> Herkese açık (listede görünsün)</label>
       <label class="chk"><input type="checkbox" id="cPvp"> PVP açık (oyuncular birbirine vurabilir)</label>
+      <label class="chk"><input type="checkbox" id="cKeep"> Envanteri koru (ölünce eşyalar düşmez)</label>
       <label class="chk">Oyuncu limiti
         <select id="cMax">
           <option value="2">2</option>
@@ -63,6 +69,10 @@
       <button id="jDo">Katıl</button>
       <button class="back alt">Geri</button>
     </div>
+    <div id="sMine">
+      <div id="mineList"></div>
+      <button class="back alt">Geri</button>
+    </div>
     <div id="mErr"></div>
   </div>
 </div>
@@ -82,14 +92,15 @@ window.addEventListener('unhandledrejection', function (e) {
   showErr(String(e.reason && (e.reason.message || e.reason)));
 });
 
-var ids = ['flash','coins','roomInfo','msg','hearts','hotbar','look','joy','joyBase','joyKnob','bJump','bBreak','bPlace',
-  'bAttack','bMarket','bLeave','bSettings','market','panel','settings','setBox','menu','nameIn','mCreate','mList','mJoin',
-  'mSolo','cName','cPublic','cPvp','cMax','cDo','sMain','sCreate','sList','sJoin','roomList','jCode','jDo','mErr'];
+var ids = ['flash','coord','coins','roomInfo','msg','hearts','hotbar','look','joy','joyBase','joyKnob','bJump','bBreak','bPlace',
+  'bAttack','bMarket','bPlayers','bLeave','bSettings','market','panel','settings','setBox','players','plBox','menu','nameIn',
+  'mSoloCont','mCreate','mList','mJoin','mMine','mSolo','cName','cPublic','cPvp','cKeep','cMax','cDo','sMain','sCreate','sList',
+  'sJoin','sMine','roomList','mineList','jCode','jDo','mErr'];
 var missing = ids.filter(function (i) { return !document.getElementById(i); });
 if (missing.length) {
   showErr('index.html eski, eksik elemanlar: ' + missing.join(', '));
 } else {
-  import('./js/main.js?v=12').catch(function (e) {
+  import('./js/main.js?v=13').catch(function (e) {
     showErr('Yükleme hatası (bir js dosyası eski ya da eksik olabilir): ' + (e.message || e));
   });
 }
