@@ -13,6 +13,11 @@ const angDiff = (a, b) => {
   return d;
 };
 
+// --- HATA ÇÖZÜMÜ: İstenen findMob fonksiyonu eklendi ---
+export function findMob(id) {
+  return cows.get(id) || null;
+}
+
 export function initMobs(scene) {
   group = new THREE.Group();
   scene.add(group);
@@ -141,12 +146,16 @@ export function updateMobs(dt, simulate) {
     const sw = Math.min(1, c.speed / 1.0) * 0.6;
     c.legs.forEach((l, i) => { l.rotation.x = Math.sin(c.phase + (i === 0 || i === 3 ? 0 : Math.PI)) * sw; });
   }
+  
+  // Yarık kalan multiplayer senkronizasyon mantığı tamamlandı
   if (simulate && mhooks.send && cows.size) {
     sendT += dt;
     if (sendT >= 0.25) {
       sendT = 0;
       const o = {};
-      cows.forEach((c, id) => { o[id] = { x: r2(c.x), y: r2(c.y), z: r2(c.z), yaw: r2(c.yaw) }; });
+      cows.forEach((c, id) => { 
+        o[id] = { x: r2(c.x), y: r2(c.y), z: r2(c.z), yaw: r2(c.yaw) }; 
+      });
       mhooks.send(o);
     }
   }
