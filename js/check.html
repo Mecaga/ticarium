@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dosya kontrolü</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#1d2330;color:#fff;padding:16px}
+.ok{color:#6f6}.bad{color:#f77;font-weight:700}
+div{padding:3px 0;font-size:15px}
+</style>
+</head>
+<body>
+<h3>Ticarium dosya kontrolü</h3>
+<div id="out">Kontrol ediliyor...</div>
+<script>
+var files = ['css/style.css','js/main.js','js/world.js','js/player.js','js/input.js','js/economy.js','js/ui.js',
+  'js/bag.js','js/items.js','js/health.js','js/mobs.js','js/sky.js','js/save.js','js/gravity.js','js/menu.js',
+  'js/rooms.js','js/online.js','js/firebase.js','js/state.js','js/sound.js','js/avatars.js','js/progress.js',
+  'js/panels.js','js/death.js','js/actions.js','js/session.js'];
+var out = document.getElementById('out');
+var html = '', bad = 0, done = 0;
+files.forEach(function (f, i) {
+  fetch(f + '?t=' + Date.now(), { cache: 'no-store' }).then(function (r) {
+    var ok = r.ok;
+    if (!ok) bad++;
+    html += '<div class="' + (ok ? 'ok' : 'bad') + '">' + (ok ? '✅ ' : '❌ EKSİK: ') + f + '</div>';
+  }).catch(function () {
+    bad++;
+    html += '<div class="bad">❌ EKSİK: ' + f + '</div>';
+  }).then(function () {
+    done++;
+    if (done === files.length) {
+      out.innerHTML = (bad ? '<div class="bad">' + bad + ' dosya eksik, aşağıda kırmızılar:</div>' : '<div class="ok">Hepsi tamam ✅</div>') + html;
+    }
+  });
+});
+</script>
+</body>
+</html>
