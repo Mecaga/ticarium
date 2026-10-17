@@ -1,7 +1,9 @@
+import { hasSolo, loadSolo, getMine, addMine, removeMine } from './save.js';
+
 const $ = id => document.getElementById(id);
 let R = null, onEnter = null, unsub = null;
 const loadR = async () => R || (R = await import('./rooms.js'));
-const screens = ['sMain', 'sCreate', 'sList', 'sJoin'];
+const screens = ['sMain', 'sCreate', 'sList', 'sJoin', 'sMine'];
 
 function show(id) {
   screens.forEach(s => { const el = $(s); if (el) el.style.display = s === id ? 'block' : 'none'; });
@@ -16,13 +18,21 @@ const pname = () => {
 };
 
 export const isMenuOpen = () => $('menu').style.display !== 'none';
-export function showMenu() { $('menu').style.display = 'flex'; show('sMain'); }
+export function showMenu() {
+  $('menu').style.display = 'flex';
+  $('mSoloCont').style.display = hasSolo() ? 'block' : 'none';
+  show('sMain');
+}
 export async function leaveToMenu() {
   try { if (R) await R.leaveRoom(); } catch (e) {}
   showMenu();
 }
 
-function enter(info) { $('menu').style.display = 'none'; onEnter(info); }
+function enter(info) {
+  if (!info.solo) addMine(info.code, info.name);
+  $('menu').style.display = 'none';
+  onEnter(info);
+}
 async function run(btn, fn) {
   btn.disabled = true;
   try { await fn(); } catch (e) { err(e.code || e.message || String(e)); }
@@ -42,7 +52,7 @@ async function startList() {
         const b = document.createElement('button');
         b.textContent = room.name;
         const s = document.createElement('small');
-        s.textContent = `${room.ownerName || '?'} · Kod: ${room.code}`;
+        s.textContent = `${room.ownerName || '?'} · Kod: ${room.code} · 👥 ${room.count || 0}/${room.max || 8}`;
         b.appendChild(s);
         b.onclick = () => run(b, async () => enter(await r.joinRoom(room.code, pname())));
         box.appendChild(b);
@@ -51,27 +61,60 @@ async function startList() {
   } catch (e) { box.innerHTML = ''; err(e.code || e.message); }
 }
 
+function startMine() {
+  const box = $('mineList');
+  box.innerHTML = '';
+  const list = getMine();
+  if (!list.length) {
+    box.innerHTML = '<p>Kayıtlı oda yok. Kurduğun ya da girdiğin odalar burada görünür.</p>';
+    return;
+  }
+  for (const m of list) {
+    const b = document.createElement('button');
+    b.textContent = m.name;
+    const s = document.createElement('small');
+    s.textContent = 'Kod: ' + m.code;
+    b.appendChild(s);
+    b.onclick = () => run(b, async () => {
+      const r = await loadR();
+      try {
+        enter(await r.joinRoom(m.code, pname()));
+      } catch (e) {
+        if (/bulunamad/.test(e.message || '')) { removeMine(m.code); startMine(); }
+        throw e;
+      }
+    });
+    box.appendChild(b);
+  }
+}
+
 export function initMenu(cb) {
   onEnter = cb;
   try { $('nameIn').value = localStorage.getItem('tc_name') || ''; } catch (e) {}
 
-  // Butonlar önce bağlanır (sonradan bir şey bozulsa bile çalışsınlar)
   $('mCreate').onclick = () => show('sCreate');
   $('mList').onclick = () => { show('sList'); startList(); };
   $('mJoin').onclick = () => show('sJoin');
-  $('mSolo').onclick = () => enter({ solo: true, seed: 1 });
+  $('mMine').onclick = () => { show('sMine'); startMine(); };
+  $('mSolo').onclick = () => {
+    if (hasSolo() && !confirm('Kayıtlı tek oyunculu dünyan silinecek. Yeni dünya açılsın mı?')) return;
+    enter({ solo: true, seed: Math.floor(Math.random() * 1e9) + 1, resume: false });
+  };
+  $('mSoloCont').onclick = () => {
+    const s = loadSolo();
+    if (s) enter({ solo: true, seed: s.seed, resume: true });
+  };
   document.querySelectorAll('.back').forEach(b => { b.onclick = () => show('sMain'); });
 
   $('cDo').onclick = e => run(e.currentTarget, async () => {
     const r = await loadR();
     const pn = pname();
-    const keepEl = $('cKeep'), pvpEl = $('cPvp'), maxEl = $('cMax');
     enter(await r.createRoom({
       name: $('cName').value.trim() || pn + ' odası',
       isPublic: $('cPublic').checked,
-      pvp: pvpEl ? pvpEl.checked : false,
-      keep: keepEl ? keepEl.checked : false,
-      maxPlayers: maxEl ? +maxEl.value : 8,
+      pvp: $('cPvp').checked,
+      keep: $('cKeep').checked,
+      maxPlayers: +$('cMax').value,
       playerName: pn
     }));
   });
@@ -79,15 +122,4 @@ export function initMenu(cb) {
     const r = await loadR();
     enter(await r.joinRoom($('jCode').value, pname()));
   });
-
-  // "Envanteri koru" kutusu
-  try {
-    const pvp = $('cPvp');
-    if (pvp && pvp.parentElement) {
-      const keepLabel = document.createElement('label');
-      keepLabel.className = 'chk';
-      keepLabel.innerHTML = '<input type="checkbox" id="cKeep"> Envanteri koru (ölünce eşyalar düşmez)';
-      pvp.parentElement.after(keepLabel);
-    }
-  } catch (e) {}
 }
