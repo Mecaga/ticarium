@@ -1,11 +1,12 @@
-import { get, set, generate, initRender, rebuild, updateTarget, target, prev, TYPES, heightAt, N, H, inBounds } from './world.js';
-import { P, collides, updatePlayer, jump } from './player.js';
+import { get, set, generate, initRender, rebuild, updateTarget, target, prev, TYPES, heightAt, N, H, inBounds, BEDROCK } from './world.js';
+import { P, collides, updatePlayer, jump, pHooks } from './player.js';
 import { eco, resetEco, startPriceTicker } from './economy.js';
 import { initInput } from './input.js';
-import { drawHud, drawMarket, toast, toggleMarket, isMarketOpen, hooks } from './ui.js';
+import { drawHud, drawMarket, toast, toggleMarket, isMarketOpen, hooks, MARKET_ON } from './ui.js';
 import { toggleBag, isBagOpen } from './bag.js';
 import { initMenu, showMenu, isMenuOpen, leaveToMenu } from './menu.js';
 import { initItems, updateItems, clearItems, dropItems, dropFromInventory, hooks as itemHooks } from './items.js';
+import { hhooks, hurt, killNow, respawnHealth, resetHealth, tickHealth, isDead } from './health.js';
 
 const $ = id => document.getElementById(id);
 
@@ -33,25 +34,41 @@ addEventListener('resize', () => {
 let online = null;
 let room = null;           // { code, name, isOwner, pvp, max, keep, solo }
 let settingsOpen = false;
+let deathTimer = null;
 
-// Bırak butonu (index.html'e dokunmadan eklenir)
+// Pazar kapalıysa ilgili arayüzü gizle
+if (!MARKET_ON) {
+  $('bMarket').style.display = 'none';
+  $('coins').style.display = 'none';
+  $('bLeave').style.top = '8px';
+  $('bSettings').style.top = '52px';
+  $('roomInfo').style.top = '8px';
+}
+
+// Bırak butonu
 const bDrop = document.createElement('div');
 bDrop.className = 'btn';
 bDrop.id = 'bDrop';
 bDrop.textContent = '⬇️';
 document.body.appendChild(bDrop);
 
+// Ölüm ekranı
+const deathEl = document.createElement('div');
+deathEl.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:#200;opacity:0;pointer-events:none;transition:opacity .4s;z-index:7;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;font-weight:700';
+deathEl.textContent = 'Öldün 💀';
+document.body.appendChild(deathEl);
+
 hooks.bag = toggleBag;
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || isMenuOpen()) return;
   if (e.code === 'KeyB') toggleBag();
   if (e.code === 'KeyF') attack();
-  if (e.code === 'KeyQ') dropFromInventory(eco.sel, 1);
+  if (e.code === 'KeyQ' && !isDead()) dropFromInventory(eco.sel, 1);
 });
 
 // ---------- Arayüz ----------
-function drawHearts(hp, max) {
-  const full = Math.ceil(hp / 2), tot = Math.ceil(max / 2);
+function drawHearts(cur, max) {
+  const full = Math.ceil(cur / 2), tot = Math.ceil(max / 2);
   $('hearts').textContent = '❤️'.repeat(full) + '🖤'.repeat(Math.max(0, tot - full));
 }
 
@@ -59,7 +76,7 @@ function applyRoomUI() {
   const on = !!(room && !room.solo);
   const pv = on && room.pvp;
   $('bAttack').style.display = pv ? 'flex' : 'none';
-  $('hearts').style.display = pv ? 'block' : 'none';
+  $('hearts').style.display = room ? 'block' : 'none';
   $('bSettings').style.display = (on && room.isOwner) ? 'flex' : 'none';
   $('roomInfo').textContent = !room ? '' : room.solo ? 'Tek oyunculu'
     : 'Oda: ' + room.code + ' · ' + room.name + (pv ? ' · ⚔️' : '') + (room.keep ? ' · 🎒' : '');
@@ -110,9 +127,10 @@ function bindBtn(id, fn) {
 
 // ---------- Eylemler ----------
 function breakBlock() {
-  if (!target || target[1] === 0) return;
+  if (isDead() || !target) return;
   const [x, y, z] = target;
   const t = get(x, y, z);
+  if (t === BEDROCK) return toast('Katman kayası kırılamaz');
   set(x, y, z, 0);
   eco.inv[t]++;
   if (online) online.sendBlock(x, y, z, 0);
@@ -120,8 +138,8 @@ function breakBlock() {
 }
 
 function placeBlock() {
-  if (!prev) return;
-  if (eco.inv[eco.sel] < 1) return toast(TYPES[eco.sel].name + ' yok. Pazardan al ya da topla.');
+  if (isDead() || !prev) return;
+  if (eco.inv[eco.sel] < 1) return toast(TYPES[eco.sel].name + ' yok.');
   const [x, y, z] = prev;
   if (!inBounds(x, y, z)) return toast(y >= H ? 'Yükseklik sınırı (' + H + ')' : 'Dünya sınırı');
   set(x, y, z, eco.sel);
@@ -132,7 +150,7 @@ function placeBlock() {
 }
 
 function attack() {
-  if (!online || !room || !room.pvp) return;
+  if (isDead() || !online || !room || !room.pvp) return;
   const m = online.attack();
   if (m) toast(m);
 }
@@ -161,36 +179,54 @@ function scatter(px, py, pz) {
 // true döner: eşya kaybedildi
 function loseOnDeath(px, py, pz) {
   if (room && !room.solo && room.keep) return false;
-  const n = scatter(px, py, pz);
-  eco.coins = Math.floor(eco.coins * 0.8);
-  drawHud();
-  return n > 0;
+  return scatter(px, py, pz) > 0;
 }
 
 function toSpawn() {
   P.x = N / 2 + 0.5; P.z = N / 2 + 0.5;
-  P.y = heightAt(N / 2, N / 2) + 2; P.vy = 0;
-  P.sx = P.x; P.sy = P.y; P.sz = P.z;
+  P.y = heightAt(N / 2, N / 2) + 2; P.vy = 0; P.ground = false;
+  P.sx = P.x; P.sy = P.y; P.sz = P.z; P.fallY = P.y;
 }
 
-function voidDeath() {
-  const lost = loseOnDeath(P.sx, P.sy, P.sz);
-  toSpawn();
-  toast('Boşluğa düştün 💀' + (lost ? ' Eşyaların kenarda kaldı' : ''));
+function clearDeath() {
+  if (deathTimer) { clearTimeout(deathTimer); deathTimer = null; }
+  deathEl.style.opacity = 0;
 }
+
+hhooks.onChange = drawHearts;
+hhooks.onHurt = flash;
+hhooks.onDeath = src => {
+  const pos = src.void ? [P.sx, P.sy, P.sz] : [P.x, P.y, P.z];
+  const lost = loseOnDeath(pos[0], pos[1], pos[2]);
+  const why = src.name ? src.name + ' seni yendi' : src.void ? 'Boşluğa düştün' : 'Çok yüksekten düştün';
+  toast(why + ' 💀' + (lost ? ' Eşyaların düştü' : ''));
+  if (online) online.reportDeath(src.id || '');
+  deathEl.style.opacity = 1;
+  deathTimer = setTimeout(() => {
+    deathTimer = null;
+    toSpawn();
+    respawnHealth();
+    if (online) online.setDead(false);
+    deathEl.style.opacity = 0;
+    toast('Canlandın');
+  }, 2000);
+};
+
+pHooks.onFall = d => { if (d > 0) hurt(d, { fall: true }); };
 
 // ---------- Odaya giriş / çıkış ----------
 function enterGame(info) {
   if (online) { online.stopOnline(); online = null; }
   clearItems();
+  clearDeath();
   itemHooks.push = itemHooks.take = itemHooks.expire = null; itemHooks.myId = '';
   room = info;
   generate(info.seed);
   rebuild();
   toSpawn();
   resetEco();
+  resetHealth();
   drawHud();
-  drawHearts(20, 20);
   applyRoomUI();
 
   if (!info.solo) {
@@ -207,17 +243,9 @@ function enterGame(info) {
             applyRoomUI();
             if (settingsOpen) drawSettings();
           },
-          onHp: drawHearts,
-          onHurt: flash,
-          onDeath: name => {
-            const lost = loseOnDeath(P.x, P.y, P.z);
-            toast(name + ' seni yendi 💀' + (lost ? ' Eşyaların düştü' : ''));
-          },
-          onDie: () => { toSpawn(); toast('Canlandın'); },
           onKill: name => {
-            eco.coins += 15;
-            toast(name + ' yendin! +15 🪙');
-            drawHud();
+            if (MARKET_ON) { eco.coins += 15; drawHud(); }
+            toast(name + ' yendin!');
           }
         });
       })
@@ -228,6 +256,7 @@ function enterGame(info) {
 async function leave() {
   if (online) { online.stopOnline(); online = null; }
   clearItems();
+  clearDeath();
   room = null;
   if (settingsOpen) { settingsOpen = false; $('settings').style.display = 'none'; }
   applyRoomUI();
@@ -251,13 +280,14 @@ initInput(renderer.domElement, {
 bindBtn('bLeave', leave);
 bindBtn('bAttack', attack);
 bindBtn('bSettings', toggleSettings);
-bindBtn('bDrop', () => dropFromInventory(eco.sel, 1));
+bindBtn('bDrop', () => { if (!isDead()) dropFromInventory(eco.sel, 1); });
 
 initMenu(enterGame);
 showMenu();
 applyRoomUI();
-startPriceTicker(() => { if (isMarketOpen()) drawMarket(); });
+if (MARKET_ON) startPriceTicker(() => { if (isMarketOpen()) drawMarket(); });
 drawHud();
+drawHearts(20, 20);
 
 // ---------- Döngü ----------
 let last = performance.now();
@@ -265,11 +295,12 @@ function loop(now) {
   requestAnimationFrame(loop);
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  const frozen = isMarketOpen() || isMenuOpen() || isBagOpen() || settingsOpen || (online && online.isDead());
+  const frozen = isMarketOpen() || isMenuOpen() || isBagOpen() || settingsOpen || isDead();
   updatePlayer(dt, frozen);
-  if (!frozen && P.y < -15) voidDeath();
+  if (!frozen && P.y < -15) killNow({ void: true });
+  if (room) tickHealth(dt);
   if (online) online.updateOthers(dt);
-  updateItems(dt, !frozen && !isMenuOpen());
+  updateItems(dt, !frozen);
   rebuild();
   camera.position.set(P.x, P.y + 1.6, P.z);
   camera.rotation.set(P.pitch, P.yaw, 0);
