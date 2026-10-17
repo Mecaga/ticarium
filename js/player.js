@@ -4,11 +4,13 @@ import { input } from './input.js';
 const R = 0.3, PH = 1.7;
 const sx = N / 2 + 0.5, sz = N / 2 + 0.5, sy = heightAt(N / 2, N / 2) + 2;
 
+export const pHooks = { onFall: null };
+
 export const P = {
   x: sx, y: sy, z: sz,
   vy: 0, ground: false, yaw: 0, pitch: 0,
-  // en son güvenle durduğu yer (boşluğa düşünce eşyalar buraya bırakılır)
-  sx, sy, sz
+  sx, sy, sz,      // en son güvenle durduğu yer
+  fallY: sy        // havadayken ulaştığı en yüksek nokta
 };
 
 export function collides(x, y, z) {
@@ -36,8 +38,18 @@ export function updatePlayer(dt, frozen) {
 
   P.vy = Math.max(-40, P.vy - 22 * dt);
   const ny = P.y + P.vy * dt;
+  let landed = false;
   if (!collides(P.x, ny, P.z)) { P.y = ny; P.ground = false; }
-  else { if (P.vy < 0) P.ground = true; P.vy = 0; }
+  else { if (P.vy < 0) { P.ground = true; landed = true; } P.vy = 0; }
+
+  // Düşme hasarı: 3 bloktan fazla düşersen, fazla her blok 1 can
+  if (P.ground) {
+    const d = P.fallY - P.y;
+    if (landed && d > 3 && pHooks.onFall) pHooks.onFall(Math.floor(d - 3));
+    P.fallY = P.y;
+  } else if (P.y > P.fallY) {
+    P.fallY = P.y;
+  }
 
   // Dünyanın içinde yere basıyorsa güvenli nokta olarak kaydet
   if (P.ground && P.x >= 0 && P.x < N && P.z >= 0 && P.z < N) {
