@@ -2,57 +2,6 @@
 html,body{margin:0;height:100%;overflow:hidden;background:#87ceeb;font-family:system-ui,sans-serif;touch-action:none}
 canvas{display:block}
 #coins{position:fixed;top:8px;left:8px;background:#000a;color:#ffd84a;padding:6px 12px;border-radius:8px;font-weight:700;font-size:16px}
-#cross{position:fixed;top:50%;left:50%;width:18px;height:18px;margin:-9px 0 0 -9px;pointer-events:none}
-#cross:before,#cross:after{content:"";position:absolute;background:#fff;mix-blend-mode:difference}
-#cross:before{left:8px;top:0;width:2px;height:18px}
-#cross:after{top:8px;left:0;height:2px;width:18px}
-#hotbar{position:fixed;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:4px;z-index:6}
-.slot{width:54px;height:54px;border:3px solid #fff6;border-radius:8px;background:#0008;color:#fff;font-size:11px;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.slot.sel{border-color:#ffd84a}
-.slot i{width:20px;height:20px;border-radius:3px;display:block;margin-bottom:2px}
-#joy{position:fixed;left:0;bottom:0;width:45%;height:55%}
-#look{position:fixed;right:0;top:0;width:55%;height:100%}
-#joyBase{position:fixed;width:100px;height:100px;border-radius:50%;background:#fff3;border:2px solid #fff6;display:none;pointer-events:none}
-#joyKnob{position:absolute;width:44px;height:44px;border-radius:50%;background:#fffa;left:28px;top:28px}
-.btn{position:fixed;width:62px;height:62px;border-radius:50%;background:#000a;color:#fff;border:2px solid #fff8;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;z-index:5}
-#bJump{right:18px;bottom:90px}
-#bBreak{right:92px;bottom:70px;background:#b3261eaa}
-#bPlace{right:18px;bottom:162px;background:#2e7d32aa}
-#bMarket{top:8px;right:8px;width:auto;height:40px;border-radius:10px;padding:0 14px}
-#market{position:fixed;inset:0;background:#000b;display:none;z-index:20;align-items:center;justify-content:center}
-#panel{background:#1d2330;color:#fff;border-radius:14px;padding:14px;width:min(94vw,460px);max-height:90vh;overflow:auto}
-#panel h2{margin:0 0 4px;font-size:18px}
-.row{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #fff2}
-.row .n{flex:1}
-.row small{display:block;opacity:.7}
-.row button{padding:8px 12px;border:0;border-radius:8px;font-weight:700;color:#fff}
-.sell{background:#2e7d32}
-.buy{background:#1565c0}
-#close{background:#444;color:#fff;border:0;padding:10px;border-radius:8px;width:100%;margin-top:8px;font-weight:700}
-.up{color:#6f6}
-.down{color:#f77}
-#msg{position:fixed;top:56px;left:50%;transform:translateX(-50%);background:#000a;color:#fff;padding:6px 12px;border-radius:8px;opacity:0;transition:opacity .3s;pointer-events:none;font-size:13px}
-#roomInfo{position:fixed;top:44px;left:8px;background:#000a;color:#fff;padding:4px 10px;border-radius:8px;font-size:12px}
-#roomInfo:empty{display:none}
-#bLeave{top:56px;right:8px;width:auto;height:36px;border-radius:10px;padding:0 14px;background:#b3261eaa}
-#menu{position:fixed;inset:0;z-index:30;background:linear-gradient(#87ceeb,#3d8f3a);display:flex;align-items:center;justify-content:center;overflow:auto;touch-action:pan-y}
-.mbox{background:#1d2330;color:#fff;border-radius:16px;padding:18px;width:min(92vw,380px)}
-.mbox h1{margin:0 0 12px;text-align:center}
-.mbox input[type=text],.mbox input:not([type]){width:100%;padding:12px;border-radius:8px;border:0;margin-bottom:8px;font-size:16px;-webkit-user-select:text;user-select:text}
-.mbox button{width:100%;padding:12px;margin-top:8px;border:0;border-radius:8px;background:#2e7d32;color:#fff;font-weight:700;font-size:15px}
-.mbox button.alt{background:#444}
-.mbox button:disabled{opacity:.5}
-#sCreate,#sList,#sJoin{display:none}
-.chk{display:flex;gap:8px;align-items:center;font-size:13px;margin:4px 0}
-#roomList{max-height:50vh;overflow:auto;touch-action:pan-y}
-#roomList button{text-align:left;background:#1565c0}
-#roomList small{display:block;font-weight:400;opacity:.8}
-#roomList p{opacity:.7;text-align:center}
-#mErr{color:#ff8a80;font-size:13px;margin-top:8px;min-height:16px}
-*{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;overflow:hidden;background:#87ceeb;font-family:system-ui,sans-serif;touch-action:none}
-canvas{display:block}
-#coins{position:fixed;top:8px;left:8px;background:#000a;color:#ffd84a;padding:6px 12px;border-radius:8px;font-weight:700;font-size:16px}
 #roomInfo{position:fixed;top:44px;left:8px;background:#000a;color:#fff;padding:4px 10px;border-radius:8px;font-size:12px}
 #roomInfo:empty{display:none}
 #cross{position:fixed;top:50%;left:50%;width:18px;height:18px;margin:-9px 0 0 -9px;pointer-events:none}
@@ -63,6 +12,8 @@ canvas{display:block}
 .slot{width:54px;height:54px;border:3px solid #fff6;border-radius:8px;background:#0008;color:#fff;font-size:11px;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .slot.sel{border-color:#ffd84a}
 .slot i{width:20px;height:20px;border-radius:3px;display:block;margin-bottom:2px}
+#hearts{position:fixed;bottom:72px;left:50%;transform:translateX(-50%);display:none;font-size:14px;z-index:6;pointer-events:none;white-space:nowrap}
+#flash{position:fixed;inset:0;background:#f00;opacity:0;pointer-events:none;transition:opacity .15s;z-index:4}
 #joy{position:fixed;left:0;bottom:0;width:45%;height:55%}
 #look{position:fixed;right:0;top:0;width:55%;height:100%}
 #joyBase{position:fixed;width:100px;height:100px;border-radius:50%;background:#fff3;border:2px solid #fff6;display:none;pointer-events:none}
@@ -71,21 +22,24 @@ canvas{display:block}
 #bJump{right:18px;bottom:90px}
 #bBreak{right:92px;bottom:70px;background:#b3261eaa}
 #bPlace{right:18px;bottom:162px;background:#2e7d32aa}
+#bAttack{right:92px;bottom:142px;background:#e65100cc;font-size:24px;display:none}
 #bMarket{top:8px;right:8px;width:auto;height:40px;border-radius:10px;padding:0 14px}
 #bLeave{top:56px;right:8px;width:auto;height:36px;border-radius:10px;padding:0 14px;background:#b3261eaa}
-#market{position:fixed;inset:0;background:#000b;display:none;z-index:20;align-items:center;justify-content:center}
-#panel{background:#1d2330;color:#fff;border-radius:14px;padding:14px;width:min(94vw,460px);max-height:90vh;overflow:auto}
-#panel h2{margin:0 0 4px;font-size:18px}
+#bSettings{top:100px;right:8px;width:auto;height:36px;border-radius:10px;padding:0 14px;display:none}
+#market,#settings{position:fixed;inset:0;background:#000b;display:none;z-index:20;align-items:center;justify-content:center}
+#panel,#setBox{background:#1d2330;color:#fff;border-radius:14px;padding:14px;width:min(94vw,460px);max-height:90vh;overflow:auto}
+#panel h2,#setBox h2{margin:0 0 4px;font-size:18px}
 .row{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #fff2}
 .row .n{flex:1}
 .row small{display:block;opacity:.7}
 .row button{padding:8px 12px;border:0;border-radius:8px;font-weight:700;color:#fff}
 .sell{background:#2e7d32}
 .buy{background:#1565c0}
-#close{background:#444;color:#fff;border:0;padding:10px;border-radius:8px;width:100%;margin-top:8px;font-weight:700}
+#close,.closeBtn{background:#444;color:#fff;border:0;padding:10px;border-radius:8px;width:100%;margin-top:8px;font-weight:700}
+#setMax{display:flex;gap:4px}
 .up{color:#6f6}
 .down{color:#f77}
-#msg{position:fixed;top:56px;left:50%;transform:translateX(-50%);background:#000a;color:#fff;padding:6px 12px;border-radius:8px;opacity:0;transition:opacity .3s;pointer-events:none;font-size:13px}
+#msg{position:fixed;top:56px;left:50%;transform:translateX(-50%);background:#000a;color:#fff;padding:6px 12px;border-radius:8px;opacity:0;transition:opacity .3s;pointer-events:none;font-size:13px;z-index:8}
 
 /* Ana menü */
 #menu{position:fixed;inset:0;z-index:30;background:linear-gradient(#87ceeb,#3d8f3a);display:flex;align-items:center;justify-content:center;overflow:auto;touch-action:pan-y}
@@ -96,7 +50,8 @@ canvas{display:block}
 .mbox button.alt{background:#444}
 .mbox button:disabled{opacity:.5}
 #sCreate,#sList,#sJoin{display:none}
-.chk{display:flex;gap:8px;align-items:center;font-size:13px;margin:4px 0}
+.chk{display:flex;gap:8px;align-items:center;font-size:13px;margin:6px 0}
+.mbox .chk select{width:auto;margin:0;padding:6px 10px;border-radius:6px;border:0;font-size:15px}
 #roomList{max-height:50vh;overflow:auto;touch-action:pan-y}
 #roomList button{text-align:left;background:#1565c0}
 #roomList small{display:block;font-weight:400;opacity:.8}
