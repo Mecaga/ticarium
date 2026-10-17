@@ -26,12 +26,16 @@ addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
 });
 
+let online = null;
+
 // Eylemler
 function breakBlock() {
   if (!target || target[1] === 0) return;
-  const t = get(...target);
-  set(...target, 0);
+  const [x, y, z] = target;
+  const t = get(x, y, z);
+  set(x, y, z, 0);
   eco.inv[t]++;
+  if (online) online.sendBlock(x, y, z, 0);
   rebuild(); drawHud();
 }
 
@@ -41,21 +45,34 @@ function placeBlock() {
   const [x, y, z] = prev;
   set(x, y, z, eco.sel);
   if (collides(P.x, P.y, P.z)) { set(x, y, z, 0); return; }
+  if (online) online.sendBlock(x, y, z, eco.sel);
   eco.inv[eco.sel]--;
   rebuild(); drawHud();
 }
 
 // Odaya / oyuna giriş
 function enterGame(info) {
+  if (online) { online.stopOnline(); online = null; }
   generate(info.seed);
   rebuild();
   P.x = N / 2 + 0.5; P.z = N / 2 + 0.5;
   P.y = heightAt(N / 2, N / 2) + 2; P.vy = 0;
   eco.coins = 50;
   for (const t in eco.inv) eco.inv[t] = 0;
-  document.getElementById('roomInfo').textContent =
-    info.solo ? 'Tek oyunculu' : 'Oda: ' + info.code + ' · ' + info.name;
+  const ri = document.getElementById('roomInfo');
+  ri.textContent = info.solo ? 'Tek oyunculu' : 'Oda: ' + info.code + ' · ' + info.name;
   drawHud();
+
+  if (!info.solo) {
+    import('./online.js')
+      .then(m => { online = m; m.startOnline(scene, info.code); })
+      .catch(e => { ri.textContent = 'Online hata: ' + (e.message || e); });
+  }
+}
+
+async function leave() {
+  if (online) { online.stopOnline(); online = null; }
+  await leaveToMenu();
 }
 
 // Başlat
@@ -69,8 +86,8 @@ initInput(renderer.domElement, {
 });
 
 const bLeave = document.getElementById('bLeave');
-bLeave.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); leaveToMenu(); }, { passive: false });
-bLeave.addEventListener('mousedown', e => { e.stopPropagation(); leaveToMenu(); });
+bLeave.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); leave(); }, { passive: false });
+bLeave.addEventListener('mousedown', e => { e.stopPropagation(); leave(); });
 
 initMenu(enterGame);
 showMenu();
@@ -84,6 +101,7 @@ function loop(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   updatePlayer(dt, isMarketOpen() || isMenuOpen());
+  if (online) online.updateOthers(dt);
   camera.position.set(P.x, P.y + 1.6, P.z);
   camera.rotation.set(P.pitch, P.yaw, 0);
   updateTarget(camera);
