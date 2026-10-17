@@ -3,6 +3,7 @@ export const hhooks = { onChange: null, onHurt: null, onDeath: null };
 
 const changed = () => { if (hhooks.onChange) hhooks.onChange(hp.cur, hp.max); };
 export const isDead = () => hp.dead;
+export const canHurt = () => !hp.dead && Date.now() >= hp.protectUntil;
 
 export function resetHealth() {
   hp.cur = hp.max; hp.dead = false; hp.protectUntil = 0; hp.regen = 0;
