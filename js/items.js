@@ -1,4 +1,4 @@
-import { get, atlas, sideTile, TYPES } from './world.js';
+import { solid, atlas, sideTile, TYPES } from './world.js';
 import { eco } from './economy.js';
 import { P } from './player.js';
 import { drawHud, toast } from './ui.js';
@@ -18,7 +18,7 @@ let seq = 0;
 export function initItems(scene) {
   group = new THREE.Group();
   scene.add(group);
-  mat = new THREE.MeshLambertMaterial({ map: atlas.tex });
+  mat = new THREE.MeshLambertMaterial({ map: atlas.tex, alphaTest: 0.5 });
   for (const t in TYPES) {
     const g = new THREE.BoxGeometry(0.32, 0.32, 0.32);
     const uv = g.attributes.uv, tile = sideTile(+t);
@@ -102,16 +102,16 @@ export function updateItems(dt, canPick) {
   for (const it of list.values()) {
     it.vy = Math.max(-30, it.vy - 18 * dt);
     let nx = it.x + it.vx * dt, ny = it.y + it.vy * dt, nz = it.z + it.vz * dt;
-    if (get(Math.floor(nx), Math.floor(it.y), Math.floor(it.z))) { it.vx *= -0.3; nx = it.x; }
-    if (get(Math.floor(it.x), Math.floor(it.y), Math.floor(nz))) { it.vz *= -0.3; nz = it.z; }
+    if (solid(Math.floor(nx), Math.floor(it.y), Math.floor(it.z))) { it.vx *= -0.3; nx = it.x; }
+    if (solid(Math.floor(it.x), Math.floor(it.y), Math.floor(nz))) { it.vz *= -0.3; nz = it.z; }
     it.ground = false;
-    if (it.vy <= 0 && get(Math.floor(nx), Math.floor(ny - R), Math.floor(nz))) {
+    if (it.vy <= 0 && solid(Math.floor(nx), Math.floor(ny - R), Math.floor(nz))) {
       ny = Math.floor(ny - R) + 1 + R;
       it.vy = it.vy < -3 ? -it.vy * 0.3 : 0;
       it.ground = true;
       const f = Math.pow(0.03, dt);
       it.vx *= f; it.vz *= f;
-    } else if (it.vy > 0 && get(Math.floor(nx), Math.floor(ny + R), Math.floor(nz))) {
+    } else if (it.vy > 0 && solid(Math.floor(nx), Math.floor(ny + R), Math.floor(nz))) {
       it.vy = 0; ny = it.y;
     }
     it.x = nx; it.y = ny; it.z = nz;
@@ -130,4 +130,4 @@ export function updateItems(dt, canPick) {
       if (dx * dx + dy * dy + dz * dz < 2.25) tryTake(it);
     }
   }
-      }
+                    }
