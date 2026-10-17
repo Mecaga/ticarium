@@ -15,16 +15,27 @@ async function enterRoom(code, meta, playerName) {
   od.remove();
 
   const isOwner = meta.owner === myUid;
-  let beat = null;
+  const cur = {
+    code, isOwner, pref, od, beat: null, offCount: null, pubRef: null,
+    cnt: 1, max: meta.max || 8
+  };
   if (isOwner && meta.public) {
-    const pubRef = ref(db, `publicRooms/${code}`);
-    const pub = () => ({ owner: myUid, name: meta.name, ownerName: playerName, created: meta.created, updated: Date.now() });
-    await set(pubRef, pub());
-    beat = setInterval(() => { set(pubRef, pub()).catch(() => {}); }, 30000);
+    cur.pubRef = ref(db, `publicRooms/${code}`);
+    const pubObj = () => ({
+      owner: myUid, name: meta.name, ownerName: playerName, created: meta.created,
+      updated: Date.now(), max: cur.max, count: cur.cnt
+    });
+    await set(cur.pubRef, pubObj());
+    cur.beat = setInterval(() => { set(cur.pubRef, pubObj()).catch(() => {}); }, 30000);
+    // Oyuncu sayısı değişince listedeki kaydı güncelle
+    cur.offCount = onValue(ref(db, `rooms/${code}/players`), s => {
+      cur.cnt = s.numChildren();
+      update(cur.pubRef, { count: cur.cnt, updated: Date.now() }).catch(() => {});
+    });
   }
-  current = { code, isOwner, pref, od, beat };
+  current = cur;
   return {
-    code, name: meta.name, seed: meta.seed, isOwner, solo: false,
+    code, name: meta.name, seed: meta.seed, isOwner, solo: false, playerName,
     pvp: !!meta.pvp, max: meta.max || 8, keep: !!meta.keep
   };
 }
@@ -66,6 +77,10 @@ export async function joinRoom(codeRaw, playerName) {
 export async function updateSettings(patch) {
   if (!current) throw new Error('Odada değilsin');
   await update(ref(db, `rooms/${current.code}/meta`), patch);
+  if (patch.max) {
+    current.max = patch.max;
+    if (current.pubRef) update(current.pubRef, { max: patch.max }).catch(() => {});
+  }
 }
 
 export async function leaveRoom() {
@@ -73,6 +88,7 @@ export async function leaveRoom() {
   const c = current;
   current = null;
   if (c.beat) clearInterval(c.beat);
+  if (c.offCount) { try { c.offCount(); } catch (e) {} }
   try { c.od.cancel(); } catch (e) {}
   try { await remove(c.pref); } catch (e) {}
   if (c.isOwner) { try { await remove(ref(db, `publicRooms/${c.code}`)); } catch (e) {} }
@@ -90,4 +106,4 @@ export async function watchPublicRooms(cb) {
     arr.sort((a, b) => b.created - a.created);
     cb(arr, null);
   }, e => cb(null, e));
-    }
+}
