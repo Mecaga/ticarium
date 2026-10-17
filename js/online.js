@@ -165,7 +165,7 @@ export function startOnline(sc, roomCode, opts = {}) {
   // Diğer oyuncular + vuruşlar
   unsubs.push(onValue(ref(db, `rooms/${code}/players`), snap => {
     const seen = {};
-    if (cb.onCount) cb.onCount(snap.numChildren());
+    if (cb.onCount) cb.onCount(snap.size);
     snap.forEach(ch => {
       if (ch.key === uid) return;
       seen[ch.key] = 1;
@@ -320,4 +320,4 @@ export function stopOnline() {
   pvp.on = false;
   cb = {};
   code = null; last = ''; ownerId = null;
-  }
+    }
