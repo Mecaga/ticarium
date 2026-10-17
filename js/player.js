@@ -1,13 +1,14 @@
-import { N, H, get, heightAt } from './world.js';
+import { N, get, heightAt } from './world.js';
 import { input } from './input.js';
 
 const R = 0.3, PH = 1.7;
+const sx = N / 2 + 0.5, sz = N / 2 + 0.5, sy = heightAt(N / 2, N / 2) + 2;
 
 export const P = {
-  x: N / 2 + 0.5,
-  y: heightAt(N / 2, N / 2) + 2,
-  z: N / 2 + 0.5,
-  vy: 0, ground: false, yaw: 0, pitch: 0
+  x: sx, y: sy, z: sz,
+  vy: 0, ground: false, yaw: 0, pitch: 0,
+  // en son güvenle durduğu yer (boşluğa düşünce eşyalar buraya bırakılır)
+  sx, sy, sz
 };
 
 export function collides(x, y, z) {
@@ -33,12 +34,13 @@ export function updatePlayer(dt, frozen) {
   if (!collides(P.x + vx * dt, P.y, P.z)) P.x += vx * dt;
   if (!collides(P.x, P.y, P.z + vz * dt)) P.z += vz * dt;
 
-  P.vy -= 22 * dt;
+  P.vy = Math.max(-40, P.vy - 22 * dt);
   const ny = P.y + P.vy * dt;
   if (!collides(P.x, ny, P.z)) { P.y = ny; P.ground = false; }
   else { if (P.vy < 0) P.ground = true; P.vy = 0; }
 
-  P.x = Math.max(0.5, Math.min(N - 0.5, P.x));
-  P.z = Math.max(0.5, Math.min(N - 0.5, P.z));
-  if (P.y < -10) { P.x = N / 2 + 0.5; P.z = N / 2 + 0.5; P.y = H; P.vy = 0; }
+  // Dünyanın içinde yere basıyorsa güvenli nokta olarak kaydet
+  if (P.ground && P.x >= 0 && P.x < N && P.z >= 0 && P.z < N) {
+    P.sx = P.x; P.sy = P.y; P.sz = P.z;
+  }
 }
