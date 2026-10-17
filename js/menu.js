@@ -54,6 +54,13 @@ async function startList() {
 export function initMenu(cb) {
   onEnter = cb;
   try { $('nameIn').value = localStorage.getItem('tc_name') || ''; } catch (e) {}
+
+  // "Envanteri koru" kutusu (index.html'e dokunmadan eklenir)
+  const keepLabel = document.createElement('label');
+  keepLabel.className = 'chk';
+  keepLabel.innerHTML = '<input type="checkbox" id="cKeep"> Envanteri koru (ölünce eşyalar düşmez)';
+  $('cPvp').parentElement.after(keepLabel);
+
   $('mCreate').onclick = () => show('sCreate');
   $('mList').onclick = () => { show('sList'); startList(); };
   $('mJoin').onclick = () => show('sJoin');
@@ -67,6 +74,7 @@ export function initMenu(cb) {
       name: $('cName').value.trim() || pn + ' odası',
       isPublic: $('cPublic').checked,
       pvp: $('cPvp').checked,
+      keep: $('cKeep').checked,
       maxPlayers: +$('cMax').value,
       playerName: pn
     }));
@@ -75,4 +83,4 @@ export function initMenu(cb) {
     const r = await loadR();
     enter(await r.joinRoom($('jCode').value, pname()));
   });
-}
+    }
