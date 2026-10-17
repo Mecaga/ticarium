@@ -1,8 +1,9 @@
-import { db, uid, ref, set, update, onValue } from './firebase.js';
-import { onChildAdded, onChildChanged, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { db, uid, ref, set, update, remove, onValue } from './firebase.js';
+import { onChildAdded, onChildChanged, onChildRemoved, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import { get as getBlock, set as setBlock, rebuild, TYPES } from './world.js';
 import { P } from './player.js';
 import { eco, net, clampRaw, priceOf } from './economy.js';
+import { hooks as ih, spawnItem, removeItem, clearItems } from './items.js';
 
 const MAXHP = 20, DMG = 4;
 const pvp = { on: false, hp: MAXHP, max: MAXHP, protectUntil: 0, dead: false, lastAtk: 0 };
@@ -64,6 +65,7 @@ function damage(d, byId, byName) {
   if (cb.onHurt) cb.onHurt();
   if (pvp.hp <= 0) {
     pvp.dead = true;
+    if (cb.onDeath) cb.onDeath(byName);   // eşyalar burada saçılır
     const c = code;
     update(ref(db, `rooms/${c}/players/${uid}`), { died: { by: byId, n: Date.now() } }).catch(() => {});
     setTimeout(() => {
@@ -72,12 +74,12 @@ function damage(d, byId, byName) {
       pvp.protectUntil = Date.now() + 3000;
       last = '';
       if (cb.onHp) cb.onHp(pvp.hp, pvp.max);
-      if (cb.onDie) cb.onDie(byName);
+      if (cb.onDie) cb.onDie();
     }, 2000);
   }
 }
 
-// opts: { isOwner, pvp, onPrices, onMeta, onHp, onHurt, onDie, onKill }
+// opts: { isOwner, pvp, onPrices, onMeta, onHp, onHurt, onDeath, onDie, onKill }
 export function startOnline(sc, roomCode, opts = {}) {
   stopOnline();
   scene = sc; code = roomCode; cb = opts;
@@ -85,13 +87,13 @@ export function startOnline(sc, roomCode, opts = {}) {
   primed = false; lastHit = {}; lastDied = {}; regen = 0;
   scene.add(group);
 
-  // Oda ayarları (PVP aç/kapa, limit)
+  // Oda ayarları (PVP, limit, envanteri koru)
   unsubs.push(onValue(ref(db, `rooms/${code}/meta`), snap => {
     const m = snap.val();
     if (!m) return;
     if (!pvp.on && m.pvp) pvp.hp = pvp.max;
     pvp.on = !!m.pvp;
-    if (cb.onMeta) cb.onMeta({ pvp: pvp.on, max: m.max || 8 });
+    if (cb.onMeta) cb.onMeta({ pvp: pvp.on, max: m.max || 8, keep: !!m.keep });
     if (cb.onHp) cb.onHp(pvp.hp, pvp.max);
   }));
 
@@ -103,6 +105,29 @@ export function startOnline(sc, roomCode, opts = {}) {
     scheduleRebuild();
   };
   unsubs.push(onChildAdded(bref, apply), onChildChanged(bref, apply));
+
+  // Yerdeki eşyalar (herkeste ortak)
+  const iref = ref(db, `rooms/${code}/items`);
+  ih.myId = uid;
+  ih.push = arr => {
+    const now = Date.now(), obj = {};
+    arr.forEach((a, i) => {
+      obj[uid.slice(0, 5) + now.toString(36) + i] = {
+        t: a.t, c: a.c, x: a.x, y: a.y, z: a.z, vx: a.vx, vy: a.vy, vz: a.vz, by: a.by, n: now
+      };
+    });
+    update(iref, obj).catch(() => {});
+  };
+  // İlk alan kazanır: kayıt hâlâ varsa silinir ve eşya senin olur
+  ih.take = async id => {
+    const r = await runTransaction(ref(db, `rooms/${code}/items/${id}`), v => (v === null ? undefined : null));
+    return r.committed;
+  };
+  ih.expire = id => { remove(ref(db, `rooms/${code}/items/${id}`)).catch(() => {}); };
+  unsubs.push(
+    onChildAdded(iref, s => spawnItem(s.key, s.val())),
+    onChildRemoved(iref, s => removeItem(s.key))
+  );
 
   // Ortak fiyatlar
   net.active = true;
@@ -180,7 +205,6 @@ export function sendBlock(x, y, z, t) {
   set(ref(db, `rooms/${code}/blocks/${x}_${y}_${z}`), t).catch(() => {});
 }
 
-// Nişan alınan oyuncuya vur. Dönen yazı ekranda gösterilir.
 export function attack() {
   if (!code || !pvp.on) return 'PVP kapalı';
   if (pvp.dead) return '';
@@ -242,6 +266,8 @@ export function stopOnline() {
   others = {};
   if (scene) scene.remove(group);
   net.active = false; net.owner = false; net.trade = null; net.setPrice = null;
+  ih.push = ih.take = ih.expire = null; ih.myId = '';
+  clearItems();
   pvp.on = false; pvp.dead = false;
   cb = {};
   code = null; last = '';
