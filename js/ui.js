@@ -1,6 +1,9 @@
 import { TYPES } from './world.js';
 import { eco, sell, buy, priceOf, buyCost } from './economy.js';
 
+// Pazarı geri açmak için true yap
+export const MARKET_ON = false;
+
 const css = c => '#' + c.toString(16).padStart(6, '0');
 let marketOpen = false;
 export const isMarketOpen = () => marketOpen;
@@ -51,6 +54,7 @@ export function drawMarket() {
 }
 
 export function toggleMarket() {
+  if (!MARKET_ON) return;
   marketOpen = !marketOpen;
   document.getElementById('market').style.display = marketOpen ? 'flex' : 'none';
   if (marketOpen) drawMarket();
