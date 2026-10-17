@@ -1,4 +1,5 @@
-export const N = 40, H = 24;
+export const N = 48, H = 32, CS = 16;
+const NC = N / CS;
 
 export const TYPES = {
   1:  { name: 'Çim',    color: 0x5fae45, base: 10 },
@@ -13,15 +14,35 @@ export const TYPES = {
   10: { name: 'Altın',  color: 0xffd700, base: 80 }
 };
 
+// ---- Dünya verisi ----
 const world = new Uint8Array(N * H * N);
 const idx = (x, y, z) => (y * N + z) * N + x;
 const inb = (x, y, z) => x >= 0 && x < N && y >= 0 && y < H && z >= 0 && z < N;
+export const inBounds = inb;
 export const get = (x, y, z) => inb(x, y, z) ? world[idx(x, y, z)] : 0;
-export const set = (x, y, z, t) => { if (inb(x, y, z)) world[idx(x, y, z)] = t; };
+
+const dirty = new Set();
+const addDirty = (cx, cz) => { if (cx >= 0 && cz >= 0 && cx < NC && cz < NC) dirty.add(cz * NC + cx); };
+function markDirty(x, z) {
+  const cx = Math.floor(x / CS), cz = Math.floor(z / CS);
+  addDirty(cx, cz);
+  const lx = x - cx * CS, lz = z - cz * CS;
+  if (lx === 0) addDirty(cx - 1, cz);
+  if (lx === CS - 1) addDirty(cx + 1, cz);
+  if (lz === 0) addDirty(cx, cz - 1);
+  if (lz === CS - 1) addDirty(cx, cz + 1);
+}
+export const set = (x, y, z, t) => {
+  if (!inb(x, y, z)) return;
+  const i = idx(x, y, z);
+  if (world[i] === t) return;
+  world[i] = t;
+  markDirty(x, z);
+};
 
 export function heightAt(x, z) {
-  const h = 6 + 3 * Math.sin(x * 0.21) + 3 * Math.cos(z * 0.17) + 2 * Math.sin((x + z) * 0.11);
-  return Math.max(2, Math.min(H - 8, Math.floor(h)));
+  const h = 10 + 4 * Math.sin(x * 0.15) + 4 * Math.cos(z * 0.13) + 3 * Math.sin((x + z) * 0.08);
+  return Math.max(3, Math.min(H - 9, Math.floor(h)));
 }
 
 function mulberry(a) {
@@ -35,12 +56,13 @@ function mulberry(a) {
 
 export function generate(seed = 1) {
   world.fill(0);
+  for (let cx = 0; cx < NC; cx++) for (let cz = 0; cz < NC; cz++) addDirty(cx, cz);
   const rnd = mulberry(seed);
   for (let x = 0; x < N; x++) for (let z = 0; z < N; z++) {
     const h = heightAt(x, z);
     for (let y = 0; y <= h; y++) set(x, y, z, y === h ? 1 : y >= h - 2 ? 2 : 3);
   }
-  for (let i = 0; i < 28; i++) {
+  for (let i = 0; i < 40; i++) {
     const x = 3 + Math.floor(rnd() * (N - 6)), z = 3 + Math.floor(rnd() * (N - 6));
     if (Math.abs(x - N / 2) < 3 && Math.abs(z - N / 2) < 3) continue;
     const h = heightAt(x, z);
@@ -52,22 +74,94 @@ export function generate(seed = 1) {
   }
 }
 
-// ---- Çizim ----
-const meshes = {};
-const MAXI = 9000;
-const dummy = new THREE.Object3D();
-const col = new THREE.Color();
-let hl;
+// ---- Dokular (atlas) ----
+const TILE_NAMES = ['grassTop', 'grassSide', 'dirt', 'stone', 'woodSide', 'woodTop', 'leaves', 'sand', 'brick', 'snow', 'glass', 'gold'];
+const TI = {};
+TILE_NAMES.forEach((n, i) => TI[n] = i);
+const T = TILE_NAMES.length;
+// [üst, yan, alt]
+const FACE_TILES = {
+  1: [TI.grassTop, TI.grassSide, TI.dirt],
+  2: [TI.dirt, TI.dirt, TI.dirt],
+  3: [TI.stone, TI.stone, TI.stone],
+  4: [TI.woodTop, TI.woodSide, TI.woodTop],
+  5: [TI.leaves, TI.leaves, TI.leaves],
+  6: [TI.sand, TI.sand, TI.sand],
+  7: [TI.brick, TI.brick, TI.brick],
+  8: [TI.snow, TI.snow, TI.snow],
+  9: [TI.glass, TI.glass, TI.glass],
+  10: [TI.gold, TI.gold, TI.gold]
+};
+export const atlas = { tex: null, T };
+export const sideTile = t => FACE_TILES[t][1];
+
+function hash(x, y, s) {
+  let n = Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(s, 1274126177);
+  n = Math.imul(n ^ (n >>> 13), 1274126177);
+  return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
+}
+
+const BASE = {
+  grassTop: [95, 174, 69], grassSide: [139, 90, 43], dirt: [139, 90, 43], stone: [138, 138, 138],
+  woodSide: [107, 68, 35], woodTop: [150, 110, 62], leaves: [47, 125, 50], sand: [230, 214, 144],
+  brick: [181, 73, 58], snow: [245, 245, 245], glass: [159, 216, 232], gold: [255, 215, 0]
+};
+
+function buildAtlas() {
+  const cv = document.createElement('canvas');
+  cv.width = 16 * T; cv.height = 16;
+  const ctx = cv.getContext('2d');
+  TILE_NAMES.forEach((name, i) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      let [r, g, b] = BASE[name];
+      let k = 0.86 + hash(x, y, i) * 0.28;
+      switch (name) {
+        case 'grassSide':
+          if (y < 3 || (y === 3 && hash(x, y, 99) < 0.5)) [r, g, b] = [95, 174, 69];
+          break;
+        case 'stone': if (hash(x, y, 7) < 0.12) k *= 0.7; break;
+        case 'woodSide': if (x % 4 === 0) k *= 0.78; break;
+        case 'woodTop': {
+          const d = Math.max(Math.abs(x - 7.5), Math.abs(y - 7.5));
+          if (Math.floor(d) % 2 === 0) k *= 0.82;
+          break;
+        }
+        case 'leaves': if (hash(x, y, 5) < 0.25) k *= 0.65; break;
+        case 'brick': {
+          const row = Math.floor(y / 4);
+          if (y % 4 === 3 || x % 8 === (row % 2 ? 3 : 7)) { [r, g, b] = [200, 195, 185]; k = 0.95 + hash(x, y, 3) * 0.1; }
+          break;
+        }
+        case 'glass':
+          if (x === 0 || y === 0 || x === 15 || y === 15) [r, g, b] = [230, 245, 250];
+          else if (hash(x, y, 4) < 0.06) k = 1.25;
+          break;
+        case 'gold': if (hash(x, y, 6) < 0.15) k = 1.2; break;
+      }
+      ctx.fillStyle = `rgb(${Math.min(255, r * k) | 0},${Math.min(255, g * k) | 0},${Math.min(255, b * k) | 0})`;
+      ctx.fillRect(i * 16 + x, y, 1, 1);
+    }
+  });
+  const tex = new THREE.CanvasTexture(cv);
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.NearestFilter;
+  tex.generateMipmaps = false;
+  return tex;
+}
+
+// ---- Chunk çizimi ----
+let group, material, hl;
+const chunkMeshes = new Map();
+const AOV = [0.5, 0.68, 0.84, 1.0];
+const ORD_P = [[0, 0], [1, 0], [1, 1], [0, 1]];
+const ORD_N = [[0, 0], [0, 1], [1, 1], [1, 0]];
+const occ = (x, y, z) => get(x, y, z) ? 1 : 0;
 
 export function initRender(scene) {
-  const geo = new THREE.BoxGeometry(1, 1, 1);
-  for (const t in TYPES) {
-    const m = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: TYPES[t].color }), MAXI);
-    m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAXI * 3), 3);
-    m.frustumCulled = false;
-    scene.add(m);
-    meshes[t] = m;
-  }
+  atlas.tex = buildAtlas();
+  material = new THREE.MeshBasicMaterial({ map: atlas.tex, vertexColors: true });
+  group = new THREE.Group();
+  scene.add(group);
   hl = new THREE.LineSegments(
     new THREE.EdgesGeometry(new THREE.BoxGeometry(1.01, 1.01, 1.01)),
     new THREE.LineBasicMaterial({ color: 0x000000 })
@@ -77,31 +171,66 @@ export function initRender(scene) {
   rebuild();
 }
 
-function exposed(x, y, z) {
-  return !get(x + 1, y, z) || !get(x - 1, y, z) || !get(x, y + 1, z) ||
-         !get(x, y - 1, z) || !get(x, y, z + 1) || !get(x, y, z - 1);
+function buildChunk(cx, cz) {
+  const pos = [], uv = [], col = [], ind = [];
+  let vc = 0;
+  const x0 = cx * CS, z0 = cz * CS;
+  for (let y = 0; y < H; y++) for (let lz = 0; lz < CS; lz++) for (let lx = 0; lx < CS; lx++) {
+    const x = x0 + lx, z = z0 + lz, t = get(x, y, z);
+    if (!t) continue;
+    const ft = FACE_TILES[t];
+    for (let a = 0; a < 3; a++) for (let s = -1; s <= 1; s += 2) {
+      const b = [x, y, z]; b[a] += s;
+      if (get(b[0], b[1], b[2])) continue;
+      const tile = a === 1 ? (s > 0 ? ft[0] : ft[2]) : ft[1];
+      const shade = a === 1 ? (s > 0 ? 1 : 0.55) : a === 0 ? 0.82 : 0.68;
+      const u = (a + 1) % 3, v = (a + 2) % 3;
+      const order = s > 0 ? ORD_P : ORD_N;
+      const aoS = [];
+      for (let k = 0; k < 4; k++) {
+        const cu = order[k][0], cv = order[k][1];
+        const p = [x, y, z];
+        if (s > 0) p[a] += 1;
+        p[u] += cu; p[v] += cv;
+        const du = cu ? 1 : -1, dv = cv ? 1 : -1;
+        const q1 = [b[0], b[1], b[2]]; q1[u] += du;
+        const q2 = [b[0], b[1], b[2]]; q2[v] += dv;
+        const q3 = [b[0], b[1], b[2]]; q3[u] += du; q3[v] += dv;
+        const s1 = occ(q1[0], q1[1], q1[2]), s2 = occ(q2[0], q2[1], q2[2]), s3 = occ(q3[0], q3[1], q3[2]);
+        const ao = (s1 && s2) ? 0 : 3 - (s1 + s2 + s3);
+        aoS.push(ao);
+        const br = AOV[ao] * shade;
+        pos.push(p[0], p[1], p[2]);
+        col.push(br, br, br);
+        const tu = a === 0 ? cv : cu, tv = a === 0 ? cu : cv;
+        uv.push((tile + 0.02 + tu * 0.96) / T, 0.02 + tv * 0.96);
+      }
+      if (aoS[0] + aoS[2] >= aoS[1] + aoS[3]) ind.push(vc, vc + 1, vc + 2, vc, vc + 2, vc + 3);
+      else ind.push(vc + 1, vc + 2, vc + 3, vc + 1, vc + 3, vc);
+      vc += 4;
+    }
+  }
+  const key = cz * NC + cx;
+  let mesh = chunkMeshes.get(key);
+  if (!vc) {
+    if (mesh) { group.remove(mesh); mesh.geometry.dispose(); chunkMeshes.delete(key); }
+    return;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setIndex(ind);
+  g.computeBoundingSphere();
+  if (mesh) { mesh.geometry.dispose(); mesh.geometry = g; }
+  else { mesh = new THREE.Mesh(g, material); group.add(mesh); chunkMeshes.set(key, mesh); }
 }
 
+// Değişen chunk'ları yeniden çizer (boşsa hiçbir şey yapmaz)
 export function rebuild() {
-  const c = {};
-  for (const t in TYPES) c[t] = 0;
-  for (let y = 0; y < H; y++) for (let z = 0; z < N; z++) for (let x = 0; x < N; x++) {
-    const t = get(x, y, z);
-    if (!t || !meshes[t] || !exposed(x, y, z) || c[t] >= MAXI) continue;
-    dummy.position.set(x + 0.5, y + 0.5, z + 0.5);
-    dummy.updateMatrix();
-    const m = meshes[t], i = c[t]++;
-    m.setMatrixAt(i, dummy.matrix);
-    const v = 0.88 + ((x * 7 + y * 13 + z * 17) % 5) * 0.03;
-    col.setRGB(v, v, v);
-    m.setColorAt(i, col);
-  }
-  for (const t in meshes) {
-    const m = meshes[t];
-    m.count = c[t];
-    m.instanceMatrix.needsUpdate = true;
-    m.instanceColor.needsUpdate = true;
-  }
+  if (!group || !dirty.size) return;
+  for (const k of dirty) buildChunk(k % NC, Math.floor(k / NC));
+  dirty.clear();
 }
 
 // ---- Hedef bulma ----
@@ -117,11 +246,11 @@ export function updateTarget(camera) {
     if (x === lx && y === ly && z === lz) continue;
     if (get(x, y, z)) {
       target = [x, y, z];
-      prev = lx < 0 ? null : [lx, ly, lz];
+      prev = (lx === -1 && ly === -1 && lz === -1) ? null : [lx, ly, lz];
       break;
     }
     lx = x; ly = y; lz = z;
   }
   hl.visible = !!target;
   if (target) hl.position.set(target[0] + 0.5, target[1] + 0.5, target[2] + 0.5);
-}
+    }
