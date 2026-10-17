@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Ticarium 3D</title>
-<link rel="stylesheet" href="css/style.css?v=13">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link rel="stylesheet" href="css/style.css?v=14">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
 <div id="flash"></div>
@@ -45,6 +45,9 @@
     </div>
     <div id="sCreate">
       <input id="cName" maxlength="24" placeholder="Oda adı">
+      <label class="chk">Dünya
+        <select id="cWorld" style="flex:1;min-width:0"><option value="random">🎲 Rastgele yeni dünya</option></select>
+      </label>
       <label class="chk"><input type="checkbox" id="cPublic" checked> Herkese açık (listede görünsün)</label>
       <label class="chk"><input type="checkbox" id="cPvp"> PVP açık (oyuncular birbirine vurabilir)</label>
       <label class="chk"><input type="checkbox" id="cKeep"> Envanteri koru (ölünce eşyalar düşmez)</label>
@@ -94,13 +97,13 @@ window.addEventListener('unhandledrejection', function (e) {
 
 var ids = ['flash','coord','coins','roomInfo','msg','hearts','hotbar','look','joy','joyBase','joyKnob','bJump','bBreak','bPlace',
   'bAttack','bMarket','bPlayers','bLeave','bSettings','market','panel','settings','setBox','players','plBox','menu','nameIn',
-  'mSoloCont','mCreate','mList','mJoin','mMine','mSolo','cName','cPublic','cPvp','cKeep','cMax','cDo','sMain','sCreate','sList',
-  'sJoin','sMine','roomList','mineList','jCode','jDo','mErr'];
+  'mSoloCont','mCreate','mList','mJoin','mMine','mSolo','cName','cWorld','cPublic','cPvp','cKeep','cMax','cDo','sMain','sCreate',
+  'sList','sJoin','sMine','roomList','mineList','jCode','jDo','mErr'];
 var missing = ids.filter(function (i) { return !document.getElementById(i); });
 if (missing.length) {
   showErr('index.html eski, eksik elemanlar: ' + missing.join(', '));
 } else {
-  import('./js/main.js?v=13').catch(function (e) {
+  import('./js/main.js?v=14').catch(function (e) {
     showErr('Yükleme hatası (bir js dosyası eski ya da eksik olabilir): ' + (e.message || e));
   });
 }
