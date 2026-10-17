@@ -1,15 +1,21 @@
 import { db, uid, ref, set, update, onValue } from './firebase.js';
 import { onChildAdded, onChildChanged, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-import { set as setBlock, rebuild, TYPES } from './world.js';
+import { get as getBlock, set as setBlock, rebuild, TYPES } from './world.js';
 import { P } from './player.js';
 import { eco, net, clampRaw, priceOf } from './economy.js';
+
+const MAXHP = 20, DMG = 4;
+const pvp = { on: false, hp: MAXHP, max: MAXHP, protectUntil: 0, dead: false, lastAtk: 0 };
 
 let code = null, scene = null, timer = null, dirty = false;
 let unsubs = [];
 let others = {};
 let last = '';
-let onPricesCb = null;
+let cb = {};
+let primed = false, lastHit = {}, lastDied = {}, regen = 0;
 const group = new THREE.Group();
+
+export const isDead = () => pvp.dead;
 
 function scheduleRebuild() {
   if (dirty) return;
@@ -39,7 +45,6 @@ function makeAvatar(name, id) {
   const m = new THREE.Group();
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.35), new THREE.MeshLambertMaterial({ color }));
   body.position.y = 0.85;
-  // Kafa ayrı grup: yukarı/aşağı eğilir
   const headG = new THREE.Group();
   headG.position.y = 1.55;
   const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), new THREE.MeshLambertMaterial({ color: 0xf1c27d }));
@@ -52,12 +57,43 @@ function makeAvatar(name, id) {
   return m;
 }
 
-// opts: { isOwner, onPrices }
+function damage(d, byId, byName) {
+  if (!pvp.on || pvp.dead || Date.now() < pvp.protectUntil) return;
+  pvp.hp = Math.max(0, pvp.hp - d);
+  if (cb.onHp) cb.onHp(pvp.hp, pvp.max);
+  if (cb.onHurt) cb.onHurt();
+  if (pvp.hp <= 0) {
+    pvp.dead = true;
+    const c = code;
+    update(ref(db, `rooms/${c}/players/${uid}`), { died: { by: byId, n: Date.now() } }).catch(() => {});
+    setTimeout(() => {
+      if (code !== c) return;
+      pvp.hp = pvp.max; pvp.dead = false;
+      pvp.protectUntil = Date.now() + 3000;
+      last = '';
+      if (cb.onHp) cb.onHp(pvp.hp, pvp.max);
+      if (cb.onDie) cb.onDie(byName);
+    }, 2000);
+  }
+}
+
+// opts: { isOwner, pvp, onPrices, onMeta, onHp, onHurt, onDie, onKill }
 export function startOnline(sc, roomCode, opts = {}) {
   stopOnline();
-  scene = sc; code = roomCode;
-  onPricesCb = opts.onPrices || null;
+  scene = sc; code = roomCode; cb = opts;
+  pvp.on = !!opts.pvp; pvp.hp = pvp.max; pvp.dead = false; pvp.protectUntil = 0;
+  primed = false; lastHit = {}; lastDied = {}; regen = 0;
   scene.add(group);
+
+  // Oda ayarları (PVP aç/kapa, limit)
+  unsubs.push(onValue(ref(db, `rooms/${code}/meta`), snap => {
+    const m = snap.val();
+    if (!m) return;
+    if (!pvp.on && m.pvp) pvp.hp = pvp.max;
+    pvp.on = !!m.pvp;
+    if (cb.onMeta) cb.onMeta({ pvp: pvp.on, max: m.max || 8 });
+    if (cb.onHp) cb.onHp(pvp.hp, pvp.max);
+  }));
 
   // Bloklar
   const bref = ref(db, `rooms/${code}/blocks`);
@@ -94,10 +130,10 @@ export function startOnline(sc, roomCode, opts = {}) {
       eco.raw[t] = nv;
       eco.trend[t] = priceOf(t) - old;
     }
-    if (onPricesCb) onPricesCb();
+    if (cb.onPrices) cb.onPrices();
   }));
 
-  // Diğer oyuncular
+  // Diğer oyuncular + vuruşlar
   unsubs.push(onValue(ref(db, `rooms/${code}/players`), snap => {
     const seen = {};
     snap.forEach(ch => {
@@ -113,8 +149,17 @@ export function startOnline(sc, roomCode, opts = {}) {
         o.tx = v.x; o.ty = v.y; o.tz = v.z; o.tyaw = v.yaw || 0; o.tpitch = v.pitch || 0;
         if (!o.init) { o.mesh.position.set(v.x, v.y, v.z); o.init = true; o.mesh.visible = true; }
       }
+      if (v.hit && v.hit.to === uid && lastHit[ch.key] !== v.hit.n && primed) {
+        damage(v.hit.d || DMG, ch.key, v.name || '?');
+      }
+      if (v.hit) lastHit[ch.key] = v.hit.n;
+      if (v.died && v.died.by === uid && lastDied[ch.key] !== v.died.n && primed) {
+        if (cb.onKill) cb.onKill(v.name || '?');
+      }
+      if (v.died) lastDied[ch.key] = v.died.n;
     });
     for (const k in others) if (!seen[k]) { group.remove(others[k].mesh); delete others[k]; }
+    primed = true;
   }));
 
   timer = setInterval(sendPos, 100);
@@ -135,6 +180,37 @@ export function sendBlock(x, y, z, t) {
   set(ref(db, `rooms/${code}/blocks/${x}_${y}_${z}`), t).catch(() => {});
 }
 
+// Nişan alınan oyuncuya vur. Dönen yazı ekranda gösterilir.
+export function attack() {
+  if (!code || !pvp.on) return 'PVP kapalı';
+  if (pvp.dead) return '';
+  const now = Date.now();
+  if (now - pvp.lastAtk < 450) return '';
+  pvp.lastAtk = now;
+
+  const ex = P.x, ey = P.y + 1.6, ez = P.z;
+  const cp = Math.cos(P.pitch);
+  const dx = -Math.sin(P.yaw) * cp, dy = Math.sin(P.pitch), dz = -Math.cos(P.yaw) * cp;
+  let best = null, bt = 99;
+  for (const id in others) {
+    const o = others[id];
+    if (!o.init) continue;
+    const vx = o.mesh.position.x - ex, vy = o.mesh.position.y + 1.0 - ey, vz = o.mesh.position.z - ez;
+    const t = vx * dx + vy * dy + vz * dz;
+    if (t < 0.2 || t > 4.5) continue;
+    if (Math.hypot(vx - dx * t, vy - dy * t, vz - dz * t) > 0.7) continue;
+    let blocked = false;
+    for (let s = 0.3; s < t; s += 0.25) {
+      if (getBlock(Math.floor(ex + dx * s), Math.floor(ey + dy * s), Math.floor(ez + dz * s))) { blocked = true; break; }
+    }
+    if (blocked) continue;
+    if (t < bt) { bt = t; best = id; }
+  }
+  if (!best) return 'Iskaladın';
+  update(ref(db, `rooms/${code}/players/${uid}`), { hit: { to: best, n: now, d: DMG } }).catch(() => {});
+  return 'Vurdun!';
+}
+
 export function updateOthers(dt) {
   const k = Math.min(1, dt * 10);
   for (const id in others) {
@@ -148,6 +224,13 @@ export function updateOthers(dt) {
     const hd = o.mesh.userData.head;
     hd.rotation.x += (o.tpitch - hd.rotation.x) * k;
   }
+  if (pvp.on && !pvp.dead && pvp.hp < pvp.max) {
+    regen += dt;
+    if (regen >= 6) {
+      regen = 0; pvp.hp++;
+      if (cb.onHp) cb.onHp(pvp.hp, pvp.max);
+    }
+  }
 }
 
 export function stopOnline() {
@@ -159,5 +242,7 @@ export function stopOnline() {
   others = {};
   if (scene) scene.remove(group);
   net.active = false; net.owner = false; net.trade = null; net.setPrice = null;
+  pvp.on = false; pvp.dead = false;
+  cb = {};
   code = null; last = '';
 }
