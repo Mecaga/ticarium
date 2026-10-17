@@ -4,7 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Ticarium 3D</title>
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=9">
+<script type="importmap">
+{
+  "imports": {
+    "./js/main.js": "./js/main.js?v=9",
+    "./js/world.js": "./js/world.js?v=9",
+    "./js/player.js": "./js/player.js?v=9",
+    "./js/input.js": "./js/input.js?v=9",
+    "./js/economy.js": "./js/economy.js?v=9",
+    "./js/ui.js": "./js/ui.js?v=9",
+    "./js/bag.js": "./js/bag.js?v=9",
+    "./js/menu.js": "./js/menu.js?v=9",
+    "./js/rooms.js": "./js/rooms.js?v=9",
+    "./js/online.js": "./js/online.js?v=9",
+    "./js/firebase.js": "./js/firebase.js?v=9"
+  }
+}
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
@@ -53,6 +70,7 @@
 </div>
 
 <script type="module">
+const V = 9;
 function showErr(t) {
   const d = document.createElement('div');
   d.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#b3261e;color:#fff;padding:10px;font-size:12px;z-index:99;word-break:break-all';
@@ -62,7 +80,30 @@ function showErr(t) {
 }
 addEventListener('error', e => showErr((e.message || 'Hata') + ' ' + (e.filename || '') + ':' + (e.lineno || '')));
 addEventListener('unhandledrejection', e => showErr(String(e.reason && (e.reason.message || e.reason))));
-import('./js/main.js').catch(e => showErr('Yükleme hatası: ' + (e.message || e)));
+
+// Dosya kontrolü: hangisi eski ya da eksik?
+const need = {
+  world: ['TYPES', 'generate'],
+  economy: ['resetEco', 'net'],
+  ui: ['hooks', 'drawHud'],
+  bag: ['toggleBag'],
+  online: ['startOnline'],
+  rooms: ['createRoom'],
+  menu: ['initMenu']
+};
+const bad = [];
+for (const k in need) {
+  try {
+    const m = await import('./js/' + k + '.js');
+    const miss = need[k].filter(n => !(n in m));
+    if (miss.length) bad.push(k + '.js ESKİ (eksik: ' + miss.join(',') + ')');
+    if (k === 'world' && Object.keys(m.TYPES).length !== 10) bad.push('world.js ESKİ (10 blok yok)');
+  } catch (e) {
+    bad.push(k + '.js yüklenemedi: ' + (e.message || e));
+  }
+}
+if (bad.length) showErr('Güncellenecek dosyalar: ' + bad.join(' | '));
+else import('./js/main.js').catch(e => showErr('main.js: ' + (e.message || e)));
 </script>
 </body>
 </html>
