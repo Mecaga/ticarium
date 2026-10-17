@@ -27,7 +27,6 @@ async function enterRoom(code, meta, playerName) {
     });
     await set(cur.pubRef, pubObj());
     cur.beat = setInterval(() => { set(cur.pubRef, pubObj()).catch(() => {}); }, 30000);
-    // Oyuncu sayısı değişince listedeki kaydı güncelle
     cur.offCount = onValue(ref(db, `rooms/${code}/players`), s => {
       cur.cnt = s.size;
       update(cur.pubRef, { count: cur.cnt, updated: Date.now() }).catch(() => {});
@@ -40,7 +39,18 @@ async function enterRoom(code, meta, playerName) {
   };
 }
 
-export async function createRoom({ name, isPublic, playerName, pvp, maxPlayers, keep }) {
+// Kayıtlı dünyayı yeni odaya kopyalar (300'lük paketlerle)
+async function copyBlocks(code, blocks) {
+  const keys = Object.keys(blocks);
+  for (let i = 0; i < keys.length; i += 300) {
+    const part = {};
+    for (const k of keys.slice(i, i + 300)) part[k] = Number(blocks[k]) || 0;
+    await update(ref(db, `rooms/${code}/blocks`), part);
+  }
+}
+
+// source: { type:'random' } | { type:'solo', seed, changes } | { type:'room', code }
+export async function createRoom({ name, isPublic, playerName, pvp, maxPlayers, keep, source }) {
   await ready();
   let code = null;
   for (let i = 0; i < 6; i++) {
@@ -49,12 +59,27 @@ export async function createRoom({ name, isPublic, playerName, pvp, maxPlayers, 
     if (!s.exists()) { code = c; break; }
   }
   if (!code) throw new Error('Kod üretilemedi, tekrar dene');
+
+  let seed = Math.floor(Math.random() * 1e9) + 1;
+  let blocks = null;
+  if (source && source.type === 'solo') {
+    seed = source.seed;
+    blocks = source.changes || {};
+  } else if (source && source.type === 'room') {
+    const m = await get(ref(db, `rooms/${source.code}/meta`));
+    if (!m.exists() || m.val().owner !== myUid) throw new Error('Kaynak oda bulunamadı');
+    seed = m.val().seed;
+    const b = await get(ref(db, `rooms/${source.code}/blocks`));
+    blocks = b.exists() ? b.val() : {};
+  }
+
   const meta = {
     owner: myUid, name, public: !!isPublic,
-    seed: Math.floor(Math.random() * 1e9), created: Date.now(),
+    seed, created: Date.now(),
     pvp: !!pvp, max: maxPlayers || 8, keep: !!keep
   };
   await set(ref(db, `rooms/${code}/meta`), meta);
+  if (blocks) await copyBlocks(code, blocks);
   return enterRoom(code, meta, playerName);
 }
 
@@ -72,6 +97,21 @@ export async function joinRoom(codeRaw, playerName) {
     if (n >= (meta.max || 8)) throw new Error('Oda dolu (' + (meta.max || 8) + ' kişilik)');
   }
   return enterRoom(code, meta, playerName);
+}
+
+// Yerel listedeki odaların gerçekten sana ait olup olmadığını kontrol eder
+export async function checkOwned(list) {
+  await ready();
+  return Promise.all(list.map(async m => {
+    try {
+      const s = await get(ref(db, `rooms/${m.code}/meta`));
+      if (!s.exists()) return { code: m.code, name: m.name, status: 'gone' };
+      const v = s.val();
+      return { code: m.code, name: v.name || m.name, status: v.owner === myUid ? 'own' : 'other' };
+    } catch (e) {
+      return { code: m.code, name: m.name, status: 'err' };
+    }
+  }));
 }
 
 export async function updateSettings(patch) {
