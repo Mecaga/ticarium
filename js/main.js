@@ -1,4 +1,4 @@
-import { get, set, generate, initRender, rebuild, updateTarget, target, prev, TYPES, heightAt, N, H, inBounds, BEDROCK } from './world.js';
+import { get, set, generate, initRender, rebuild, updateTarget, target, prev, TYPES, heightAt, N, H, inBounds, BEDROCK, SAPLING, planTree } from './world.js';
 import { P, collides, updatePlayer, jump, pHooks } from './player.js';
 import { eco, resetEco, startPriceTicker } from './economy.js';
 import { initInput } from './input.js';
@@ -7,8 +7,12 @@ import { toggleBag, isBagOpen } from './bag.js';
 import { initMenu, showMenu, isMenuOpen, leaveToMenu } from './menu.js';
 import { initItems, updateItems, clearItems, dropItems, dropFromInventory, hooks as itemHooks } from './items.js';
 import { hhooks, hurt, killNow, respawnHealth, resetHealth, tickHealth, isDead } from './health.js';
+import { initSky, updateSky } from './sky.js';
+import { initMobs, spawnCows, updateMobs, clearMobs } from './mobs.js';
+import { saveSolo, loadSolo, clearSolo } from './save.js';
 
 const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // Sahne
 const scene = new THREE.Scene();
@@ -21,9 +25,9 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 document.body.prepend(renderer.domElement);
 scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-const sun = new THREE.DirectionalLight(0xffffff, 0.5);
-sun.position.set(0.5, 1, 0.3);
-scene.add(sun);
+const sunL = new THREE.DirectionalLight(0xffffff, 0.55);
+sunL.position.set(0.5, 0.75, 0.4);
+scene.add(sunL);
 
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
@@ -32,17 +36,15 @@ addEventListener('resize', () => {
 });
 
 let online = null;
-let room = null;           // { code, name, isOwner, pvp, max, keep, solo }
-let settingsOpen = false;
+let room = null;           // { code, name, isOwner, pvp, max, keep, count, solo, seed, playerName }
+let settingsOpen = false, playersOpen = false, plTimer = null;
 let deathTimer = null;
+let soloChanges = {};
+const saplings = new Map();
 
-// Pazar kapalıysa ilgili arayüzü gizle
 if (!MARKET_ON) {
   $('bMarket').style.display = 'none';
   $('coins').style.display = 'none';
-  $('bLeave').style.top = '8px';
-  $('bSettings').style.top = '52px';
-  $('roomInfo').style.top = '8px';
 }
 
 // Bırak butonu
@@ -63,6 +65,7 @@ addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || isMenuOpen()) return;
   if (e.code === 'KeyB') toggleBag();
   if (e.code === 'KeyF') attack();
+  if (e.code === 'KeyP') togglePlayers();
   if (e.code === 'KeyQ' && !isDead()) dropFromInventory(eco.sel, 1);
 });
 
@@ -72,14 +75,23 @@ function drawHearts(cur, max) {
   $('hearts').textContent = '❤️'.repeat(full) + '🖤'.repeat(Math.max(0, tot - full));
 }
 
+function updateInfo() {
+  if (!room) { $('roomInfo').textContent = ''; return; }
+  if (room.solo) { $('roomInfo').textContent = 'Tek oyunculu · 💾'; return; }
+  $('roomInfo').textContent = 'Oda: ' + room.code + ' · ' + room.name + ' · 👥 ' + room.count + '/' + room.max +
+    (room.pvp ? ' · ⚔️' : '') + (room.keep ? ' · 🎒' : '');
+  $('bPlayers').textContent = '👥 ' + room.count + '/' + room.max;
+}
+
 function applyRoomUI() {
   const on = !!(room && !room.solo);
-  const pv = on && room.pvp;
-  $('bAttack').style.display = pv ? 'flex' : 'none';
+  $('bAttack').style.display = (on && room.pvp) ? 'flex' : 'none';
   $('hearts').style.display = room ? 'block' : 'none';
-  $('bSettings').style.display = (on && room.isOwner) ? 'flex' : 'none';
-  $('roomInfo').textContent = !room ? '' : room.solo ? 'Tek oyunculu'
-    : 'Oda: ' + room.code + ' · ' + room.name + (pv ? ' · ⚔️' : '') + (room.keep ? ' · 🎒' : '');
+  $('bSettings').style.display = room ? 'flex' : 'none';
+  $('bPlayers').style.display = on ? 'flex' : 'none';
+  $('bLeave').style.display = room ? 'flex' : 'none';
+  $('coord').style.display = room ? 'block' : 'none';
+  updateInfo();
 }
 
 function flash() {
@@ -88,20 +100,35 @@ function flash() {
   setTimeout(() => f.style.opacity = 0, 160);
 }
 
+// ---------- Ayarlar ----------
 function drawSettings() {
   const on = (v, id) => `<button id="${id}" class="${v ? 'sell' : 'buy'}">${v ? 'Açık' : 'Kapalı'}</button>`;
-  const maxBtns = [2, 4, 6, 8, 10].map(n =>
-    `<button data-m="${n}" class="${room.max === n ? 'sell' : 'buy'}">${n}</button>`).join('');
-  $('setBox').innerHTML = `<h2>⚙️ Oda ayarları</h2><small>Oda kodu: ${room.code}</small>
-    <div class="row"><div class="n">PVP<small>Oyuncular birbirine vurabilir</small></div>${on(room.pvp, 'setPvp')}</div>
-    <div class="row"><div class="n">Envanteri koru<small>Ölünce eşyalar düşmez</small></div>${on(room.keep, 'setKeep')}</div>
-    <div class="row"><div class="n">Oyuncu limiti<small>Yeni girişlerde geçerli</small></div>
-      <div id="setMax">${maxBtns}</div></div>
-    <button class="closeBtn">Kapat</button>`;
+  const flag = v => v ? 'Açık' : 'Kapalı';
+  let h = '<h2>⚙️ Ayarlar</h2>';
+  if (room.solo) {
+    h += '<small>Tek oyunculu dünya</small>';
+  } else {
+    h += `<small>Oda kodu: ${esc(room.code)} · ${room.count}/${room.max} kişilik</small>`;
+    if (room.isOwner) {
+      const maxBtns = [2, 4, 6, 8, 10].map(n =>
+        `<button data-m="${n}" class="${room.max === n ? 'sell' : 'buy'}">${n}</button>`).join('');
+      h += `<div class="row"><div class="n">PVP<small>Oyuncular birbirine vurabilir</small></div>${on(room.pvp, 'setPvp')}</div>
+        <div class="row"><div class="n">Envanteri koru<small>Ölünce eşyalar düşmez</small></div>${on(room.keep, 'setKeep')}</div>
+        <div class="row"><div class="n">Oyuncu limiti<small>Yeni girişlerde geçerli</small></div><div id="setMax">${maxBtns}</div></div>`;
+    } else {
+      h += `<div class="row"><div class="n">Oda kuralları<small>PVP: ${flag(room.pvp)} · Envanteri koru: ${flag(room.keep)} · Limit: ${room.max}</small></div></div>`;
+    }
+  }
+  h += `<div class="row"><div class="n">Kaydet<small>Otomatik: 15 sn'de bir</small></div><button id="setSave" class="buy">💾 Kaydet</button></div>`;
+  if (room.solo) {
+    h += `<div class="row"><div class="n">Dünyayı sil<small>Kayıt kalıcı silinir</small></div><button id="setDel" style="background:#b3261e">🗑 Sil</button></div>`;
+  }
+  h += '<button class="closeBtn">Kapat</button>';
+  $('setBox').innerHTML = h;
 }
 
 function toggleSettings() {
-  if (!room || room.solo || !room.isOwner) return;
+  if (!room) return;
   settingsOpen = !settingsOpen;
   $('settings').style.display = settingsOpen ? 'flex' : 'none';
   if (settingsOpen) drawSettings();
@@ -111,6 +138,16 @@ $('setBox').addEventListener('click', async e => {
   const b = e.target.closest('button');
   if (!b || !room) return;
   if (b.classList.contains('closeBtn')) return toggleSettings();
+  if (b.id === 'setSave') return autosave(true);
+  if (b.id === 'setDel') {
+    if (confirm('Dünya kalıcı olarak silinecek. Emin misin?')) {
+      clearSolo();
+      soloChanges = {};
+      room.noSave = true;
+      leave();
+    }
+    return;
+  }
   try {
     const r = await import('./rooms.js');
     if (b.id === 'setPvp') await r.updateSettings({ pvp: !room.pvp });
@@ -119,11 +156,71 @@ $('setBox').addEventListener('click', async e => {
   } catch (err) { toast('Ayar kaydedilemedi'); }
 });
 
+// ---------- Oyuncular ----------
+function drawPlayers() {
+  if (!online || !room || room.solo) return;
+  const list = online.getPlayers(room.playerName || 'Sen')
+    .sort((a, b) => (b.me ? 1 : 0) - (a.me ? 1 : 0) || a.dist - b.dist);
+  let h = `<h2>👥 Oyuncular (${list.length}/${room.max})</h2>`;
+  for (const p of list) {
+    h += `<div class="row"><div class="n">${p.owner ? '👑 ' : ''}${esc(p.name)}${p.me ? ' (sen)' : ''}
+      <small>${p.dead ? '💀 öldü' : '❤️ hayatta'}${p.me ? '' : ' · ' + Math.round(p.dist) + ' blok uzakta'}</small></div></div>`;
+  }
+  h += '<button class="closeBtn">Kapat</button>';
+  $('plBox').innerHTML = h;
+}
+
+function togglePlayers() {
+  if (!room || room.solo) return;
+  playersOpen = !playersOpen;
+  $('players').style.display = playersOpen ? 'flex' : 'none';
+  clearInterval(plTimer);
+  if (playersOpen) { drawPlayers(); plTimer = setInterval(drawPlayers, 1000); }
+}
+$('plBox').addEventListener('click', e => {
+  if (e.target.closest('.closeBtn')) togglePlayers();
+});
+
+function closePanels() {
+  settingsOpen = false; $('settings').style.display = 'none';
+  playersOpen = false; $('players').style.display = 'none';
+  clearInterval(plTimer);
+}
+
 function bindBtn(id, fn) {
   const el = $(id);
   el.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); fn(); }, { passive: false });
   el.addEventListener('mousedown', e => { e.stopPropagation(); fn(); });
 }
+
+// ---------- Fidanlar ----------
+function recordChange(x, y, z, t) {
+  if (room && room.solo) soloChanges[x + '_' + y + '_' + z] = t;
+}
+
+function trackSapling(x, y, z) {
+  if (room && !room.solo && !room.isOwner) return; // odada büyütmeyi oda sahibi yapar
+  saplings.set(x + '_' + y + '_' + z, { x, y, z, at: Date.now() + 45000 + Math.random() * 45000 });
+}
+
+function growSaplings() {
+  if (!room) return;
+  const now = Date.now();
+  for (const [k, s] of saplings) {
+    if (get(s.x, s.y, s.z) !== SAPLING || !get(s.x, s.y - 1, s.z)) { saplings.delete(k); continue; }
+    if (now < s.at) continue;
+    const plan = planTree(s.x, s.y, s.z, Math.random() < 0.35);
+    if (!plan) { s.at = now + 20000; continue; }
+    saplings.delete(k);
+    for (const b of plan) {
+      set(b.x, b.y, b.z, b.t);
+      recordChange(b.x, b.y, b.z, b.t);
+      if (online) online.sendBlock(b.x, b.y, b.z, b.t);
+    }
+    rebuild();
+  }
+}
+setInterval(growSaplings, 2000);
 
 // ---------- Eylemler ----------
 function breakBlock() {
@@ -132,20 +229,31 @@ function breakBlock() {
   const t = get(x, y, z);
   if (t === BEDROCK) return toast('Katman kayası kırılamaz');
   set(x, y, z, 0);
+  recordChange(x, y, z, 0);
   eco.inv[t]++;
+  if ((t === 5 || t === 14) && Math.random() < 0.25) {
+    eco.inv[SAPLING]++;
+    toast('🌱 Fidan buldun!');
+  }
   if (online) online.sendBlock(x, y, z, 0);
   rebuild(); drawHud();
 }
 
 function placeBlock() {
   if (isDead() || !prev) return;
-  if (eco.inv[eco.sel] < 1) return toast(TYPES[eco.sel].name + ' yok.');
+  const t = eco.sel;
+  if (eco.inv[t] < 1) return toast(TYPES[t].name + ' yok.');
   const [x, y, z] = prev;
   if (!inBounds(x, y, z)) return toast(y >= H ? 'Yükseklik sınırı (' + H + ')' : 'Dünya sınırı');
-  set(x, y, z, eco.sel);
+  if (t === SAPLING && ![1, 2, 6, 8].includes(get(x, y - 1, z))) {
+    return toast('Fidan çimene, toprağa, kuma ya da kara dikilir');
+  }
+  set(x, y, z, t);
   if (collides(P.x, P.y, P.z)) { set(x, y, z, 0); return; }
-  if (online) online.sendBlock(x, y, z, eco.sel);
-  eco.inv[eco.sel]--;
+  recordChange(x, y, z, t);
+  if (online) online.sendBlock(x, y, z, t);
+  if (t === SAPLING) trackSapling(x, y, z);
+  eco.inv[t]--;
   rebuild(); drawHud();
 }
 
@@ -176,7 +284,6 @@ function scatter(px, py, pz) {
   return total;
 }
 
-// true döner: eşya kaybedildi
 function loseOnDeath(px, py, pz) {
   if (room && !room.solo && room.keep) return false;
   return scatter(px, py, pz) > 0;
@@ -185,6 +292,7 @@ function loseOnDeath(px, py, pz) {
 function toSpawn() {
   P.x = N / 2 + 0.5; P.z = N / 2 + 0.5;
   P.y = heightAt(N / 2, N / 2) + 2; P.vy = 0; P.ground = false;
+  P.kx = 0; P.kz = 0;
   P.sx = P.x; P.sy = P.y; P.sz = P.z; P.fallY = P.y;
 }
 
@@ -201,6 +309,7 @@ hhooks.onDeath = src => {
   const why = src.name ? src.name + ' seni yendi' : src.void ? 'Boşluğa düştün' : 'Çok yüksekten düştün';
   toast(why + ' 💀' + (lost ? ' Eşyaların düştü' : ''));
   if (online) online.reportDeath(src.id || '');
+  autosave(false, true); // ölünce envanteri hemen kaydet (eşya kopyalanmasın)
   deathEl.style.opacity = 1;
   deathTimer = setTimeout(() => {
     deathTimer = null;
@@ -214,24 +323,85 @@ hhooks.onDeath = src => {
 
 pHooks.onFall = d => { if (d > 0) hurt(d, { fall: true }); };
 
+// ---------- Kayıt ----------
+function snapshotState() {
+  const inv = {};
+  for (const t in TYPES) inv['t' + t] = eco.inv[t] || 0;
+  const r = n => +n.toFixed(2);
+  return { inv, hotbar: eco.hotbar.slice(), hsel: eco.hsel, x: r(P.x), y: r(P.y), z: r(P.z), yaw: r(P.yaw), pitch: r(P.pitch), t: Date.now() };
+}
+
+function applyState(s) {
+  if (!s) return;
+  if (s.inv) for (const t in TYPES) { const v = +s.inv['t' + t]; if (v > 0) eco.inv[t] = Math.floor(v); }
+  if (Array.isArray(s.hotbar) && s.hotbar.length === eco.hotbar.length && s.hotbar.every(t => TYPES[t])) {
+    eco.hotbar = s.hotbar.map(Number);
+  }
+  eco.hsel = Math.min(Math.max(0, s.hsel | 0), eco.hotbar.length - 1);
+  eco.sel = eco.hotbar[eco.hsel];
+  if (typeof s.x === 'number' && inBounds(Math.floor(s.x), Math.floor(s.y), Math.floor(s.z)) && !collides(s.x, s.y, s.z)) {
+    P.x = s.x; P.y = s.y; P.z = s.z; P.vy = 0; P.kx = 0; P.kz = 0;
+    P.yaw = s.yaw || 0; P.pitch = s.pitch || 0;
+    P.sx = P.x; P.sy = P.y; P.sz = P.z; P.fallY = P.y;
+  }
+  drawHud();
+}
+
+function autosave(manual, force) {
+  if (!room || room.noSave) return;
+  if (isDead() && !force) return;
+  const st = snapshotState();
+  if (room.solo) {
+    st.seed = room.seed;
+    st.changes = soloChanges;
+    const ok = saveSolo(st);
+    if (manual) toast(ok ? '💾 Kaydedildi' : 'Kaydedilemedi (depolama dolu)');
+  } else if (online) {
+    online.saveProgress(st);
+    if (manual) toast('💾 Kaydedildi (dünya otomatik kayıtlı)');
+  }
+}
+setInterval(() => autosave(false), 15000);
+addEventListener('pagehide', () => autosave(false));
+document.addEventListener('visibilitychange', () => { if (document.hidden) autosave(false); });
+
 // ---------- Odaya giriş / çıkış ----------
 function enterGame(info) {
   if (online) { online.stopOnline(); online = null; }
-  clearItems();
-  clearDeath();
+  clearItems(); clearMobs(); clearDeath(); closePanels();
+  saplings.clear(); soloChanges = {};
   itemHooks.push = itemHooks.take = itemHooks.expire = null; itemHooks.myId = '';
-  room = info;
-  generate(info.seed);
-  rebuild();
-  toSpawn();
+  const my = room = { ...info, count: 1, max: info.max || 8 };
   resetEco();
   resetHealth();
+  generate(info.seed);
+
+  let saved = null;
+  if (info.solo) {
+    if (info.resume) {
+      saved = loadSolo();
+      if (saved && saved.changes) {
+        soloChanges = saved.changes;
+        for (const k in soloChanges) {
+          const [x, y, z] = k.split('_').map(Number);
+          set(x, y, z, soloChanges[k]);
+          if (soloChanges[k] === SAPLING) trackSapling(x, y, z);
+        }
+      }
+    } else clearSolo();
+  }
+  rebuild();
+  toSpawn();
+  if (saved) applyState(saved);
   drawHud();
   applyRoomUI();
 
-  if (!info.solo) {
+  if (info.solo) {
+    spawnCows();
+  } else {
     import('./online.js')
       .then(m => {
+        if (room !== my) return;
         online = m;
         m.startOnline(scene, info.code, {
           isOwner: info.isOwner,
@@ -243,22 +413,30 @@ function enterGame(info) {
             applyRoomUI();
             if (settingsOpen) drawSettings();
           },
+          onCount: n => {
+            if (!room) return;
+            room.count = n;
+            updateInfo();
+            if (playersOpen) drawPlayers();
+          },
+          onBlock: (x, y, z, t) => { if (t === SAPLING) trackSapling(x, y, z); },
           onKill: name => {
             if (MARKET_ON) { eco.coins += 15; drawHud(); }
             toast(name + ' yendin!');
           }
         });
+        m.loadProgress().then(s => { if (s && room === my) applyState(s); });
       })
       .catch(e => { $('roomInfo').textContent = 'Online hata: ' + (e.message || e); });
   }
 }
 
 async function leave() {
+  autosave(false);
   if (online) { online.stopOnline(); online = null; }
-  clearItems();
-  clearDeath();
+  clearItems(); clearMobs(); clearDeath(); closePanels();
+  saplings.clear();
   room = null;
-  if (settingsOpen) { settingsOpen = false; $('settings').style.display = 'none'; }
   applyRoomUI();
   await leaveToMenu();
 }
@@ -267,6 +445,8 @@ async function leave() {
 generate(1);
 initRender(scene);
 initItems(scene);
+initMobs(scene);
+initSky(scene);
 
 initInput(renderer.domElement, {
   jump, breakBlock, placeBlock,
@@ -280,6 +460,7 @@ initInput(renderer.domElement, {
 bindBtn('bLeave', leave);
 bindBtn('bAttack', attack);
 bindBtn('bSettings', toggleSettings);
+bindBtn('bPlayers', togglePlayers);
 bindBtn('bDrop', () => { if (!isDead()) dropFromInventory(eco.sel, 1); });
 
 initMenu(enterGame);
@@ -290,20 +471,26 @@ drawHud();
 drawHearts(20, 20);
 
 // ---------- Döngü ----------
-let last = performance.now();
+let last = performance.now(), lastCoord = '';
 function loop(now) {
   requestAnimationFrame(loop);
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  const frozen = isMarketOpen() || isMenuOpen() || isBagOpen() || settingsOpen || isDead();
+  const frozen = isMarketOpen() || isMenuOpen() || isBagOpen() || settingsOpen || playersOpen || isDead();
   updatePlayer(dt, frozen);
   if (!frozen && P.y < -15) killNow({ void: true });
-  if (room) tickHealth(dt);
+  if (room) {
+    tickHealth(dt);
+    updateMobs(dt, room.solo || room.isOwner);
+    const c = 'X ' + Math.floor(P.x) + '  Y ' + Math.floor(P.y) + '  Z ' + Math.floor(P.z);
+    if (c !== lastCoord) { $('coord').textContent = c; lastCoord = c; }
+  }
   if (online) online.updateOthers(dt);
   updateItems(dt, !frozen);
   rebuild();
   camera.position.set(P.x, P.y + 1.6, P.z);
   camera.rotation.set(P.pitch, P.yaw, 0);
+  updateSky(dt, camera);
   updateTarget(camera);
   renderer.render(scene, camera);
 }
