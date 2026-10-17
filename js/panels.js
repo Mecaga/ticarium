@@ -3,6 +3,8 @@ import { toast } from './ui.js';
 import { sfx } from './sound.js';
 import { autosave, canSave, setChanges } from './progress.js';
 import { clearSolo } from './save.js';
+import { showFood } from './hunger.js';
+import { setChatVisible } from './chat.js';
 
 const $ = id => document.getElementById(id);
 export const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -37,12 +39,14 @@ export function updateInfo() {
 export function applyRoomUI() {
   const room = G.room;
   const on = !!(room && !room.solo);
-  $('bAttack').style.display = (on && room.pvp) ? 'flex' : 'none';
+  $('bAttack').style.display = room ? 'flex' : 'none';   // hayvanlara vurmak için her yerde
   $('hearts').style.display = room ? 'block' : 'none';
   $('bSettings').style.display = room ? 'flex' : 'none';
   $('bPlayers').style.display = on ? 'flex' : 'none';
   $('bLeave').style.display = room ? 'flex' : 'none';
   $('coord').style.display = room ? 'block' : 'none';
+  showFood(!!room);
+  setChatVisible(on);
   updateInfo();
 }
 
