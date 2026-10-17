@@ -4,11 +4,11 @@ const loadR = async () => R || (R = await import('./rooms.js'));
 const screens = ['sMain', 'sCreate', 'sList', 'sJoin'];
 
 function show(id) {
-  screens.forEach(s => $(s).style.display = s === id ? 'block' : 'none');
+  screens.forEach(s => { const el = $(s); if (el) el.style.display = s === id ? 'block' : 'none'; });
   $('mErr').textContent = '';
   if (id !== 'sList' && unsub) { unsub(); unsub = null; }
 }
-const err = m => $('mErr').textContent = m;
+const err = m => { $('mErr').textContent = m; };
 const pname = () => {
   const n = $('nameIn').value.trim() || 'Oyuncu' + Math.floor(Math.random() * 900 + 100);
   try { localStorage.setItem('tc_name', n); } catch (e) {}
@@ -55,27 +55,23 @@ export function initMenu(cb) {
   onEnter = cb;
   try { $('nameIn').value = localStorage.getItem('tc_name') || ''; } catch (e) {}
 
-  // "Envanteri koru" kutusu (index.html'e dokunmadan eklenir)
-  const keepLabel = document.createElement('label');
-  keepLabel.className = 'chk';
-  keepLabel.innerHTML = '<input type="checkbox" id="cKeep"> Envanteri koru (ölünce eşyalar düşmez)';
-  $('cPvp').parentElement.after(keepLabel);
-
+  // Butonlar önce bağlanır (sonradan bir şey bozulsa bile çalışsınlar)
   $('mCreate').onclick = () => show('sCreate');
   $('mList').onclick = () => { show('sList'); startList(); };
   $('mJoin').onclick = () => show('sJoin');
   $('mSolo').onclick = () => enter({ solo: true, seed: 1 });
-  document.querySelectorAll('.back').forEach(b => b.onclick = () => show('sMain'));
+  document.querySelectorAll('.back').forEach(b => { b.onclick = () => show('sMain'); });
 
   $('cDo').onclick = e => run(e.currentTarget, async () => {
     const r = await loadR();
     const pn = pname();
+    const keepEl = $('cKeep'), pvpEl = $('cPvp'), maxEl = $('cMax');
     enter(await r.createRoom({
       name: $('cName').value.trim() || pn + ' odası',
       isPublic: $('cPublic').checked,
-      pvp: $('cPvp').checked,
-      keep: $('cKeep').checked,
-      maxPlayers: +$('cMax').value,
+      pvp: pvpEl ? pvpEl.checked : false,
+      keep: keepEl ? keepEl.checked : false,
+      maxPlayers: maxEl ? +maxEl.value : 8,
       playerName: pn
     }));
   });
@@ -83,4 +79,15 @@ export function initMenu(cb) {
     const r = await loadR();
     enter(await r.joinRoom($('jCode').value, pname()));
   });
+
+  // "Envanteri koru" kutusu
+  try {
+    const pvp = $('cPvp');
+    if (pvp && pvp.parentElement) {
+      const keepLabel = document.createElement('label');
+      keepLabel.className = 'chk';
+      keepLabel.innerHTML = '<input type="checkbox" id="cKeep"> Envanteri koru (ölünce eşyalar düşmez)';
+      pvp.parentElement.after(keepLabel);
     }
+  } catch (e) {}
+}
