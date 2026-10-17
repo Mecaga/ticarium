@@ -16,6 +16,16 @@ function label(text) {
   return s;
 }
 
+// Üstü pivotlu uzuv (dönünce omuzdan/kalçadan sallanır)
+function limb(w, h, d, mat, x, y) {
+  const p = new THREE.Group();
+  p.position.set(x, y, 0);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.position.y = -h / 2;
+  p.add(m);
+  return p;
+}
+
 export function makeAvatar(name, id) {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 360;
@@ -23,6 +33,8 @@ export function makeAvatar(name, id) {
   const m = new THREE.Group();
   const bodyMat = new THREE.MeshLambertMaterial({ color });
   const headMat = new THREE.MeshLambertMaterial({ color: 0xf1c27d });
+  const pantsMat = new THREE.MeshLambertMaterial({ color: 0x35457a });
+
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.35), bodyMat);
   body.position.y = 0.85;
   const headG = new THREE.Group();
@@ -31,12 +43,30 @@ export function makeAvatar(name, id) {
   const face = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.1, 0.05), new THREE.MeshBasicMaterial({ color: 0x222222 }));
   face.position.set(0, 0, -0.21);
   headG.add(head, face);
-  m.add(body, headG);
+
+  const legL = limb(0.27, 0.42, 0.27, pantsMat, -0.15, 0.42);
+  const legR = limb(0.27, 0.42, 0.27, pantsMat, 0.15, 0.42);
+  const armL = limb(0.2, 0.62, 0.22, headMat, -0.42, 1.28);
+  const armR = limb(0.2, 0.62, 0.22, headMat, 0.42, 1.28);
+
+  m.add(body, headG, legL, legR, armL, armR);
   try { m.add(label(name)); } catch (e) {} // isim yazısı olmasa da karakter görünsün
-  m.userData.head = headG;
-  m.userData.mats = [bodyMat, headMat];
+  m.userData = { head: headG, legL, legR, armL, armR, mats: [bodyMat, headMat, pantsMat] };
   m.visible = false;
   return m;
+}
+
+// Yürüme sallanması + vurma kolu
+export function animateAvatar(o, speed, dt) {
+  const u = o.mesh.userData;
+  o.phase = (o.phase || 0) + dt * Math.min(speed, 6) * 2.2;
+  const s = Math.sin(o.phase) * Math.min(1, speed / 3) * 0.9;
+  u.legL.rotation.x = s; u.legR.rotation.x = -s;
+  u.armL.rotation.x = -s;
+  if (o.swing > 0) {
+    o.swing -= dt;
+    u.armR.rotation.x = -Math.sin((1 - Math.max(0, o.swing) / 0.35) * Math.PI) * 1.7;
+  } else u.armR.rotation.x = s;
 }
 
 // Vurulan karakter kısa süre kırmızı yanar
