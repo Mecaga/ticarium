@@ -14,23 +14,32 @@ div{padding:3px 0;font-size:15px}
 <h3>Ticarium dosya kontrolü</h3>
 <div id="out">Kontrol ediliyor...</div>
 <script>
-var files = ['css/style.css','js/main.js','js/world.js','js/textures.js','js/player.js','js/input.js','js/economy.js','js/ui.js',
-  'js/bag.js','js/items.js','js/health.js','js/hunger.js','js/mobs.js','js/sky.js','js/save.js','js/gravity.js','js/menu.js',
-  'js/rooms.js','js/online.js','js/firebase.js','js/state.js','js/sound.js','js/avatars.js','js/progress.js',
-  'js/panels.js','js/death.js','js/actions.js','js/session.js','js/chat.js'];
-var out = document.getElementById('out');
+// dosya: yeni sürümde mutlaka geçen yazı
+var files = {
+  'css/style.css': '', 'js/main.js': 'gameClock', 'js/world.js': 'spawnPos', 'js/textures.js': 'water',
+  'js/player.js': 'inWater', 'js/input.js': '', 'js/economy.js': '', 'js/ui.js': '', 'js/bag.js': '',
+  'js/items.js': '', 'js/health.js': 'starve', 'js/hunger.js': 'tickHunger', 'js/mobs.js': 'spawnAnimals',
+  'js/sky.js': 'gameClock', 'js/save.js': '', 'js/gravity.js': 'WATER', 'js/menu.js': '', 'js/rooms.js': 'checkOwned',
+  'js/online.js': 'findPlayer', 'js/firebase.js': '', 'js/state.js': '', 'js/sound.js': 'splash',
+  'js/avatars.js': 'animateAvatar', 'js/progress.js': 'food', 'js/panels.js': 'showFood', 'js/death.js': 'spawnPos',
+  'js/actions.js': 'findMob', 'js/session.js': 'clearChat', 'js/chat.js': 'toggleChat'
+};
+var names = Object.keys(files), out = document.getElementById('out');
 var html = '', bad = 0, done = 0;
-files.forEach(function (f) {
+names.forEach(function (f) {
   fetch(f + '?t=' + Date.now(), { cache: 'no-store' }).then(function (r) {
-    if (!r.ok) bad++;
-    html += '<div class="' + (r.ok ? 'ok' : 'bad') + '">' + (r.ok ? '✅ ' : '❌ EKSİK: ') + f + '</div>';
+    if (!r.ok) { bad++; html += '<div class="bad">❌ EKSİK: ' + f + '</div>'; return; }
+    return r.text().then(function (t) {
+      var key = files[f];
+      if (key && t.indexOf(key) < 0) { bad++; html += '<div class="bad">⚠️ ESKİ SÜRÜM: ' + f + '</div>'; }
+      else html += '<div class="ok">✅ ' + f + '</div>';
+    });
   }).catch(function () {
-    bad++;
-    html += '<div class="bad">❌ EKSİK: ' + f + '</div>';
+    bad++; html += '<div class="bad">❌ EKSİK: ' + f + '</div>';
   }).then(function () {
     done++;
-    if (done === files.length) {
-      out.innerHTML = (bad ? '<div class="bad">' + bad + ' dosya eksik:</div>' : '<div class="ok">Hepsi tamam ✅</div>') + html;
+    if (done === names.length) {
+      out.innerHTML = (bad ? '<div class="bad">' + bad + ' sorunlu dosya:</div>' : '<div class="ok">Hepsi güncel ✅</div>') + html;
     }
   });
 });
