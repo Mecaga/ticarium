@@ -1,9 +1,10 @@
 *{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;overflow:hidden;background:#87ceeb;font-family:system-ui,sans-serif;touch-action:none}
 canvas{display:block}
-#coins{position:fixed;top:8px;left:8px;background:#000a;color:#ffd84a;padding:6px 12px;border-radius:8px;font-weight:700;font-size:16px}
-#roomInfo{position:fixed;top:44px;left:8px;background:#000a;color:#fff;padding:4px 10px;border-radius:8px;font-size:12px}
+#coord{position:fixed;top:8px;left:8px;background:#000a;color:#fff;padding:4px 10px;border-radius:8px;font:12px monospace;display:none;z-index:5}
+#roomInfo{position:fixed;top:36px;left:8px;max-width:62vw;background:#000a;color:#fff;padding:4px 10px;border-radius:8px;font-size:12px;z-index:5}
 #roomInfo:empty{display:none}
+#coins{position:fixed;top:64px;left:8px;background:#000a;color:#ffd84a;padding:6px 12px;border-radius:8px;font-weight:700;font-size:16px}
 #cross{position:fixed;top:50%;left:50%;width:18px;height:18px;margin:-9px 0 0 -9px;pointer-events:none}
 #cross:before,#cross:after{content:"";position:absolute;background:#fff;mix-blend-mode:difference}
 #cross:before{left:8px;top:0;width:2px;height:18px}
@@ -23,12 +24,14 @@ canvas{display:block}
 #bBreak{right:92px;bottom:70px;background:#b3261eaa}
 #bPlace{right:18px;bottom:162px;background:#2e7d32aa}
 #bAttack{right:92px;bottom:142px;background:#e65100cc;font-size:24px;display:none}
-#bMarket{top:8px;right:8px;width:auto;height:40px;border-radius:10px;padding:0 14px}
-#bLeave{top:56px;right:8px;width:auto;height:36px;border-radius:10px;padding:0 14px;background:#b3261eaa}
-#bSettings{top:100px;right:8px;width:auto;height:36px;border-radius:10px;padding:0 14px;display:none}
-#market,#settings{position:fixed;inset:0;background:#000b;display:none;z-index:20;align-items:center;justify-content:center}
-#panel,#setBox{background:#1d2330;color:#fff;border-radius:14px;padding:14px;width:min(94vw,460px);max-height:90vh;overflow:auto}
-#panel h2,#setBox h2{margin:0 0 4px;font-size:18px}
+#bPlayers,#bSettings,#bLeave,#bMarket{right:8px;width:auto;height:38px;border-radius:10px;padding:0 12px}
+#bPlayers{top:8px;display:none}
+#bSettings{top:52px;display:none}
+#bLeave{top:96px;background:#b3261eaa;display:none}
+#bMarket{top:140px}
+#market,#settings,#players{position:fixed;inset:0;background:#000b;display:none;z-index:20;align-items:center;justify-content:center}
+#panel,#setBox,#plBox{background:#1d2330;color:#fff;border-radius:14px;padding:14px;width:min(94vw,460px);max-height:90vh;overflow:auto;touch-action:pan-y}
+#panel h2,#setBox h2,#plBox h2{margin:0 0 4px;font-size:18px}
 .row{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #fff2}
 .row .n{flex:1}
 .row small{display:block;opacity:.7}
@@ -39,21 +42,21 @@ canvas{display:block}
 #setMax{display:flex;gap:4px}
 .up{color:#6f6}
 .down{color:#f77}
-#msg{position:fixed;top:56px;left:50%;transform:translateX(-50%);background:#000a;color:#fff;padding:6px 12px;border-radius:8px;opacity:0;transition:opacity .3s;pointer-events:none;font-size:13px;z-index:8}
+#msg{position:fixed;top:56px;left:50%;transform:translateX(-50%);background:#000a;color:#fff;padding:6px 12px;border-radius:8px;opacity:0;transition:opacity .3s;pointer-events:none;font-size:13px;z-index:8;max-width:90vw;text-align:center}
 
 /* Ana menü */
 #menu{position:fixed;inset:0;z-index:30;background:linear-gradient(#87ceeb,#3d8f3a);display:flex;align-items:center;justify-content:center;overflow:auto;touch-action:pan-y}
-.mbox{background:#1d2330;color:#fff;border-radius:16px;padding:18px;width:min(92vw,380px)}
+.mbox{background:#1d2330;color:#fff;border-radius:16px;padding:18px;width:min(92vw,380px);max-height:96vh;overflow:auto}
 .mbox h1{margin:0 0 12px;text-align:center}
 .mbox input[type=text],.mbox input:not([type]){width:100%;padding:12px;border-radius:8px;border:0;margin-bottom:8px;font-size:16px;-webkit-user-select:text;user-select:text}
 .mbox button{width:100%;padding:12px;margin-top:8px;border:0;border-radius:8px;background:#2e7d32;color:#fff;font-weight:700;font-size:15px}
 .mbox button.alt{background:#444}
 .mbox button:disabled{opacity:.5}
-#sCreate,#sList,#sJoin{display:none}
+#sCreate,#sList,#sJoin,#sMine{display:none}
 .chk{display:flex;gap:8px;align-items:center;font-size:13px;margin:6px 0}
 .mbox .chk select{width:auto;margin:0;padding:6px 10px;border-radius:6px;border:0;font-size:15px}
-#roomList{max-height:50vh;overflow:auto;touch-action:pan-y}
-#roomList button{text-align:left;background:#1565c0}
-#roomList small{display:block;font-weight:400;opacity:.8}
-#roomList p{opacity:.7;text-align:center}
+#roomList,#mineList{max-height:50vh;overflow:auto;touch-action:pan-y}
+#roomList button,#mineList button{text-align:left;background:#1565c0}
+#roomList small,#mineList small{display:block;font-weight:400;opacity:.8}
+#roomList p,#mineList p{opacity:.7;text-align:center}
 #mErr{color:#ff8a80;font-size:13px;margin-top:8px;min-height:16px}
