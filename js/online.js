@@ -4,19 +4,18 @@ import { get as getBlock, set as setBlock, rebuild, TYPES } from './world.js';
 import { P } from './player.js';
 import { eco, net, clampRaw, priceOf } from './economy.js';
 import { hooks as ih, spawnItem, removeItem, clearItems } from './items.js';
+import { hurt, hp } from './health.js';
 
-const MAXHP = 20, DMG = 4;
-const pvp = { on: false, hp: MAXHP, max: MAXHP, protectUntil: 0, dead: false, lastAtk: 0 };
+const DMG = 4;
+const pvp = { on: false, lastAtk: 0 };
 
 let code = null, scene = null, timer = null, dirty = false;
 let unsubs = [];
 let others = {};
 let last = '';
 let cb = {};
-let primed = false, lastHit = {}, lastDied = {}, regen = 0;
+let primed = false, lastHit = {}, lastDied = {};
 const group = new THREE.Group();
-
-export const isDead = () => pvp.dead;
 
 function scheduleRebuild() {
   if (dirty) return;
@@ -58,43 +57,20 @@ function makeAvatar(name, id) {
   return m;
 }
 
-function damage(d, byId, byName) {
-  if (!pvp.on || pvp.dead || Date.now() < pvp.protectUntil) return;
-  pvp.hp = Math.max(0, pvp.hp - d);
-  if (cb.onHp) cb.onHp(pvp.hp, pvp.max);
-  if (cb.onHurt) cb.onHurt();
-  if (pvp.hp <= 0) {
-    pvp.dead = true;
-    if (cb.onDeath) cb.onDeath(byName);   // eşyalar burada saçılır
-    const c = code;
-    update(ref(db, `rooms/${c}/players/${uid}`), { died: { by: byId, n: Date.now() } }).catch(() => {});
-    setTimeout(() => {
-      if (code !== c) return;
-      pvp.hp = pvp.max; pvp.dead = false;
-      pvp.protectUntil = Date.now() + 3000;
-      last = '';
-      if (cb.onHp) cb.onHp(pvp.hp, pvp.max);
-      if (cb.onDie) cb.onDie();
-    }, 2000);
-  }
-}
-
-// opts: { isOwner, pvp, onPrices, onMeta, onHp, onHurt, onDeath, onDie, onKill }
+// opts: { isOwner, pvp, onPrices, onMeta, onKill }
 export function startOnline(sc, roomCode, opts = {}) {
   stopOnline();
   scene = sc; code = roomCode; cb = opts;
-  pvp.on = !!opts.pvp; pvp.hp = pvp.max; pvp.dead = false; pvp.protectUntil = 0;
-  primed = false; lastHit = {}; lastDied = {}; regen = 0;
+  pvp.on = !!opts.pvp;
+  primed = false; lastHit = {}; lastDied = {};
   scene.add(group);
 
   // Oda ayarları (PVP, limit, envanteri koru)
   unsubs.push(onValue(ref(db, `rooms/${code}/meta`), snap => {
     const m = snap.val();
     if (!m) return;
-    if (!pvp.on && m.pvp) pvp.hp = pvp.max;
     pvp.on = !!m.pvp;
     if (cb.onMeta) cb.onMeta({ pvp: pvp.on, max: m.max || 8, keep: !!m.keep });
-    if (cb.onHp) cb.onHp(pvp.hp, pvp.max);
   }));
 
   // Bloklar
@@ -118,7 +94,7 @@ export function startOnline(sc, roomCode, opts = {}) {
     });
     update(iref, obj).catch(() => {});
   };
-  // İlk alan kazanır: kayıt hâlâ varsa silinir ve eşya senin olur
+  // İlk alan kazanır
   ih.take = async id => {
     const r = await runTransaction(ref(db, `rooms/${code}/items/${id}`), v => (v === null ? undefined : null));
     return r.committed;
@@ -167,15 +143,19 @@ export function startOnline(sc, roomCode, opts = {}) {
       const v = ch.val() || {};
       let o = others[ch.key];
       if (!o) {
-        o = others[ch.key] = { mesh: makeAvatar(v.name || '?', ch.key), tx: 0, ty: 0, tz: 0, tyaw: 0, tpitch: 0, init: false };
+        o = others[ch.key] = { mesh: makeAvatar(v.name || '?', ch.key), tx: 0, ty: 0, tz: 0, tyaw: 0, tpitch: 0, init: false, dead: false };
         group.add(o.mesh);
       }
+      o.dead = !!v.dead;
       if (typeof v.x === 'number') {
         o.tx = v.x; o.ty = v.y; o.tz = v.z; o.tyaw = v.yaw || 0; o.tpitch = v.pitch || 0;
-        if (!o.init) { o.mesh.position.set(v.x, v.y, v.z); o.init = true; o.mesh.visible = true; }
+        if (!o.init) { o.mesh.position.set(v.x, v.y, v.z); o.init = true; }
       }
-      if (v.hit && v.hit.to === uid && lastHit[ch.key] !== v.hit.n && primed) {
-        damage(v.hit.d || DMG, ch.key, v.name || '?');
+      // Ölü oyuncu görünmez
+      o.mesh.visible = o.init && !o.dead;
+
+      if (v.hit && v.hit.to === uid && lastHit[ch.key] !== v.hit.n && primed && pvp.on) {
+        hurt(v.hit.d || DMG, { id: ch.key, name: v.name || '?' });
       }
       if (v.hit) lastHit[ch.key] = v.hit.n;
       if (v.died && v.died.by === uid && lastDied[ch.key] !== v.died.n && primed) {
@@ -205,9 +185,21 @@ export function sendBlock(x, y, z, t) {
   set(ref(db, `rooms/${code}/blocks/${x}_${y}_${z}`), t).catch(() => {});
 }
 
+// Ölünce diğerlerinde görünmez ol (byId: öldüren oyuncu, yoksa '')
+export function reportDeath(byId) {
+  if (!code) return;
+  update(ref(db, `rooms/${code}/players/${uid}`), { dead: true, died: { by: byId || '', n: Date.now() } }).catch(() => {});
+}
+
+export function setDead(v) {
+  if (!code) return;
+  last = '';
+  update(ref(db, `rooms/${code}/players/${uid}`), { dead: !!v }).catch(() => {});
+}
+
 export function attack() {
   if (!code || !pvp.on) return 'PVP kapalı';
-  if (pvp.dead) return '';
+  if (hp.dead) return '';
   const now = Date.now();
   if (now - pvp.lastAtk < 450) return '';
   pvp.lastAtk = now;
@@ -218,7 +210,7 @@ export function attack() {
   let best = null, bt = 99;
   for (const id in others) {
     const o = others[id];
-    if (!o.init) continue;
+    if (!o.init || o.dead) continue;
     const vx = o.mesh.position.x - ex, vy = o.mesh.position.y + 1.0 - ey, vz = o.mesh.position.z - ez;
     const t = vx * dx + vy * dy + vz * dz;
     if (t < 0.2 || t > 4.5) continue;
@@ -248,13 +240,6 @@ export function updateOthers(dt) {
     const hd = o.mesh.userData.head;
     hd.rotation.x += (o.tpitch - hd.rotation.x) * k;
   }
-  if (pvp.on && !pvp.dead && pvp.hp < pvp.max) {
-    regen += dt;
-    if (regen >= 6) {
-      regen = 0; pvp.hp++;
-      if (cb.onHp) cb.onHp(pvp.hp, pvp.max);
-    }
-  }
 }
 
 export function stopOnline() {
@@ -268,7 +253,7 @@ export function stopOnline() {
   net.active = false; net.owner = false; net.trade = null; net.setPrice = null;
   ih.push = ih.take = ih.expire = null; ih.myId = '';
   clearItems();
-  pvp.on = false; pvp.dead = false;
+  pvp.on = false;
   cb = {};
   code = null; last = '';
-}
+      }
