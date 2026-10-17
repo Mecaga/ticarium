@@ -1,8 +1,9 @@
 import { get, set, generate, initRender, rebuild, updateTarget, target, prev, TYPES, heightAt, N } from './world.js';
 import { P, collides, updatePlayer, jump } from './player.js';
-import { eco, startPriceTicker } from './economy.js';
+import { eco, resetEco, startPriceTicker } from './economy.js';
 import { initInput } from './input.js';
-import { drawHud, drawMarket, toast, toggleMarket, isMarketOpen } from './ui.js';
+import { drawHud, drawMarket, toast, toggleMarket, isMarketOpen, hooks } from './ui.js';
+import { toggleBag, isBagOpen } from './bag.js';
 import { initMenu, showMenu, isMenuOpen, leaveToMenu } from './menu.js';
 
 // Sahne
@@ -27,6 +28,10 @@ addEventListener('resize', () => {
 });
 
 let online = null;
+hooks.bag = toggleBag;
+addEventListener('keydown', e => {
+  if (e.code === 'KeyB' && e.target.tagName !== 'INPUT' && !isMenuOpen()) toggleBag();
+});
 
 // Eylemler
 function breakBlock() {
@@ -57,15 +62,20 @@ function enterGame(info) {
   rebuild();
   P.x = N / 2 + 0.5; P.z = N / 2 + 0.5;
   P.y = heightAt(N / 2, N / 2) + 2; P.vy = 0;
-  eco.coins = 50;
-  for (const t in eco.inv) eco.inv[t] = 0;
+  resetEco();
   const ri = document.getElementById('roomInfo');
   ri.textContent = info.solo ? 'Tek oyunculu' : 'Oda: ' + info.code + ' · ' + info.name;
   drawHud();
 
   if (!info.solo) {
     import('./online.js')
-      .then(m => { online = m; m.startOnline(scene, info.code); })
+      .then(m => {
+        online = m;
+        m.startOnline(scene, info.code, {
+          isOwner: info.isOwner,
+          onPrices: () => { if (isMarketOpen()) drawMarket(); }
+        });
+      })
       .catch(e => { ri.textContent = 'Online hata: ' + (e.message || e); });
   }
 }
@@ -82,7 +92,10 @@ initRender(scene);
 initInput(renderer.domElement, {
   jump, breakBlock, placeBlock,
   market: toggleMarket,
-  select: n => { eco.sel = n; drawHud(); }
+  select: n => {
+    if (n < 1 || n > eco.hotbar.length) return;
+    eco.hsel = n - 1; eco.sel = eco.hotbar[n - 1]; drawHud();
+  }
 });
 
 const bLeave = document.getElementById('bLeave');
@@ -100,7 +113,7 @@ function loop(now) {
   requestAnimationFrame(loop);
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  updatePlayer(dt, isMarketOpen() || isMenuOpen());
+  updatePlayer(dt, isMarketOpen() || isMenuOpen() || isBagOpen());
   if (online) online.updateOthers(dt);
   camera.position.set(P.x, P.y + 1.6, P.z);
   camera.rotation.set(P.pitch, P.yaw, 0);
