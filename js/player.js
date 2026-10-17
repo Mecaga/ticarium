@@ -68,4 +68,4 @@ export function updatePlayer(dt, frozen) {
   if (P.ground && P.x >= 0 && P.x < N && P.z >= 0 && P.z < N) {
     P.sx = P.x; P.sy = P.y; P.sz = P.z;
   }
-}
+    }
