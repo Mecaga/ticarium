@@ -66,6 +66,8 @@ export function initMenu(cb) {
     enter(await r.createRoom({
       name: $('cName').value.trim() || pn + ' odası',
       isPublic: $('cPublic').checked,
+      pvp: $('cPvp').checked,
+      maxPlayers: +$('cMax').value,
       playerName: pn
     }));
   });
