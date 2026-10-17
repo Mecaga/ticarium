@@ -1,4 +1,4 @@
-import { login, db, ref, set, get, remove, onValue, onDisconnect } from './firebase.js';
+import { login, db, ref, set, get, update, remove, onValue, onDisconnect } from './firebase.js';
 
 let loginP = null, myUid = null;
 const ready = () => loginP || (loginP = login().then(id => (myUid = id)));
@@ -23,10 +23,10 @@ async function enterRoom(code, meta, playerName) {
     beat = setInterval(() => { set(pubRef, pub()).catch(() => {}); }, 30000);
   }
   current = { code, isOwner, pref, od, beat };
-  return { code, name: meta.name, seed: meta.seed, isOwner, solo: false };
+  return { code, name: meta.name, seed: meta.seed, isOwner, solo: false, pvp: !!meta.pvp, max: meta.max || 8 };
 }
 
-export async function createRoom({ name, isPublic, playerName }) {
+export async function createRoom({ name, isPublic, playerName, pvp, maxPlayers }) {
   await ready();
   let code = null;
   for (let i = 0; i < 6; i++) {
@@ -35,7 +35,11 @@ export async function createRoom({ name, isPublic, playerName }) {
     if (!s.exists()) { code = c; break; }
   }
   if (!code) throw new Error('Kod üretilemedi, tekrar dene');
-  const meta = { owner: myUid, name, public: !!isPublic, seed: Math.floor(Math.random() * 1e9), created: Date.now() };
+  const meta = {
+    owner: myUid, name, public: !!isPublic,
+    seed: Math.floor(Math.random() * 1e9), created: Date.now(),
+    pvp: !!pvp, max: maxPlayers || 8
+  };
   await set(ref(db, `rooms/${code}/meta`), meta);
   return enterRoom(code, meta, playerName);
 }
@@ -46,7 +50,19 @@ export async function joinRoom(codeRaw, playerName) {
   if (code.length !== 6) throw new Error('Kod 6 haneli olmalı');
   const s = await get(ref(db, `rooms/${code}/meta`));
   if (!s.exists()) throw new Error('Oda bulunamadı');
-  return enterRoom(code, s.val(), playerName);
+  const meta = s.val();
+  if (meta.owner !== myUid) {
+    const ps = await get(ref(db, `rooms/${code}/players`));
+    let n = 0;
+    ps.forEach(c => { if (c.key !== myUid) n++; });
+    if (n >= (meta.max || 8)) throw new Error('Oda dolu (' + (meta.max || 8) + ' kişilik)');
+  }
+  return enterRoom(code, meta, playerName);
+}
+
+export async function updateSettings(patch) {
+  if (!current) throw new Error('Odada değilsin');
+  await update(ref(db, `rooms/${current.code}/meta`), patch);
 }
 
 export async function leaveRoom() {
