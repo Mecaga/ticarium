@@ -1,9 +1,10 @@
-import { N, heightAt } from './world.js';
-import { P, pHooks } from './player.js';
+import { H, spawnPos } from './world.js';
+import { P, pHooks, collides } from './player.js';
 import { eco } from './economy.js';
 import { drawHud, toast } from './ui.js';
 import { dropItems } from './items.js';
 import { hhooks, hurt, respawnHealth } from './health.js';
+import { setFood } from './hunger.js';
 import { G } from './state.js';
 import { autosave } from './progress.js';
 import { sfx } from './sound.js';
@@ -17,8 +18,11 @@ document.body.appendChild(deathEl);
 let deathTimer = null;
 
 export function toSpawn() {
-  P.x = N / 2 + 0.5; P.z = N / 2 + 0.5;
-  P.y = heightAt(N / 2, N / 2) + 2; P.vy = 0; P.ground = false;
+  const sp = spawnPos();
+  P.x = sp.x; P.z = sp.z;
+  let y = sp.y;
+  while (y < H - 2 && collides(P.x, y, P.z)) y += 1; // ağaç vb. varsa yukarı çık
+  P.y = y; P.vy = 0; P.ground = false;
   P.kx = 0; P.kz = 0;
   P.sx = P.x; P.sy = P.y; P.sz = P.z; P.fallY = P.y;
 }
@@ -69,6 +73,7 @@ export function initDeath() {
       deathTimer = null;
       toSpawn();
       respawnHealth();
+      setFood(20);
       if (G.online) G.online.setDead(false);
       deathEl.style.opacity = 0;
       toast('Canlandın');
