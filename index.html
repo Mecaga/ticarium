@@ -4,14 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Ticarium 3D</title>
-<link rel="stylesheet" href="css/style.css?v=10">
+<link rel="stylesheet" href="css/style.css?v=11">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
+<div id="flash"></div>
 <div id="coins">🪙 50</div>
 <div id="roomInfo"></div>
 <div id="cross"></div>
 <div id="msg"></div>
+<div id="hearts"></div>
 <div id="hotbar"></div>
 <div id="look"></div>
 <div id="joy"></div>
@@ -19,9 +21,12 @@
 <div class="btn" id="bJump">Zıpla</div>
 <div class="btn" id="bBreak">Kır</div>
 <div class="btn" id="bPlace">Koy</div>
+<div class="btn" id="bAttack">⚔️</div>
 <div class="btn" id="bMarket">🏪 Pazar</div>
 <div class="btn" id="bLeave">🚪 Çık</div>
+<div class="btn" id="bSettings">⚙️ Ayarlar</div>
 <div id="market"><div id="panel"></div></div>
+<div id="settings"><div id="setBox"></div></div>
 
 <div id="menu">
   <div class="mbox">
@@ -36,6 +41,16 @@
     <div id="sCreate">
       <input id="cName" maxlength="24" placeholder="Oda adı">
       <label class="chk"><input type="checkbox" id="cPublic" checked> Herkese açık (listede görünsün)</label>
+      <label class="chk"><input type="checkbox" id="cPvp"> PVP açık (oyuncular birbirine vurabilir)</label>
+      <label class="chk">Oyuncu limiti
+        <select id="cMax">
+          <option value="2">2</option>
+          <option value="4">4</option>
+          <option value="6">6</option>
+          <option value="8" selected>8</option>
+          <option value="10">10</option>
+        </select>
+      </label>
       <button id="cDo">Odayı Kur</button>
       <button class="back alt">Geri</button>
     </div>
@@ -70,6 +85,6 @@ if (!('noModule' in HTMLScriptElement.prototype)) {
   showErr('Tarayıcın çok eski, güncelle (iOS 12+ gerekir)');
 }
 </script>
-<script type="module" src="js/main.js?v=10"></script>
+<script type="module" src="js/main.js?v=11"></script>
 </body>
 </html>
