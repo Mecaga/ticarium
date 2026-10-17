@@ -1,10 +1,10 @@
-import { get, set, atlas, sideTile, inBounds, H, SAPLING } from './world.js';
+import { get, set, atlas, sideTile, inBounds, H, SAPLING, WATER } from './world.js';
 import { P, collides } from './player.js';
 
 const FALLING = new Set([6, 8]); // kum, kar
 export const isFalling = t => FALLING.has(t);
 
-// main.js doldurur: blok değişince kaydet / online gönder
+// main/actions doldurur: blok değişince kaydet / online gönder
 export const ghooks = { onChange: null };
 
 let group = null, mat = null;
@@ -12,7 +12,8 @@ const geos = {};
 const pending = new Map();
 const falling = [];
 
-const empty = (x, y, z) => { const t = get(x, y, z); return t === 0 || t === SAPLING; };
+// Hava, fidan ve su: düşen blok buraya girer
+const empty = (x, y, z) => { const t = get(x, y, z); return t === 0 || t === SAPLING || t === WATER; };
 
 export function initGravity(scene) {
   group = new THREE.Group();
