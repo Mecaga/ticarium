@@ -1,10 +1,10 @@
 import { TYPES } from './world.js';
 import { eco } from './economy.js';
 import { drawHud } from './ui.js';
+import { dropFromInventory } from './items.js';
 
 const css = c => '#' + c.toString(16).padStart(6, '0');
 
-// Stiller (style.css'e dokunmadan)
 const st = document.createElement('style');
 st.textContent = `
 .slot{width:48px;height:56px}
@@ -24,6 +24,9 @@ st.textContent = `
 .bc span{font-size:12px;font-weight:700}
 #bagSlots{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
 .hs{min-height:58px;border-style:dashed}
+.dropRow{display:flex;gap:6px;align-items:center;margin-top:10px;font-size:13px}
+.dropRow span{flex:1.2}
+.dropRow button{flex:1;padding:8px;border:0;border-radius:8px;background:#e65100;color:#fff;font-weight:700}
 .ghost{position:fixed;width:44px;height:44px;border-radius:8px;border:2px solid #fff;opacity:.85;pointer-events:none;z-index:40}
 `;
 document.head.appendChild(st);
@@ -58,7 +61,12 @@ function draw() {
     h += `<div class="bc${pending == t ? ' pend' : ''}" data-t="${t}"><i style="background:${css(TYPES[t].color)}"></i>
       ${TYPES[t].name}<span>${eco.inv[t]}</span></div>`;
   }
-  h += `</div><h3>Hızlı slotlar</h3><div id="bagSlots">`;
+  h += `</div>`;
+  if (pending) {
+    h += `<div class="dropRow"><span>${TYPES[pending].name} bırak:</span>
+      <button data-drop="1">1</button><button data-drop="10">10</button><button data-drop="all">Hepsi</button></div>`;
+  }
+  h += `<h3>Hızlı slotlar</h3><div id="bagSlots">`;
   eco.hotbar.forEach((t, i) => {
     h += `<div class="hs" data-i="${i}"><i style="background:${css(TYPES[t].color)}"></i>${TYPES[t].name}</div>`;
   });
@@ -66,7 +74,15 @@ function draw() {
   bag.innerHTML = h;
 }
 
-bag.addEventListener('click', e => { if (e.target.closest('#bagX')) toggleBag(); });
+bag.addEventListener('click', e => {
+  if (e.target.closest('#bagX')) return toggleBag();
+  const d = e.target.closest('[data-drop]');
+  if (d && pending) {
+    const n = d.dataset.drop === 'all' ? eco.inv[pending] : +d.dataset.drop;
+    dropFromInventory(pending, n);
+    draw(); drawHud();
+  }
+});
 
 bag.addEventListener('pointerdown', e => {
   const c = e.target.closest('.bc');
