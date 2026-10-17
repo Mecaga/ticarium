@@ -1,24 +1,24 @@
-import { db, uid, ref, set, update, remove, get as dbGet, onValue } from './firebase.js';
-import { onChildAdded, onChildChanged, onChildRemoved, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-import { get as getBlock, set as setBlock, rebuild, TYPES } from './world.js';
+import { db, uid, ref, set, update, remove, push, get as dbGet, onValue } from './firebase.js';
+import { onChildAdded, onChildChanged, onChildRemoved, runTransaction, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { set as setBlock, rebuild, TYPES, losBlocked } from './world.js';
 import { P, knock } from './player.js';
 import { eco, net, clampRaw, priceOf } from './economy.js';
 import { hooks as ih, spawnItem, removeItem, clearItems } from './items.js';
 import { hurt, canHurt, hp } from './health.js';
-import { mhooks, spawnCows, applyRemote } from './mobs.js';
-import { makeAvatar, tint } from './avatars.js';
-import { sfx } from './sound.js';
+import { mhooks, spawnAnimals, applyRemote, hurtMob } from './mobs.js';
+import { makeAvatar, tint, animateAvatar } from './avatars.js';
 
 const DMG = 4;
-const pvp = { on: false, lastAtk: 0 };
+const pvp = { on: false };
 
 let code = null, scene = null, timer = null, dirty = false;
 let unsubs = [];
 let others = {};
 let last = '';
 let cb = {};
-let ownerId = null;
-let primed = false, lastHit = {}, lastDied = {};
+let ownerId = null, myName = '?';
+let primed = false, lastHit = {}, lastDied = {}, lastSw = {};
+let chatLive = false, chatTimer = null;
 const group = new THREE.Group();
 
 function scheduleRebuild() {
@@ -27,12 +27,14 @@ function scheduleRebuild() {
   setTimeout(() => { dirty = false; rebuild(); }, 60);
 }
 
-// opts: { isOwner, pvp, onPrices, onMeta, onCount, onBlock, onKill }
+// opts: { isOwner, pvp, name, onPrices, onMeta, onCount, onBlock, onChat, onKill }
 export function startOnline(sc, roomCode, opts = {}) {
   stopOnline();
   scene = sc; code = roomCode; cb = opts;
+  myName = opts.name || '?';
   pvp.on = !!opts.pvp;
-  primed = false; lastHit = {}; lastDied = {}; ownerId = null;
+  primed = false; lastHit = {}; lastDied = {}; lastSw = {}; ownerId = null;
+  chatLive = false;
   scene.add(group);
 
   // Oda ayarları (PVP, limit, envanteri koru)
@@ -54,6 +56,13 @@ export function startOnline(sc, roomCode, opts = {}) {
     if (cb.onBlock) cb.onBlock(x, y, z, t);
   };
   unsubs.push(onChildAdded(bref, apply), onChildChanged(bref, apply));
+
+  // Sohbet (son 20 mesaj)
+  chatTimer = setTimeout(() => { chatLive = true; }, 1500);
+  unsubs.push(onChildAdded(query(ref(db, `rooms/${code}/chat`), limitToLast(20)), s => {
+    const v = s.val();
+    if (v && cb.onChat) cb.onChat({ name: String(v.n || '?'), text: String(v.m || ''), mine: v.u === uid, live: chatLive });
+  }));
 
   // Yerdeki eşyalar (herkeste ortak)
   const iref = ref(db, `rooms/${code}/items`);
@@ -77,17 +86,26 @@ export function startOnline(sc, roomCode, opts = {}) {
     onChildRemoved(iref, s => removeItem(s.key))
   );
 
-  // İnekler: oda sahibi yönetir, diğerleri izler
+  // Hayvanlar: oda sahibi yönetir, diğerleri izler
   mhooks.send = obj => { if (code) update(ref(db, `rooms/${code}/mobs`), obj).catch(() => {}); };
+  mhooks.remove = id => { if (code) remove(ref(db, `rooms/${code}/mobs/${id}`)).catch(() => {}); };
   let mobsFirst = true;
   unsubs.push(onValue(ref(db, `rooms/${code}/mobs`), snap => {
     const v = snap.val() || {};
     if (opts.isOwner) {
       if (mobsFirst) {
         mobsFirst = false;
-        if (Object.keys(v).length) applyRemote(v, true); else spawnCows();
+        if (Object.keys(v).length) applyRemote(v, true);
+        spawnAnimals(); // eksik hayvanları tamamlar
       }
     } else applyRemote(v, false);
+  }));
+  // Diğer oyuncuların hayvanlara vuruşlarını oda sahibi uygular
+  unsubs.push(onChildAdded(ref(db, `rooms/${code}/mobhits`), s => {
+    if (!opts.isOwner) return;
+    const v = s.val() || {};
+    remove(s.ref).catch(() => {});
+    if (Date.now() - (v.n || 0) < 10000 && v.id) hurtMob(String(v.id), v.d || 3, v.fx || 0, v.fz || 0);
   }));
 
   // Ortak fiyatlar
@@ -131,7 +149,7 @@ export function startOnline(sc, roomCode, opts = {}) {
       if (!o) {
         o = others[ch.key] = {
           name: v.name || '?', mesh: makeAvatar(v.name || '?', ch.key),
-          tx: 0, ty: 0, tz: 0, tyaw: 0, tpitch: 0, init: false, dead: false, tt: 0
+          tx: 0, ty: 0, tz: 0, tyaw: 0, tpitch: 0, init: false, dead: false, tt: 0, phase: 0, swing: 0
         };
         group.add(o.mesh);
       }
@@ -142,6 +160,9 @@ export function startOnline(sc, roomCode, opts = {}) {
         if (!o.init) { o.mesh.position.set(v.x, v.y, v.z); o.init = true; }
       }
       o.mesh.visible = o.init && !o.dead;
+
+      if (v.sw && lastSw[ch.key] !== v.sw && primed) o.swing = 0.35;
+      if (v.sw) lastSw[ch.key] = v.sw;
 
       if (v.hit && lastHit[ch.key] !== v.hit.n && primed) {
         if (v.hit.to === uid) {
@@ -179,6 +200,11 @@ export function sendBlock(x, y, z, t) {
   set(ref(db, `rooms/${code}/blocks/${x}_${y}_${z}`), t).catch(() => {});
 }
 
+export function sendChat(text) {
+  if (!code || !uid) return;
+  set(push(ref(db, `rooms/${code}/chat`)), { n: myName, u: uid, m: String(text).slice(0, 120), t: Date.now() }).catch(() => {});
+}
+
 // Ölünce diğerlerinde görünmez ol (byId: öldüren oyuncu, yoksa '')
 export function reportDeath(byId) {
   if (!code) return;
@@ -204,8 +230,8 @@ export function saveProgress(d) {
   set(ref(db, `rooms/${code}/saves/${uid}`), d).catch(() => {});
 }
 
-export function getPlayers(myName) {
-  const arr = [{ id: uid, name: myName, me: true, dead: hp.dead, owner: uid === ownerId, dist: 0 }];
+export function getPlayers(name) {
+  const arr = [{ id: uid, name, me: true, dead: hp.dead, owner: uid === ownerId, dist: 0 }];
   for (const id in others) {
     const o = others[id];
     arr.push({
@@ -216,36 +242,36 @@ export function getPlayers(myName) {
   return arr;
 }
 
-export function attack() {
-  if (!code || !pvp.on) return 'PVP kapalı';
-  if (hp.dead) return '';
-  const now = Date.now();
-  if (now - pvp.lastAtk < 450) return '';
-  pvp.lastAtk = now;
+// ---- Saldırı ----
+export function swing() {
+  if (!code) return;
+  update(ref(db, `rooms/${code}/players/${uid}`), { sw: Date.now() }).catch(() => {});
+}
 
-  const ex = P.x, ey = P.y + 1.6, ez = P.z;
-  const cp = Math.cos(P.pitch);
-  const dx = -Math.sin(P.yaw) * cp, dy = Math.sin(P.pitch), dz = -Math.cos(P.yaw) * cp;
+export function findPlayer(ex, ey, ez, dx, dy, dz, range) {
   let best = null, bt = 99;
   for (const id in others) {
     const o = others[id];
     if (!o.init || o.dead) continue;
     const vx = o.mesh.position.x - ex, vy = o.mesh.position.y + 1.0 - ey, vz = o.mesh.position.z - ez;
     const t = vx * dx + vy * dy + vz * dz;
-    if (t < 0.2 || t > 4.5) continue;
+    if (t < 0.2 || t > range) continue;
     if (Math.hypot(vx - dx * t, vy - dy * t, vz - dz * t) > 0.7) continue;
-    let blocked = false;
-    for (let s = 0.3; s < t; s += 0.25) {
-      if (getBlock(Math.floor(ex + dx * s), Math.floor(ey + dy * s), Math.floor(ez + dz * s))) { blocked = true; break; }
-    }
-    if (blocked) continue;
+    if (losBlocked(ex, ey, ez, dx, dy, dz, t)) continue;
     if (t < bt) { bt = t; best = id; }
   }
-  if (!best) return 'Iskaladın';
-  update(ref(db, `rooms/${code}/players/${uid}`), { hit: { to: best, n: now, d: DMG } }).catch(() => {});
-  tint(others[best]);
-  sfx.hit();
-  return 'Vurdun!';
+  return best ? { id: best, t: bt } : null;
+}
+
+export function hitPlayer(id) {
+  if (!code) return;
+  update(ref(db, `rooms/${code}/players/${uid}`), { hit: { to: id, n: Date.now(), d: DMG } }).catch(() => {});
+  tint(others[id]);
+}
+
+export function sendMobHit(id, d, fx, fz) {
+  if (!code) return;
+  set(push(ref(db, `rooms/${code}/mobhits`)), { id, d, fx: Math.round(fx * 10) / 10, fz: Math.round(fz * 10) / 10, n: Date.now() }).catch(() => {});
 }
 
 export function updateOthers(dt) {
@@ -253,19 +279,21 @@ export function updateOthers(dt) {
   for (const id in others) {
     const o = others[id];
     if (!o.init) continue;
-    const p = o.mesh.position;
+    const p = o.mesh.position, ox = p.x, oz = p.z;
     p.x += (o.tx - p.x) * k;
     p.y += (o.ty - p.y) * k;
     p.z += (o.tz - p.z) * k;
     o.mesh.rotation.y += (o.tyaw - o.mesh.rotation.y) * k;
     const hd = o.mesh.userData.head;
     hd.rotation.x += (o.tpitch - hd.rotation.x) * k;
+    animateAvatar(o, Math.hypot(p.x - ox, p.z - oz) / Math.max(dt, 0.001), dt);
   }
 }
 
 export function stopOnline() {
   if (timer) clearInterval(timer);
-  timer = null;
+  if (chatTimer) clearTimeout(chatTimer);
+  timer = null; chatTimer = null;
   unsubs.forEach(u => { try { u(); } catch (e) {} });
   unsubs = [];
   for (const k in others) group.remove(others[k].mesh);
@@ -273,9 +301,9 @@ export function stopOnline() {
   if (scene) scene.remove(group);
   net.active = false; net.owner = false; net.trade = null; net.setPrice = null;
   ih.push = ih.take = ih.expire = null; ih.myId = '';
-  mhooks.send = null;
+  mhooks.send = null; mhooks.remove = null;
   clearItems();
   pvp.on = false;
   cb = {};
   code = null; last = ''; ownerId = null;
-}
+    }
