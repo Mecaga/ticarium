@@ -23,10 +23,13 @@ async function enterRoom(code, meta, playerName) {
     beat = setInterval(() => { set(pubRef, pub()).catch(() => {}); }, 30000);
   }
   current = { code, isOwner, pref, od, beat };
-  return { code, name: meta.name, seed: meta.seed, isOwner, solo: false, pvp: !!meta.pvp, max: meta.max || 8 };
+  return {
+    code, name: meta.name, seed: meta.seed, isOwner, solo: false,
+    pvp: !!meta.pvp, max: meta.max || 8, keep: !!meta.keep
+  };
 }
 
-export async function createRoom({ name, isPublic, playerName, pvp, maxPlayers }) {
+export async function createRoom({ name, isPublic, playerName, pvp, maxPlayers, keep }) {
   await ready();
   let code = null;
   for (let i = 0; i < 6; i++) {
@@ -38,7 +41,7 @@ export async function createRoom({ name, isPublic, playerName, pvp, maxPlayers }
   const meta = {
     owner: myUid, name, public: !!isPublic,
     seed: Math.floor(Math.random() * 1e9), created: Date.now(),
-    pvp: !!pvp, max: maxPlayers || 8
+    pvp: !!pvp, max: maxPlayers || 8, keep: !!keep
   };
   await set(ref(db, `rooms/${code}/meta`), meta);
   return enterRoom(code, meta, playerName);
@@ -87,4 +90,4 @@ export async function watchPublicRooms(cb) {
     arr.sort((a, b) => b.created - a.created);
     cb(arr, null);
   }, e => cb(null, e));
-}
+    }
