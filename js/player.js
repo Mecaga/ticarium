@@ -1,4 +1,4 @@
-import { N, get, heightAt } from './world.js';
+import { N, solid, heightAt } from './world.js';
 import { input } from './input.js';
 
 const R = 0.3, PH = 1.7;
@@ -9,18 +9,28 @@ export const pHooks = { onFall: null };
 export const P = {
   x: sx, y: sy, z: sz,
   vy: 0, ground: false, yaw: 0, pitch: 0,
+  kx: 0, kz: 0,    // geri tepme hızı
   sx, sy, sz,      // en son güvenle durduğu yer
   fallY: sy        // havadayken ulaştığı en yüksek nokta
 };
 
 export function collides(x, y, z) {
   for (const dx of [-R, R]) for (const dz of [-R, R]) for (const dy of [0.05, 0.9, PH - 0.05])
-    if (get(Math.floor(x + dx), Math.floor(y + dy), Math.floor(z + dz))) return true;
+    if (solid(Math.floor(x + dx), Math.floor(y + dy), Math.floor(z + dz))) return true;
   return false;
 }
 
 export function jump() {
   if (P.ground) { P.vy = 8; P.ground = false; }
+}
+
+// Vurulunca geri tepme (dx, dz: saldırgandan uzaklaşma yönü)
+export function knock(dx, dz) {
+  const l = Math.hypot(dx, dz) || 1;
+  P.kx = dx / l * 8;
+  P.kz = dz / l * 8;
+  P.vy = Math.max(P.vy, 5);
+  P.ground = false;
 }
 
 export function updatePlayer(dt, frozen) {
@@ -31,8 +41,11 @@ export function updatePlayer(dt, frozen) {
   if (k.KeyD) s += 1; if (k.KeyA) s -= 1;
   if (k.Space) jump();
 
+  const decay = Math.max(0, 1 - 5 * dt);
+  P.kx *= decay; P.kz *= decay;
+
   const sp = 4.5, sn = Math.sin(P.yaw), cs = Math.cos(P.yaw);
-  const vx = (-sn * f + cs * s) * sp, vz = (-cs * f - sn * s) * sp;
+  const vx = (-sn * f + cs * s) * sp + P.kx, vz = (-cs * f - sn * s) * sp + P.kz;
   if (!collides(P.x + vx * dt, P.y, P.z)) P.x += vx * dt;
   if (!collides(P.x, P.y, P.z + vz * dt)) P.z += vz * dt;
 
