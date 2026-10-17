@@ -1,4 +1,4 @@
-import { generate, initRender, rebuild, updateTarget } from './world.js';
+import { generate, initRender, rebuild, updateTarget, isWater } from './world.js';
 import { P, updatePlayer, jump } from './player.js';
 import { eco, startPriceTicker } from './economy.js';
 import { initInput } from './input.js';
@@ -7,7 +7,7 @@ import { toggleBag, isBagOpen } from './bag.js';
 import { initMenu, showMenu, isMenuOpen } from './menu.js';
 import { initItems, updateItems, dropFromInventory } from './items.js';
 import { killNow, tickHealth, isDead } from './health.js';
-import { initSky, updateSky } from './sky.js';
+import { initSky, updateSky, setLights, gameClock } from './sky.js';
 import { initMobs, updateMobs } from './mobs.js';
 import { initGravity, updateGravity } from './gravity.js';
 import { G } from './state.js';
@@ -16,6 +16,9 @@ import { initActions, breakBlock, placeBlock, attack } from './actions.js';
 import { initDeath } from './death.js';
 import { enterGame, leave } from './session.js';
 import { applyRoomUI, drawHearts, panelOpen, toggleSettings, togglePlayers, phooks } from './panels.js';
+import { initChat, isChatOpen, toggleChat } from './chat.js';
+import { tickHunger, canRegen } from './hunger.js';
+import { sfx } from './sound.js';
 
 const $ = id => document.getElementById(id);
 
@@ -30,10 +33,12 @@ const renderer = new THREE.WebGLRenderer({ antialias: false });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 document.body.prepend(renderer.domElement);
-scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+const amb = new THREE.AmbientLight(0xffffff, 0.7);
+scene.add(amb);
 const sunL = new THREE.DirectionalLight(0xffffff, 0.55);
 sunL.position.set(0.5, 0.75, 0.4);
 scene.add(sunL);
+setLights(amb, sunL);
 
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
@@ -66,6 +71,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyB') toggleBag();
   if (e.code === 'KeyF') attack();
   if (e.code === 'KeyP') togglePlayers();
+  if (e.code === 'KeyT' && G.room && !G.room.solo) { e.preventDefault(); toggleChat(); }
   if (e.code === 'KeyQ' && !isDead()) dropFromInventory(eco.sel, 1);
 });
 
@@ -79,6 +85,7 @@ initGravity(scene);
 initActions();
 initDeath();
 initAutosave();
+initChat();
 
 initInput(renderer.domElement, {
   jump, breakBlock, placeBlock,
@@ -103,28 +110,33 @@ drawHud();
 drawHearts(20, 20);
 
 // Döngü
-let last = performance.now(), lastCoord = '';
+let last = performance.now(), lastCoord = '', lx = P.x, lz = P.z, wasWater = false;
 function loop(now) {
   requestAnimationFrame(loop);
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  const frozen = isMarketOpen() || isMenuOpen() || isBagOpen() || panelOpen() || isDead();
+  const frozen = isMarketOpen() || isMenuOpen() || isBagOpen() || panelOpen() || isChatOpen() || isDead();
   updatePlayer(dt, frozen);
   if (!frozen && P.y < -15) killNow({ void: true });
   const room = G.room;
   if (room) {
-    tickHealth(dt);
+    const moved = Math.hypot(P.x - lx, P.z - lz) / Math.max(dt, 0.001) > 0.5;
+    tickHealth(dt, canRegen());
+    tickHunger(dt, moved, !isDead());
     updateMobs(dt, room.solo || room.isOwner);
     updateGravity(dt);
-    const c = 'X ' + Math.floor(P.x) + '  Y ' + Math.floor(P.y) + '  Z ' + Math.floor(P.z);
+    if (P.inWater && !wasWater) sfx.splash();
+    const c = 'X ' + Math.floor(P.x) + '  Y ' + Math.floor(P.y) + '  Z ' + Math.floor(P.z) + '  ' + gameClock();
     if (c !== lastCoord) { $('coord').textContent = c; lastCoord = c; }
   }
+  wasWater = P.inWater; lx = P.x; lz = P.z;
   if (G.online) G.online.updateOthers(dt);
   updateItems(dt, !frozen);
   rebuild();
   camera.position.set(P.x, P.y + 1.6, P.z);
   camera.rotation.set(P.pitch, P.yaw, 0);
-  updateSky(dt, camera);
+  const uw = isWater(Math.floor(camera.position.x), Math.floor(camera.position.y), Math.floor(camera.position.z));
+  updateSky(dt, camera, uw);
   updateTarget(camera);
   renderer.render(scene, camera);
 }
