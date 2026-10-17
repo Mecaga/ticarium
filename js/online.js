@@ -6,6 +6,8 @@ import { eco, net, clampRaw, priceOf } from './economy.js';
 import { hooks as ih, spawnItem, removeItem, clearItems } from './items.js';
 import { hurt, canHurt, hp } from './health.js';
 import { mhooks, spawnCows, applyRemote } from './mobs.js';
+import { makeAvatar, tint } from './avatars.js';
+import { sfx } from './sound.js';
 
 const DMG = 4;
 const pvp = { on: false, lastAtk: 0 };
@@ -23,51 +25,6 @@ function scheduleRebuild() {
   if (dirty) return;
   dirty = true;
   setTimeout(() => { dirty = false; rebuild(); }, 60);
-}
-
-function label(text) {
-  const c = document.createElement('canvas');
-  c.width = 256; c.height = 64;
-  const g = c.getContext('2d');
-  g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(0, 8, 256, 48);
-  g.fillStyle = '#fff'; g.font = 'bold 30px sans-serif';
-  g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillText(String(text).slice(0, 14), 128, 32);
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false, fog: false }));
-  s.scale.set(2, 0.5, 1);
-  s.renderOrder = 10;
-  s.position.y = 2.1;
-  return s;
-}
-
-function makeAvatar(name, id) {
-  let h = 0;
-  for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) % 360;
-  const color = new THREE.Color().setHSL(h / 360, 0.6, 0.5);
-  const m = new THREE.Group();
-  const bodyMat = new THREE.MeshLambertMaterial({ color });
-  const headMat = new THREE.MeshLambertMaterial({ color: 0xf1c27d });
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.35), bodyMat);
-  body.position.y = 0.85;
-  const headG = new THREE.Group();
-  headG.position.y = 1.55;
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), headMat);
-  const face = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.1, 0.05), new THREE.MeshBasicMaterial({ color: 0x222222 }));
-  face.position.set(0, 0, -0.21);
-  headG.add(head, face);
-  m.add(body, headG, label(name));
-  m.userData.head = headG;
-  m.userData.mats = [bodyMat, headMat];
-  m.visible = false;
-  return m;
-}
-
-// Vurulan karakter kısa süre kırmızı yanar
-function tint(o) {
-  if (!o) return;
-  o.mesh.userData.mats.forEach(m => m.emissive.setHex(0xff0000));
-  clearTimeout(o.tt);
-  o.tt = setTimeout(() => o.mesh.userData.mats.forEach(m => m.emissive.setHex(0x000000)), 260);
 }
 
 // opts: { isOwner, pvp, onPrices, onMeta, onCount, onBlock, onKill }
@@ -287,6 +244,7 @@ export function attack() {
   if (!best) return 'Iskaladın';
   update(ref(db, `rooms/${code}/players/${uid}`), { hit: { to: best, n: now, d: DMG } }).catch(() => {});
   tint(others[best]);
+  sfx.hit();
   return 'Vurdun!';
 }
 
@@ -320,4 +278,4 @@ export function stopOnline() {
   pvp.on = false;
   cb = {};
   code = null; last = ''; ownerId = null;
-    }
+}
