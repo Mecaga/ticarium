@@ -43,6 +43,9 @@ export const sfx = {
   hurt()   { noise(0.18, 0.8, 500); tone(120, 0.22, 'sawtooth', 0.4, 45); },
   breakB() { noise(0.1, 0.5, 1400); },
   place()  { tone(220, 0.08, 'triangle', 0.35, 150); },
+  eat()    { noise(0.07, 0.5, 1800); setTimeout(() => noise(0.07, 0.5, 1500), 110); setTimeout(() => noise(0.07, 0.5, 1700), 220); },
+  splash() { noise(0.35, 0.6, 500); },
+  chat()   { tone(660, 0.09, 'sine', 0.2); },
   isMuted: () => muted,
   setMuted(v) {
     muted = !!v;
