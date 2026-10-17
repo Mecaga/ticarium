@@ -1,10 +1,11 @@
-import { db, uid, ref, set, update, remove, onValue } from './firebase.js';
+import { db, uid, ref, set, update, remove, get as dbGet, onValue } from './firebase.js';
 import { onChildAdded, onChildChanged, onChildRemoved, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import { get as getBlock, set as setBlock, rebuild, TYPES } from './world.js';
-import { P } from './player.js';
+import { P, knock } from './player.js';
 import { eco, net, clampRaw, priceOf } from './economy.js';
 import { hooks as ih, spawnItem, removeItem, clearItems } from './items.js';
-import { hurt, hp } from './health.js';
+import { hurt, canHurt, hp } from './health.js';
+import { mhooks, spawnCows, applyRemote } from './mobs.js';
 
 const DMG = 4;
 const pvp = { on: false, lastAtk: 0 };
@@ -14,6 +15,7 @@ let unsubs = [];
 let others = {};
 let last = '';
 let cb = {};
+let ownerId = null;
 let primed = false, lastHit = {}, lastDied = {};
 const group = new THREE.Group();
 
@@ -43,32 +45,44 @@ function makeAvatar(name, id) {
   for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) % 360;
   const color = new THREE.Color().setHSL(h / 360, 0.6, 0.5);
   const m = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.35), new THREE.MeshLambertMaterial({ color }));
+  const bodyMat = new THREE.MeshLambertMaterial({ color });
+  const headMat = new THREE.MeshLambertMaterial({ color: 0xf1c27d });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.35), bodyMat);
   body.position.y = 0.85;
   const headG = new THREE.Group();
   headG.position.y = 1.55;
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), new THREE.MeshLambertMaterial({ color: 0xf1c27d }));
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), headMat);
   const face = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.1, 0.05), new THREE.MeshBasicMaterial({ color: 0x222222 }));
   face.position.set(0, 0, -0.21);
   headG.add(head, face);
   m.add(body, headG, label(name));
   m.userData.head = headG;
+  m.userData.mats = [bodyMat, headMat];
   m.visible = false;
   return m;
 }
 
-// opts: { isOwner, pvp, onPrices, onMeta, onKill }
+// Vurulan karakter kısa süre kırmızı yanar
+function tint(o) {
+  if (!o) return;
+  o.mesh.userData.mats.forEach(m => m.emissive.setHex(0xff0000));
+  clearTimeout(o.tt);
+  o.tt = setTimeout(() => o.mesh.userData.mats.forEach(m => m.emissive.setHex(0x000000)), 260);
+}
+
+// opts: { isOwner, pvp, onPrices, onMeta, onCount, onBlock, onKill }
 export function startOnline(sc, roomCode, opts = {}) {
   stopOnline();
   scene = sc; code = roomCode; cb = opts;
   pvp.on = !!opts.pvp;
-  primed = false; lastHit = {}; lastDied = {};
+  primed = false; lastHit = {}; lastDied = {}; ownerId = null;
   scene.add(group);
 
   // Oda ayarları (PVP, limit, envanteri koru)
   unsubs.push(onValue(ref(db, `rooms/${code}/meta`), snap => {
     const m = snap.val();
     if (!m) return;
+    ownerId = m.owner;
     pvp.on = !!m.pvp;
     if (cb.onMeta) cb.onMeta({ pvp: pvp.on, max: m.max || 8, keep: !!m.keep });
   }));
@@ -77,8 +91,10 @@ export function startOnline(sc, roomCode, opts = {}) {
   const bref = ref(db, `rooms/${code}/blocks`);
   const apply = s => {
     const [x, y, z] = s.key.split('_').map(Number);
-    setBlock(x, y, z, Number(s.val()) || 0);
+    const t = Number(s.val()) || 0;
+    setBlock(x, y, z, t);
     scheduleRebuild();
+    if (cb.onBlock) cb.onBlock(x, y, z, t);
   };
   unsubs.push(onChildAdded(bref, apply), onChildChanged(bref, apply));
 
@@ -94,7 +110,6 @@ export function startOnline(sc, roomCode, opts = {}) {
     });
     update(iref, obj).catch(() => {});
   };
-  // İlk alan kazanır
   ih.take = async id => {
     const r = await runTransaction(ref(db, `rooms/${code}/items/${id}`), v => (v === null ? undefined : null));
     return r.committed;
@@ -104,6 +119,19 @@ export function startOnline(sc, roomCode, opts = {}) {
     onChildAdded(iref, s => spawnItem(s.key, s.val())),
     onChildRemoved(iref, s => removeItem(s.key))
   );
+
+  // İnekler: oda sahibi yönetir, diğerleri izler
+  mhooks.send = obj => { if (code) update(ref(db, `rooms/${code}/mobs`), obj).catch(() => {}); };
+  let mobsFirst = true;
+  unsubs.push(onValue(ref(db, `rooms/${code}/mobs`), snap => {
+    const v = snap.val() || {};
+    if (opts.isOwner) {
+      if (mobsFirst) {
+        mobsFirst = false;
+        if (Object.keys(v).length) applyRemote(v, true); else spawnCows();
+      }
+    } else applyRemote(v, false);
+  }));
 
   // Ortak fiyatlar
   net.active = true;
@@ -137,25 +165,34 @@ export function startOnline(sc, roomCode, opts = {}) {
   // Diğer oyuncular + vuruşlar
   unsubs.push(onValue(ref(db, `rooms/${code}/players`), snap => {
     const seen = {};
+    if (cb.onCount) cb.onCount(snap.numChildren());
     snap.forEach(ch => {
       if (ch.key === uid) return;
       seen[ch.key] = 1;
       const v = ch.val() || {};
       let o = others[ch.key];
       if (!o) {
-        o = others[ch.key] = { mesh: makeAvatar(v.name || '?', ch.key), tx: 0, ty: 0, tz: 0, tyaw: 0, tpitch: 0, init: false, dead: false };
+        o = others[ch.key] = {
+          name: v.name || '?', mesh: makeAvatar(v.name || '?', ch.key),
+          tx: 0, ty: 0, tz: 0, tyaw: 0, tpitch: 0, init: false, dead: false, tt: 0
+        };
         group.add(o.mesh);
       }
+      o.name = v.name || o.name;
       o.dead = !!v.dead;
       if (typeof v.x === 'number') {
         o.tx = v.x; o.ty = v.y; o.tz = v.z; o.tyaw = v.yaw || 0; o.tpitch = v.pitch || 0;
         if (!o.init) { o.mesh.position.set(v.x, v.y, v.z); o.init = true; }
       }
-      // Ölü oyuncu görünmez
       o.mesh.visible = o.init && !o.dead;
 
-      if (v.hit && v.hit.to === uid && lastHit[ch.key] !== v.hit.n && primed && pvp.on) {
-        hurt(v.hit.d || DMG, { id: ch.key, name: v.name || '?' });
+      if (v.hit && lastHit[ch.key] !== v.hit.n && primed) {
+        if (v.hit.to === uid) {
+          if (pvp.on && canHurt()) {
+            hurt(v.hit.d || DMG, { id: ch.key, name: v.name || '?' });
+            if (!hp.dead) knock(P.x - o.mesh.position.x, P.z - o.mesh.position.z);
+          }
+        } else if (others[v.hit.to]) tint(others[v.hit.to]);
       }
       if (v.hit) lastHit[ch.key] = v.hit.n;
       if (v.died && v.died.by === uid && lastDied[ch.key] !== v.died.n && primed) {
@@ -197,6 +234,31 @@ export function setDead(v) {
   update(ref(db, `rooms/${code}/players/${uid}`), { dead: !!v }).catch(() => {});
 }
 
+// Oyuncu ilerlemesi (envanter + konum), oda başına
+export async function loadProgress() {
+  if (!code || !uid) return null;
+  try {
+    const s = await dbGet(ref(db, `rooms/${code}/saves/${uid}`));
+    return s.exists() ? s.val() : null;
+  } catch (e) { return null; }
+}
+export function saveProgress(d) {
+  if (!code || !uid) return;
+  set(ref(db, `rooms/${code}/saves/${uid}`), d).catch(() => {});
+}
+
+export function getPlayers(myName) {
+  const arr = [{ id: uid, name: myName, me: true, dead: hp.dead, owner: uid === ownerId, dist: 0 }];
+  for (const id in others) {
+    const o = others[id];
+    arr.push({
+      id, name: o.name, me: false, dead: o.dead, owner: id === ownerId,
+      dist: Math.hypot(P.x - o.mesh.position.x, P.z - o.mesh.position.z)
+    });
+  }
+  return arr;
+}
+
 export function attack() {
   if (!code || !pvp.on) return 'PVP kapalı';
   if (hp.dead) return '';
@@ -224,6 +286,7 @@ export function attack() {
   }
   if (!best) return 'Iskaladın';
   update(ref(db, `rooms/${code}/players/${uid}`), { hit: { to: best, n: now, d: DMG } }).catch(() => {});
+  tint(others[best]);
   return 'Vurdun!';
 }
 
@@ -252,8 +315,9 @@ export function stopOnline() {
   if (scene) scene.remove(group);
   net.active = false; net.owner = false; net.trade = null; net.setPrice = null;
   ih.push = ih.take = ih.expire = null; ih.myId = '';
+  mhooks.send = null;
   clearItems();
   pvp.on = false;
   cb = {};
-  code = null; last = '';
-      }
+  code = null; last = ''; ownerId = null;
+  }
