@@ -4,6 +4,7 @@ import { eco, sell, buy, priceOf, buyCost } from './economy.js';
 const css = c => '#' + c.toString(16).padStart(6, '0');
 let marketOpen = false;
 export const isMarketOpen = () => marketOpen;
+export const hooks = { bag: null };
 
 export function toast(s) {
   const m = document.getElementById('msg');
@@ -17,15 +18,22 @@ export function drawHud() {
   document.getElementById('coins').textContent = '🪙 ' + eco.coins;
   const hb = document.getElementById('hotbar');
   hb.innerHTML = '';
-  for (const t in TYPES) {
+  eco.hotbar.forEach((t, i) => {
     const d = document.createElement('div');
-    d.className = 'slot' + (t == eco.sel ? ' sel' : '');
-    d.innerHTML = `<i style="background:${css(TYPES[t].color)}"></i>${TYPES[t].name} ${eco.inv[t]}`;
-    const pick = e => { e.preventDefault(); e.stopPropagation(); eco.sel = +t; drawHud(); };
+    d.className = 'slot' + (i === eco.hsel ? ' sel' : '');
+    d.innerHTML = `<i style="background:${css(TYPES[t].color)}"></i><span>${TYPES[t].name}</span><b>${eco.inv[t]}</b>`;
+    const pick = e => { e.preventDefault(); e.stopPropagation(); eco.hsel = i; eco.sel = t; drawHud(); };
     d.addEventListener('touchstart', pick, { passive: false });
     d.addEventListener('mousedown', pick);
     hb.appendChild(d);
-  }
+  });
+  const more = document.createElement('div');
+  more.className = 'slot more';
+  more.textContent = '⋯';
+  const openBag = e => { e.preventDefault(); e.stopPropagation(); if (hooks.bag) hooks.bag(); };
+  more.addEventListener('touchstart', openBag, { passive: false });
+  more.addEventListener('mousedown', openBag);
+  hb.appendChild(more);
 }
 
 export function drawMarket() {
