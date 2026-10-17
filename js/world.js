@@ -1,10 +1,11 @@
 export const N = 48, H = 32, CS = 16;
 const NC = N / CS;
+export const BEDROCK = 11;
 
 export const TYPES = {
   1:  { name: 'Çim',    color: 0x5fae45, base: 10 },
   2:  { name: 'Toprak', color: 0x8b5a2b, base: 6 },
-  3:  { name: 'Taş',    color: 0x8a8a8a, base: 15 },
+  3:  { name: 'Taş',    color: 0x969490, base: 15 },
   4:  { name: 'Odun',   color: 0x6b4423, base: 25 },
   5:  { name: 'Yaprak', color: 0x2f7d32, base: 5 },
   6:  { name: 'Kum',    color: 0xe6d690, base: 8 },
@@ -58,24 +59,88 @@ export function generate(seed = 1) {
   world.fill(0);
   for (let cx = 0; cx < NC; cx++) for (let cz = 0; cz < NC; cz++) addDirty(cx, cz);
   const rnd = mulberry(seed);
+
+  // Arazi: alt katman kayası, alçakta kum, tepede kar
   for (let x = 0; x < N; x++) for (let z = 0; z < N; z++) {
     const h = heightAt(x, z);
-    for (let y = 0; y <= h; y++) set(x, y, z, y === h ? 1 : y >= h - 2 ? 2 : 3);
+    for (let y = 0; y <= h; y++) {
+      let t;
+      if (y === 0) t = BEDROCK;
+      else if (y === 1 && hash(x, z, 17) < 0.5) t = BEDROCK;
+      else if (y === h) t = h <= 7 ? 6 : h >= 16 ? 8 : 1;
+      else if (y >= h - 2) t = h <= 7 ? 6 : 2;
+      else t = 3;
+      set(x, y, z, t);
+    }
   }
+
+  // Rastgele kum yamaları
+  for (let i = 0; i < 4; i++) {
+    const cx = 4 + Math.floor(rnd() * (N - 8)), cz = 4 + Math.floor(rnd() * (N - 8));
+    const r = 3 + Math.floor(rnd() * 3);
+    if (Math.abs(cx - N / 2) < r + 3 && Math.abs(cz - N / 2) < r + 3) continue;
+    for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) {
+      if (dx * dx + dz * dz > r * r) continue;
+      const x = cx + dx, z = cz + dz;
+      if (x < 0 || z < 0 || x >= N || z >= N) continue;
+      const h = heightAt(x, z);
+      if (get(x, h, z) === 1) set(x, h, z, 6);
+      if (get(x, h - 1, z) === 2) set(x, h - 1, z, 6);
+    }
+  }
+
+  // Ağaçlar (sadece çimde)
   for (let i = 0; i < 40; i++) {
     const x = 3 + Math.floor(rnd() * (N - 6)), z = 3 + Math.floor(rnd() * (N - 6));
     if (Math.abs(x - N / 2) < 3 && Math.abs(z - N / 2) < 3) continue;
     const h = heightAt(x, z);
+    if (get(x, h, z) !== 1) continue;
     for (let y = 1; y <= 4; y++) set(x, h + y, z, 4);
     for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) for (let dy = 3; dy <= 5; dy++) {
       if (Math.abs(dx) + Math.abs(dz) > 3 || (dy === 5 && Math.abs(dx) + Math.abs(dz) > 1)) continue;
       if (!get(x + dx, h + dy, z + dz)) set(x + dx, h + dy, z + dz, 5);
     }
   }
+
+  // Yer altı altın damarları
+  for (let i = 0; i < 20; i++) {
+    let x = 2 + Math.floor(rnd() * (N - 4)), z = 2 + Math.floor(rnd() * (N - 4));
+    const h = heightAt(x, z);
+    let y = 2 + Math.floor(rnd() * Math.max(1, h - 4));
+    const len = 2 + Math.floor(rnd() * 3);
+    for (let k = 0; k < len; k++) {
+      if (get(x, y, z) === 3) set(x, y, z, 10);
+      const a = Math.floor(rnd() * 6);
+      if (a === 0) x++; else if (a === 1) x--; else if (a === 2) z++;
+      else if (a === 3) z--; else if (a === 4) y++; else y--;
+    }
+  }
+
+  // Tuğla harabeler (cam pencereli)
+  let placed = 0;
+  for (let tries = 0; tries < 60 && placed < 4; tries++) {
+    const cx = 6 + Math.floor(rnd() * (N - 12)), cz = 6 + Math.floor(rnd() * (N - 12));
+    if (Math.abs(cx - N / 2) < 7 && Math.abs(cz - N / 2) < 7) continue;
+    placed++;
+    const hc = heightAt(cx, cz);
+    for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) set(cx + dx, hc, cz + dz, 7);
+    for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
+      if (Math.max(Math.abs(dx), Math.abs(dz)) !== 2) continue;
+      if (dx === 0 && dz === 2) continue; // kapı
+      const x = cx + dx, z = cz + dz;
+      const hs = heightAt(x, z);
+      const top = hc + 2 + (rnd() < 0.5 ? 1 : 0);
+      for (let y = hs + 1; y <= top; y++) {
+        if (rnd() < 0.12) continue; // yıkık boşluk
+        const win = y === hc + 2 && (dx === 0 || dz === 0) && rnd() < 0.6;
+        set(x, y, z, win ? 9 : 7);
+      }
+    }
+  }
 }
 
 // ---- Dokular (atlas) ----
-const TILE_NAMES = ['grassTop', 'grassSide', 'dirt', 'stone', 'woodSide', 'woodTop', 'leaves', 'sand', 'brick', 'snow', 'glass', 'gold'];
+const TILE_NAMES = ['grassTop', 'grassSide', 'dirt', 'stone', 'woodSide', 'woodTop', 'leaves', 'sand', 'brick', 'snow', 'glass', 'gold', 'bedrock'];
 const TI = {};
 TILE_NAMES.forEach((n, i) => TI[n] = i);
 const T = TILE_NAMES.length;
@@ -90,7 +155,8 @@ const FACE_TILES = {
   7: [TI.brick, TI.brick, TI.brick],
   8: [TI.snow, TI.snow, TI.snow],
   9: [TI.glass, TI.glass, TI.glass],
-  10: [TI.gold, TI.gold, TI.gold]
+  10: [TI.gold, TI.gold, TI.gold],
+  11: [TI.bedrock, TI.bedrock, TI.bedrock]
 };
 export const atlas = { tex: null, T };
 export const sideTile = t => FACE_TILES[t][1];
@@ -102,10 +168,24 @@ function hash(x, y, s) {
 }
 
 const BASE = {
-  grassTop: [95, 174, 69], grassSide: [139, 90, 43], dirt: [139, 90, 43], stone: [138, 138, 138],
+  grassTop: [95, 174, 69], grassSide: [139, 90, 43], dirt: [139, 90, 43], stone: [150, 148, 144],
   woodSide: [107, 68, 35], woodTop: [150, 110, 62], leaves: [47, 125, 50], sand: [230, 214, 144],
-  brick: [181, 73, 58], snow: [245, 245, 245], glass: [159, 216, 232], gold: [255, 215, 0]
+  brick: [181, 73, 58], snow: [245, 245, 245], glass: [159, 216, 232], gold: [255, 215, 0],
+  bedrock: [62, 62, 66]
 };
+
+// Kaldırım taşı için hücre noktaları (kenarlar birleşsin diye sarmalı)
+const SEEDS = Array.from({ length: 8 }, (_, i) => [hash(i, 1, 50) * 16, hash(i, 2, 50) * 16]);
+function cobble(x, y) {
+  let d1 = 99, d2 = 99, id = 0;
+  for (let i = 0; i < SEEDS.length; i++) {
+    let dx = Math.abs(x + 0.5 - SEEDS[i][0]); dx = Math.min(dx, 16 - dx);
+    let dy = Math.abs(y + 0.5 - SEEDS[i][1]); dy = Math.min(dy, 16 - dy);
+    const d = Math.hypot(dx, dy);
+    if (d < d1) { d2 = d1; d1 = d; id = i; } else if (d < d2) d2 = d;
+  }
+  return { id, edge: d2 - d1 };
+}
 
 function buildAtlas() {
   const cv = document.createElement('canvas');
@@ -119,7 +199,19 @@ function buildAtlas() {
         case 'grassSide':
           if (y < 3 || (y === 3 && hash(x, y, 99) < 0.5)) [r, g, b] = [95, 174, 69];
           break;
-        case 'stone': if (hash(x, y, 7) < 0.12) k *= 0.7; break;
+        case 'stone': {
+          const c = cobble(x, y);
+          k = 0.78 + hash(c.id, 3, 51) * 0.42 + (hash(x, y, 8) - 0.5) * 0.08;
+          if (c.edge < 0.9) k *= 0.55;
+          break;
+        }
+        case 'bedrock': {
+          const h = hash(x, y, 21);
+          k = 0.45 + hash(x, y, 22) * 0.9;
+          if (h < 0.18) { r = 22; g = 22; b = 24; k = 1; }
+          else if (h > 0.93) { r = 120; g = 120; b = 126; k = 1; }
+          break;
+        }
         case 'woodSide': if (x % 4 === 0) k *= 0.78; break;
         case 'woodTop': {
           const d = Math.max(Math.abs(x - 7.5), Math.abs(y - 7.5));
@@ -177,7 +269,7 @@ function buildChunk(cx, cz) {
   const x0 = cx * CS, z0 = cz * CS;
   for (let y = 0; y < H; y++) for (let lz = 0; lz < CS; lz++) for (let lx = 0; lx < CS; lx++) {
     const x = x0 + lx, z = z0 + lz, t = get(x, y, z);
-    if (!t) continue;
+    if (!t || !FACE_TILES[t]) continue;
     const ft = FACE_TILES[t];
     for (let a = 0; a < 3; a++) for (let s = -1; s <= 1; s += 2) {
       const b = [x, y, z]; b[a] += s;
@@ -253,4 +345,4 @@ export function updateTarget(camera) {
   }
   hl.visible = !!target;
   if (target) hl.position.set(target[0] + 0.5, target[1] + 0.5, target[2] + 0.5);
-    }
+                                  }
