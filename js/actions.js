@@ -7,8 +7,13 @@ import { isDead } from './health.js';
 import { recordChange } from './progress.js';
 import { G } from './state.js';
 import { sfx } from './sound.js';
+import { food, eat } from './hunger.js';
+import { findMob, hurtMob } from './mobs.js';
 
+const FOOD = { 15: 6 };   // Et: +6 açlık
+const MOB_DMG = 3;
 const saplings = new Map();
+let lastAtk = 0;
 export const clearSaplings = () => saplings.clear();
 
 export function trackSapling(x, y, z) {
@@ -62,9 +67,20 @@ export function breakBlock() {
   rebuild(); drawHud();
 }
 
+// Koy: blok yerleştirir, seçili eşya yiyecekse yer
 export function placeBlock() {
-  if (isDead() || !prev) return;
+  if (isDead()) return;
   const t = eco.sel;
+  if (FOOD[t]) {
+    if (eco.inv[t] < 1) return toast(TYPES[t].name + ' yok.');
+    if (food.cur >= food.max) return toast('Karnın tok');
+    eco.inv[t]--;
+    eat(FOOD[t]);
+    sfx.eat();
+    drawHud();
+    return toast('🍗 Yedin (+' + FOOD[t] + ')');
+  }
+  if (!prev) return;
   if (eco.inv[t] < 1) return toast(TYPES[t].name + ' yok.');
   const [x, y, z] = prev;
   if (!inBounds(x, y, z)) return toast(y >= H ? 'Yükseklik sınırı (' + H + ')' : 'Dünya sınırı');
@@ -82,9 +98,30 @@ export function placeBlock() {
   rebuild(); drawHud();
 }
 
+// Vur: hayvanlara her zaman, oyunculara sadece PVP açıkken
 export function attack() {
   const room = G.room;
-  if (isDead() || !G.online || !room || !room.pvp) return;
-  const m = G.online.attack();
-  if (m) toast(m);
+  if (isDead() || !room) return;
+  const now = Date.now();
+  if (now - lastAtk < 450) return;
+  lastAtk = now;
+
+  const cp = Math.cos(P.pitch);
+  const ex = P.x, ey = P.y + 1.6, ez = P.z;
+  const dx = -Math.sin(P.yaw) * cp, dy = Math.sin(P.pitch), dz = -Math.cos(P.yaw) * cp;
+  const o = G.online;
+  if (o) o.swing();
+
+  const m = findMob(ex, ey, ez, dx, dy, dz, 4.5);
+  const p = (o && room.pvp) ? o.findPlayer(ex, ey, ez, dx, dy, dz, 4.5) : null;
+  if (p && (!m || p.t <= m.t)) {
+    o.hitPlayer(p.id);
+    sfx.hit();
+    return toast('Vurdun!');
+  }
+  if (m) {
+    sfx.hit();
+    if (room.solo || room.isOwner) hurtMob(m.id, MOB_DMG, P.x, P.z);
+    else if (o) o.sendMobHit(m.id, MOB_DMG, P.x, P.z);
+  }
 }
