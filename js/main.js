@@ -10,6 +10,7 @@ import { hhooks, hurt, killNow, respawnHealth, resetHealth, tickHealth, isDead }
 import { initSky, updateSky } from './sky.js';
 import { initMobs, spawnCows, updateMobs, clearMobs } from './mobs.js';
 import { saveSolo, loadSolo, clearSolo } from './save.js';
+import { initGravity, updateGravity, queueFall, flushGravity, clearGravity, ghooks, isFalling } from './gravity.js';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -198,6 +199,12 @@ function recordChange(x, y, z, t) {
   if (room && room.solo) soloChanges[x + '_' + y + '_' + z] = t;
 }
 
+// Düşen kum/kar da kaydedilsin ve odadaki herkese gitsin
+ghooks.onChange = (x, y, z, t) => {
+  recordChange(x, y, z, t);
+  if (online) online.sendBlock(x, y, z, t);
+};
+
 function trackSapling(x, y, z) {
   if (room && !room.solo && !room.isOwner) return; // odada büyütmeyi oda sahibi yapar
   saplings.set(x + '_' + y + '_' + z, { x, y, z, at: Date.now() + 45000 + Math.random() * 45000 });
@@ -236,6 +243,7 @@ function breakBlock() {
     toast('🌱 Fidan buldun!');
   }
   if (online) online.sendBlock(x, y, z, 0);
+  queueFall(x, y + 1, z); // üstündeki kum/kar düşsün
   rebuild(); drawHud();
 }
 
@@ -253,6 +261,7 @@ function placeBlock() {
   recordChange(x, y, z, t);
   if (online) online.sendBlock(x, y, z, t);
   if (t === SAPLING) trackSapling(x, y, z);
+  if (isFalling(t)) queueFall(x, y, z); // altı boşsa düşer
   eco.inv[t]--;
   rebuild(); drawHud();
 }
@@ -350,6 +359,7 @@ function applyState(s) {
 function autosave(manual, force) {
   if (!room || room.noSave) return;
   if (isDead() && !force) return;
+  flushGravity(); // havada kalan kum/kar kaybolmasın
   const st = snapshotState();
   if (room.solo) {
     st.seed = room.seed;
@@ -368,7 +378,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) autos
 // ---------- Odaya giriş / çıkış ----------
 function enterGame(info) {
   if (online) { online.stopOnline(); online = null; }
-  clearItems(); clearMobs(); clearDeath(); closePanels();
+  clearItems(); clearMobs(); clearGravity(); clearDeath(); closePanels();
   saplings.clear(); soloChanges = {};
   itemHooks.push = itemHooks.take = itemHooks.expire = null; itemHooks.myId = '';
   const my = room = { ...info, count: 1, max: info.max || 8 };
@@ -432,9 +442,10 @@ function enterGame(info) {
 }
 
 async function leave() {
+  flushGravity();
   autosave(false);
   if (online) { online.stopOnline(); online = null; }
-  clearItems(); clearMobs(); clearDeath(); closePanels();
+  clearItems(); clearMobs(); clearGravity(); clearDeath(); closePanels();
   saplings.clear();
   room = null;
   applyRoomUI();
@@ -447,6 +458,7 @@ initRender(scene);
 initItems(scene);
 initMobs(scene);
 initSky(scene);
+initGravity(scene);
 
 initInput(renderer.domElement, {
   jump, breakBlock, placeBlock,
@@ -482,6 +494,7 @@ function loop(now) {
   if (room) {
     tickHealth(dt);
     updateMobs(dt, room.solo || room.isOwner);
+    updateGravity(dt);
     const c = 'X ' + Math.floor(P.x) + '  Y ' + Math.floor(P.y) + '  Z ' + Math.floor(P.z);
     if (c !== lastCoord) { $('coord').textContent = c; lastCoord = c; }
   }
