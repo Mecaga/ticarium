@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Ticarium 3D</title>
-<link rel="stylesheet" href="css/style.css?v=17">
+<title>BlokDiyar</title>
+<link rel="stylesheet" href="css/style.css?v=18">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
@@ -33,14 +33,14 @@
 
 <div id="menu">
   <div class="mbox">
-    <h1>Ticarium</h1>
+    <h1>BlokDiyar</h1>
     <div id="sMain">
       <input id="nameIn" maxlength="14" placeholder="Oyuncu adın">
-      <button id="mWorlds">🌍 Dünyalarım (tek oyunculu)</button>
+      <button id="mWorlds">🌍 Dünyalarım (dünyalar + özel odalar)</button>
       <button id="mCreate">Oda Kur</button>
       <button id="mList">Açık Odalar</button>
       <button id="mJoin">Kodla Katıl</button>
-      <button id="mMine">Odalarım (kayıtlı)</button>
+      <button id="mMine">Odalarım (herkese açık)</button>
     </div>
     <div id="sWorlds" style="display:none">
       <div id="wInfo"></div>
@@ -59,7 +59,7 @@
       <label class="chk">Dünya
         <select id="cWorld" style="flex:1;min-width:0"><option value="kind:normal">🌍 Rastgele dünya (Normal)</option></select>
       </label>
-      <label class="chk"><input type="checkbox" id="cPublic" checked> Herkese açık (listede görünsün)</label>
+      <label class="chk"><input type="checkbox" id="cPublic"> Herkese açık (Açık Odalar'da görünsün)</label>
       <label class="chk"><input type="checkbox" id="cPvp"> PVP açık (oyuncular birbirine vurabilir)</label>
       <label class="chk"><input type="checkbox" id="cKeep"> Envanteri koru (ölünce eşyalar düşmez)</label>
       <label class="chk">Oyuncu limiti
@@ -116,7 +116,7 @@ var missing = ids.filter(function (i) { return !document.getElementById(i); });
 if (missing.length) {
   showErr('index.html eski, eksik elemanlar: ' + missing.join(', '));
 } else {
-  import('./js/main.js?v=17').catch(function (e) {
+  import('./js/main.js?v=18').catch(function (e) {
     showErr('Yükleme hatası (bir js dosyası eski ya da eksik olabilir): ' + (e.message || e));
   });
 }
