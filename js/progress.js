@@ -7,6 +7,7 @@ import { isDead } from './health.js';
 import { food, setFood } from './hunger.js';
 import { G } from './state.js';
 import { stack } from './paints.js';
+import { survivalInv } from './creative.js';
 
 // Başkasının odasında envanter/konum kaydı tutulsun mu? (false: sadece kendi dünyan/odan kaydolur)
 const SAVE_GUEST = false;
@@ -49,8 +50,9 @@ function flashSaved() {
 }
 
 function snapshotState() {
+  const real = survivalInv();   // yaratıcı moddaysa gerçek çanta kaydedilir
   const inv = {};
-  for (const t in TYPES) inv['t' + t] = eco.inv[t] || 0;
+  for (const t in TYPES) inv['t' + t] = real[t] || 0;
   const r = n => +n.toFixed(2);
   return {
     inv, hotbar: eco.hotbar.slice(), hsel: eco.hsel, food: food.cur, stack: stack.slice(),
@@ -110,4 +112,4 @@ export function initAutosave() {
   setInterval(() => autosave(false), 15000);
   addEventListener('pagehide', () => autosave(false));
   document.addEventListener('visibilitychange', () => { if (document.hidden) autosave(false); });
-}
+    }
