@@ -1,11 +1,12 @@
-import { loadSolo, getMine, removeMine } from './save.js';
+import { getMine, removeMine } from './save.js';
+import { KINDS } from './menu-worlds.js';
 
 const $ = id => document.getElementById(id);
 let wtoken = 0;
 
-// ctx: { loadR, run, enter, err, pname, setUnsub }
+// ctx: { loadR, loadC, run, enter, err, pname, setUnsub }
 export function makeLists(ctx) {
-  const { loadR, run, enter, err, pname, setUnsub } = ctx;
+  const { loadR, loadC, run, enter, err, pname, setUnsub } = ctx;
 
   async function startList() {
     const box = $('roomList');
@@ -13,7 +14,7 @@ export function makeLists(ctx) {
     try {
       const r = await loadR();
       const un = await r.watchPublicRooms((list, e) => {
-        if (e) { box.innerHTML = ''; return err(e.message); }
+        if (e) { box.innerHTML = ''; return err(e.code || e.message); }
         box.innerHTML = '';
         if (!list.length) { box.innerHTML = '<p>Açık oda yok. Bir tane kur!</p>'; return; }
         for (const room of list) {
@@ -62,7 +63,7 @@ export function makeLists(ctx) {
     if (!n) box.innerHTML = '<p>Kayıtlı oda yok. Kurduğun odalar burada görünür.</p>';
   }
 
-  // Oda kurarken dünya seçenekleri: rastgele, tek oyunculu kayıt, kendi odaların
+  // Oda kurarken dünya seçenekleri: türler, kayıtlı dünyalarım, kendi odalarım
   async function fillWorlds() {
     const sel = $('cWorld'), tk = ++wtoken;
     const add = (v, t) => {
@@ -71,9 +72,12 @@ export function makeLists(ctx) {
       sel.appendChild(o);
     };
     sel.innerHTML = '';
-    add('random', '🎲 Rastgele yeni dünya');
-    if (loadSolo()) add('solo', '💾 Tek oyunculu dünyam');
+    for (const k in KINDS) add('kind:' + k, KINDS[k][0] + ' ' + KINDS[k][1]);
     try {
+      const c = await loadC();
+      const list = await c.listWorlds();
+      if (tk !== wtoken) return;
+      list.forEach(w => add('world:' + w.id, '💾 ' + w.name + ' (kayıtlı dünyam)'));
       const r = await loadR();
       const res = await r.checkOwned(getMine());
       if (tk !== wtoken) return;
@@ -86,13 +90,10 @@ export function makeLists(ctx) {
 
   function pickSource() {
     const v = $('cWorld').value;
-    if (v === 'solo') {
-      const s = loadSolo();
-      if (s) return { type: 'solo', seed: s.seed, changes: s.changes || {} };
-    }
+    if (v.indexOf('world:') === 0) return { type: 'world', id: v.slice(6) };
     if (v.indexOf('room:') === 0) return { type: 'room', code: v.slice(5) };
-    return { type: 'random' };
+    return { type: 'kind', kind: v.indexOf('kind:') === 0 ? v.slice(5) : 'normal' };
   }
 
   return { startList, startMine, fillWorlds, pickSource };
-      }
+}
