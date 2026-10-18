@@ -1,18 +1,20 @@
-export const hp = { cur: 20, max: 20, dead: false, protectUntil: 0, regen: 0 };
+export const hp = { cur: 20, max: 20, dead: false, protectUntil: 0, regen: 0, god: false };
 export const hhooks = { onChange: null, onHurt: null, onDeath: null };
 
 const changed = () => { if (hhooks.onChange) hhooks.onChange(hp.cur, hp.max); };
 export const isDead = () => hp.dead;
-export const canHurt = () => !hp.dead && Date.now() >= hp.protectUntil;
+export const canHurt = () => !hp.dead && !hp.god && Date.now() >= hp.protectUntil;
 
 export function resetHealth() {
-  hp.cur = hp.max; hp.dead = false; hp.protectUntil = 0; hp.regen = 0;
+  hp.cur = hp.max; hp.dead = false; hp.protectUntil = 0; hp.regen = 0; hp.god = false;
   changed();
 }
 
-// src: { name, id } (oyuncu) | { fall: true } | { void: true } | { starve: true }
+export function healFull() { hp.cur = hp.max; changed(); }
+
+// src: { name, id } | { fall } | { void } | { starve } | { lava } | { drown }
 export function hurt(d, src = {}) {
-  if (hp.dead || d <= 0) return false;
+  if (hp.dead || hp.god || d <= 0) return false;
   if (Date.now() < hp.protectUntil) return false;
   hp.cur = Math.max(0, hp.cur - d);
   hp.regen = 0;
@@ -27,7 +29,7 @@ export function hurt(d, src = {}) {
 }
 
 export function killNow(src = {}) {
-  if (hp.dead) return;
+  if (hp.dead || hp.god) return;
   hp.cur = 0; hp.dead = true;
   changed();
   if (hhooks.onDeath) hhooks.onDeath(src);
