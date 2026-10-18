@@ -19,6 +19,9 @@ import { applyRoomUI, drawHearts, panelOpen, toggleSettings, togglePlayers, phoo
 import { initChat, isChatOpen, toggleChat } from './chat.js';
 import { tickHunger, canRegen } from './hunger.js';
 import { sfx } from './sound.js';
+import { updateWater } from './water.js';
+import { initPaints, updatePaints } from './paints.js';
+import { isDrawOpen } from './draw.js';
 
 const $ = id => document.getElementById(id);
 
@@ -67,7 +70,7 @@ function bindBtn(id, fn) {
 hooks.bag = toggleBag;
 phooks.leave = leave;
 addEventListener('keydown', e => {
-  if (e.target.tagName === 'INPUT' || isMenuOpen()) return;
+  if (e.target.tagName === 'INPUT' || isMenuOpen() || isDrawOpen()) return;
   if (e.code === 'KeyB') toggleBag();
   if (e.code === 'KeyF') attack();
   if (e.code === 'KeyP') togglePlayers();
@@ -82,6 +85,7 @@ initItems(scene);
 initMobs(scene);
 initSky(scene);
 initGravity(scene);
+initPaints(scene);
 initActions();
 initDeath();
 initAutosave();
@@ -115,7 +119,7 @@ function loop(now) {
   requestAnimationFrame(loop);
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  const frozen = isMarketOpen() || isMenuOpen() || isBagOpen() || panelOpen() || isChatOpen() || isDead();
+  const frozen = isMarketOpen() || isMenuOpen() || isBagOpen() || panelOpen() || isChatOpen() || isDrawOpen() || isDead();
   updatePlayer(dt, frozen);
   if (!frozen && P.y < -15) killNow({ void: true });
   const room = G.room;
@@ -125,6 +129,8 @@ function loop(now) {
     tickHunger(dt, moved, !isDead());
     updateMobs(dt, room.solo || room.isOwner);
     updateGravity(dt);
+    updateWater(dt);
+    updatePaints(dt);
     if (P.inWater && !wasWater) sfx.splash();
     const c = 'X ' + Math.floor(P.x) + '  Y ' + Math.floor(P.y) + '  Z ' + Math.floor(P.z) + '  ' + gameClock();
     if (c !== lastCoord) { $('coord').textContent = c; lastCoord = c; }
