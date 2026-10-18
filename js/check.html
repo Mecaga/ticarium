@@ -11,23 +11,25 @@ div{padding:3px 0;font-size:15px}
 </style>
 </head>
 <body>
-<h3>Ticarium dosya kontrolü</h3>
+<h3>BlokDiyar dosya kontrolü</h3>
 <div id="out">Kontrol ediliyor...</div>
 <script>
 var files = {
-  'index.html': 'sWorlds', 'css/style.css': '#chatBox',
-  'js/main.js': 'updateWater', 'js/world.js': 'export const wh', 'js/textures.js': 'wbucket',
+  'index.html': 'BlokDiyar', 'css/style.css': '#chatBox',
+  'js/main.js': 'updateFluids', 'js/world.js': 'LAVA_MAX', 'js/textures.js': 'lbucket',
   'js/player.js': 'inWater', 'js/input.js': 'export function initInput', 'js/economy.js': 'export function startPriceTicker',
-  'js/ui.js': 'MARKET_ON', 'js/bag.js': 'export function toggleBag', 'js/items.js': 'export function dropItems',
-  'js/health.js': 'starve', 'js/hunger.js': 'export function tickHunger', 'js/mobs.js': 'surfaceY',
+  'js/ui.js': 'MARKET_ON', 'js/bag.js': 'CATS', 'js/items.js': 'export function dropItems',
+  'js/health.js': 'god', 'js/hunger.js': 'export function tickHunger', 'js/mobs.js': 'surfaceY',
   'js/sky.js': 'export function gameClock', 'js/save.js': 'saveHooks', 'js/gravity.js': 'WATER',
-  'js/menu.js': 'async function diag', 'js/menu-lists.js': 'KINDS', 'js/menu-worlds.js': 'export function makeWorlds',
+  'js/menu.js': 'async function diag', 'js/menu-lists.js': 'myRooms', 'js/menu-worlds.js': 'export function makeWorlds',
   'js/rooms.js': "type === 'world'", 'js/online.js': 'sendPaint', 'js/firebase.js': 'serverTimestamp',
   'js/state.js': 'export const G', 'js/sound.js': 'splash', 'js/avatars.js': 'export function animateAvatar',
-  'js/progress.js': 'recordPaint', 'js/panels.js': 'setChatVisible', 'js/death.js': 'spawnPos',
-  'js/actions.js': 'useCanvas', 'js/session.js': 'setSimulate', 'js/chat.js': 'export function initChat',
-  'js/cloud.js': 'export async function createWorld', 'js/water.js': 'export function updateWater',
-  'js/paints.js': 'export function setPaint', 'js/draw.js': 'export function openDraw'
+  'js/progress.js': 'survivalInv', 'js/panels.js': 'setChatVisible', 'js/death.js': 'drown',
+  'js/actions.js': 'chopTree', 'js/session.js': 'resetVitals', 'js/chat.js': 'runCommand',
+  'js/cloud.js': 'addMyRoom', 'js/fluids.js': 'export function updateFluids',
+  'js/paints.js': 'export function setPaint', 'js/draw.js': 'export function openDraw',
+  'js/creative.js': 'export function setCreative', 'js/commands.js': 'export function runCommand',
+  'js/vitals.js': 'export function tickVitals'
 };
 var names = Object.keys(files), out = document.getElementById('out');
 var rows = [], bad = 0, old = 0, done = 0;
