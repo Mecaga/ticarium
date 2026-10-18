@@ -5,8 +5,11 @@ export const N = 48, H = 32, CS = 16;
 const NC = N / CS;
 export const SEA = 7;
 export const BEDROCK = 11, SAPLING = 12, BIRCH_LOG = 13, BIRCH_LEAF = 14, MEAT = 15, WOOL = 16, WATER = 17;
-export const WATER_MAX = 24;   // 17 kaynak su, 18..24 akan su (yayılma seviyesi)
-export const BUCKET = 30, WBUCKET = 31, CANVAS = 32;
+export const WATER_MAX = 24;    // 17 kaynak su, 18..24 akan su
+export const LAVA = 25, LAVA_MAX = 28;   // 25 kaynak lav, 26..28 akan lav
+export const BUCKET = 30, WBUCKET = 31, CANVAS = 32, LBUCKET = 33;
+export const FLOWER_MIN = 40, FLOWER_MAX = 45, APPLE = 46;
+export const isPlant = t => t === SAPLING || (t >= FLOWER_MIN && t <= FLOWER_MAX);
 
 export const TYPES = {
   1:  { name: 'Çim',    color: 0x5fae45, base: 10 },
@@ -26,25 +29,45 @@ export const TYPES = {
   16: { name: 'Yün',    color: 0xececec, base: 14 },
   30: { name: 'Kova',   color: 0x9aa0a6, base: 40 },
   31: { name: 'Su kovası', color: 0x4a90e2, base: 45 },
-  32: { name: 'Tuval',  color: 0xd9c9a0, base: 35 }
+  32: { name: 'Tuval',  color: 0xd9c9a0, base: 35 },
+  33: { name: 'Lav kovası', color: 0xe8661a, base: 60 },
+  40: { name: 'Lavanta', color: 0x9a5fd0, base: 6 },
+  41: { name: 'Papatya', color: 0xf5f5f5, base: 6 },
+  42: { name: 'Gelincik', color: 0xd02228, base: 6 },
+  43: { name: 'Mavi gelincik', color: 0x3050cd, base: 8 },
+  44: { name: 'Turuncu lale', color: 0xf3861f, base: 8 },
+  45: { name: 'Pembe lale', color: 0xf078ac, base: 8 },
+  46: { name: 'Elma',   color: 0xc81e1e, base: 12 }
 };
+
+// Çanta kategorileri
+export const CATS = [
+  ['🧱 Bloklar', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 16]],
+  ['🌱 Fidan ve çiçekler', [12, 40, 41, 42, 43, 44, 45]],
+  ['🍎 Yiyecek', [15, 46]],
+  ['🪣 Aletler', [30, 31, 33, 32]]
+];
 
 // ---- Dünya verisi ----
 const world = new Uint8Array(N * H * N);
-const wl = new Uint8Array(N * H * N);   // su seviyesi: 0 kaynak, 1..7 akan su
+const wl = new Uint8Array(N * H * N);   // sıvı seviyesi: 0 kaynak, 1.. akan
 const idx = (x, y, z) => (y * N + z) * N + x;
 const inb = (x, y, z) => x >= 0 && x < N && y >= 0 && y < H && z >= 0 && z < N;
 export const inBounds = inb;
-export const get = (x, y, z) => inb(x, y, z) ? world[idx(x, y, z)] : 0;   // her su 17 döner
+export const get = (x, y, z) => inb(x, y, z) ? world[idx(x, y, z)] : 0;   // her su 17, her lav 25 döner
 export const waterLvl = (x, y, z) => inb(x, y, z) ? wl[idx(x, y, z)] : 0;
-// Kayıt/senkron için: su 17..24 (seviyeli), diğerleri normal
-export const getRaw = (x, y, z) => { const t = get(x, y, z); return t === WATER ? WATER + wl[idx(x, y, z)] : t; };
+// Kayıt/senkron için: su 17..24, lav 25..28 (seviyeli), diğerleri normal
+export const getRaw = (x, y, z) => {
+  const t = get(x, y, z);
+  return (t === WATER || t === LAVA) ? t + wl[idx(x, y, z)] : t;
+};
 export const isWater = (x, y, z) => get(x, y, z) === WATER;
-// Fidan ve suyun içinden geçilir, diğer bloklar katıdır
-export const solid = (x, y, z) => { const t = get(x, y, z); return t !== 0 && t !== SAPLING && t !== WATER; };
-const opaque = t => t !== 0 && t !== SAPLING && t !== WATER;
+export const isLava = (x, y, z) => get(x, y, z) === LAVA;
+// Bitki, su ve lavın içinden geçilir, diğer bloklar katıdır
+export const solid = (x, y, z) => { const t = get(x, y, z); return t !== 0 && !isPlant(t) && t !== WATER && t !== LAVA; };
+const opaque = t => t !== 0 && !isPlant(t) && t !== WATER && t !== LAVA;
 
-export const wh = { fn: null };       // water.js: blok değişince haber alır
+export const wh = { fn: null };       // fluids.js: blok değişince haber alır
 export const wlHook = { fn: null };   // paints.js: gündüz/gece ışığı
 let _gen = false, _kind = 'normal', _sp = null;
 export const worldKind = () => _kind;
@@ -61,12 +84,13 @@ function markDirty(x, z) {
   if (lz === CS - 1) addDirty(cx, cz + 1);
 }
 
-// t: blok türü. 18..24 verilirse akan su (seviye = t - 17)
+// t: blok türü. 18..24 akan su, 26..28 akan lav (seviye = t - kaynak)
 export const set = (x, y, z, t) => {
   if (!inb(x, y, z)) return;
   const i = idx(x, y, z);
   let lv = 0;
   if (t > WATER && t <= WATER_MAX) { lv = t - WATER; t = WATER; }
+  else if (t >= LAVA && t <= LAVA_MAX) { lv = t - LAVA; t = LAVA; }
   if (world[i] === t && wl[i] === lv) return;
   world[i] = t; wl[i] = lv;
   markDirty(x, z);
@@ -78,11 +102,11 @@ export function heightAt(x, z) {
   return Math.max(3, Math.min(H - 9, Math.floor(h)));
 }
 
-// En üstteki katı (su olmayan) blok, yoksa -1
+// En üstteki katı blok (su, lav ve bitki sayılmaz), yoksa -1
 export function surfaceY(x, z) {
   for (let y = H - 1; y >= 0; y--) {
     const t = get(x, y, z);
-    if (t && t !== SAPLING && t !== WATER) return y;
+    if (t && !isPlant(t) && t !== WATER && t !== LAVA) return y;
   }
   return -1;
 }
@@ -122,7 +146,7 @@ export function planTree(x, y, z, birch) {
     const yy = y + i;
     if (!inb(x, yy, z)) return null;
     const t = get(x, yy, z);
-    if (t !== 0 && t !== SAPLING && t !== 5 && t !== BIRCH_LEAF) return null;
+    if (t !== 0 && !isPlant(t) && t !== 5 && t !== BIRCH_LEAF) return null;
     out.push({ x, y: yy, z, t: log });
   }
   const top = y + th - 1;
@@ -145,12 +169,29 @@ export function losBlocked(ex, ey, ez, dx, dy, dz, t) {
   return false;
 }
 
-function genFlat() {
+// Çimen üstüne çiçek öbekleri
+function scatterFlowers(rnd, topY) {
+  for (let p = 0; p < 16; p++) {
+    const cx = 2 + Math.floor(rnd() * (N - 4)), cz = 2 + Math.floor(rnd() * (N - 4));
+    const type = FLOWER_MIN + Math.floor(rnd() * 6), r = 2 + Math.floor(rnd() * 2);
+    for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) {
+      const skip = rnd() > 0.55;
+      if (skip || dx * dx + dz * dz > r * r) continue;
+      const x = cx + dx, z = cz + dz;
+      if (x < 0 || z < 0 || x >= N || z >= N) continue;
+      const y = topY(x, z);
+      if (get(x, y, z) === 1 && get(x, y + 1, z) === 0) set(x, y + 1, z, type);
+    }
+  }
+}
+
+function genFlat(seed) {
   for (let x = 0; x < N; x++) for (let z = 0; z < N; z++) {
     set(x, 0, z, BEDROCK);
     set(x, 1, z, 2);
     set(x, 2, z, 1);
   }
+  scatterFlowers(mulberry((seed ^ 0x27d4eb2f) >>> 0), () => 2);
 }
 
 function genSky() {
@@ -264,6 +305,20 @@ function genNormal(seed) {
     for (const b of plan) set(b.x, b.y, b.z, b.t);
     birches++;
   }
+
+  // Çiçek öbekleri
+  scatterFlowers(mulberry((seed ^ 0x27d4eb2f) >>> 0), heightAt);
+
+  // Yer altı lav cepleri (taşın içinde kapalı, kazınca akar)
+  const rnd4 = mulberry((seed ^ 0x165667b1) >>> 0);
+  for (let i = 0; i < 8; i++) {
+    const x = 3 + Math.floor(rnd4() * (N - 6)), z = 3 + Math.floor(rnd4() * (N - 6));
+    const y = 2 + Math.floor(rnd4() * 2);
+    if (heightAt(x, z) < 9 || heightAt(x + 1, z) < 9 || heightAt(x, z + 1) < 9 || heightAt(x + 1, z + 1) < 9) continue;
+    for (let dx = 0; dx < 2; dx++) for (let dz = 0; dz < 2; dz++) {
+      if (get(x + dx, y, z + dz) === 3) set(x + dx, y, z + dz, LAVA);
+    }
+  }
 }
 
 // kind: 'normal' | 'flat' | 'sky'
@@ -273,22 +328,24 @@ export function generate(seed = 1, kind = 'normal') {
   _sp = null;
   world.fill(0); wl.fill(0);
   for (let cx = 0; cx < NC; cx++) for (let cz = 0; cz < NC; cz++) addDirty(cx, cz);
-  if (_kind === 'flat') genFlat();
+  if (_kind === 'flat') genFlat(seed);
   else if (_kind === 'sky') genSky();
   else genNormal(seed);
   _gen = false;
 }
 
 // ---- Chunk çizimi ----
-let group, material, waterMat, hl;
+let group, material, waterMat, lavaMat, hl;
 const chunkMeshes = new Map();
 const waterMeshes = new Map();
+const lavaMeshes = new Map();
 const AOV = [0.5, 0.68, 0.84, 1.0];
 const ORD_P = [[0, 0], [1, 0], [1, 1], [0, 1]];
 const ORD_N = [[0, 0], [0, 1], [1, 1], [1, 0]];
+const D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const occ = (x, y, z) => opaque(get(x, y, z)) ? 1 : 0;
 
-// Gündüz/gece parlaklığı (sky.js çağırır)
+// Gündüz/gece parlaklığı (sky.js çağırır). Lav parlak kalır.
 export function setWorldLight(v) {
   if (material) material.color.setScalar(v);
   if (waterMat) waterMat.color.setScalar(v);
@@ -301,6 +358,7 @@ export function initRender(scene) {
   waterMat = new THREE.MeshBasicMaterial({
     map: atlas.tex, vertexColors: true, transparent: true, opacity: 0.62, depthWrite: false, side: THREE.DoubleSide
   });
+  lavaMat = new THREE.MeshBasicMaterial({ map: atlas.tex, vertexColors: true, side: THREE.DoubleSide });
   group = new THREE.Group();
   scene.add(group);
   hl = new THREE.LineSegments(
@@ -333,52 +391,54 @@ function putMesh(map, key, pos, uv, col, ind, mat, order) {
   }
 }
 
-// Su yüksekliği: üstünde su varsa tam, kaynak 0.88, akan su seviyeye göre alçalır
-function waterH(x, y, z) {
-  if (get(x, y + 1, z) === WATER) return 1;
+// Sıvı yüksekliği: üstünde aynı sıvı varsa tam, kaynak 0.88, akan seviyeye göre alçalır
+function fluidH(x, y, z, t) {
+  if (get(x, y + 1, z) === t) return 1;
   const l = wl[idx(x, y, z)];
-  return l === 0 ? 0.88 : Math.max(0.16, 0.86 - l * 0.1);
+  if (l === 0) return 0.88;
+  return t === WATER ? Math.max(0.16, 0.86 - l * 0.13) : Math.max(0.25, 0.84 - l * 0.2);
 }
 
-const D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+const sink = () => ({ pos: [], uv: [], col: [], ind: [], n: 0 });
+function pushQ(s, tile, p, sh) {
+  for (let k = 0; k < 4; k++) {
+    s.pos.push(p[k][0], p[k][1], p[k][2]);
+    s.col.push(sh, sh, sh);
+    s.uv.push((tile + 0.02 + (k === 1 || k === 2 ? 0.96 : 0)) / T, 0.02 + (k >= 2 ? 0.96 : 0));
+  }
+  s.ind.push(s.n, s.n + 1, s.n + 2, s.n, s.n + 2, s.n + 3);
+  s.n += 4;
+}
 
 function buildChunk(cx, cz) {
   const pos = [], uv = [], col = [], ind = [];
-  const wpos = [], wuv = [], wcol = [], wind = [];
-  let vc = 0, wvc = 0;
-  const WT = FACE_TILES[WATER][0];
-  const wq = (p, sh) => {
-    for (let k = 0; k < 4; k++) {
-      wpos.push(p[k][0], p[k][1], p[k][2]);
-      wcol.push(sh, sh, sh);
-      wuv.push((WT + 0.02 + (k === 1 || k === 2 ? 0.96 : 0)) / T, 0.02 + (k >= 2 ? 0.96 : 0));
-    }
-    wind.push(wvc, wvc + 1, wvc + 2, wvc, wvc + 2, wvc + 3);
-    wvc += 4;
-  };
+  const wS = sink(), lS = sink();
+  let vc = 0;
+  const WT = FACE_TILES[WATER][0], LT = FACE_TILES[LAVA][0];
   const x0 = cx * CS, z0 = cz * CS;
   for (let y = 0; y < H; y++) for (let lz = 0; lz < CS; lz++) for (let lx = 0; lx < CS; lx++) {
     const x = x0 + lx, z = z0 + lz, t = get(x, y, z);
     if (!t) continue;
 
-    if (t === WATER) {
-      const h = waterH(x, y, z);
+    if (t === WATER || t === LAVA) {
+      const S = t === WATER ? wS : lS, tile = t === WATER ? WT : LT;
+      const h = fluidH(x, y, z, t);
       const up = get(x, y + 1, z);
-      if (up !== WATER && !opaque(up)) wq([[x, y + h, z], [x + 1, y + h, z], [x + 1, y + h, z + 1], [x, y + h, z + 1]], 1);
+      if (up !== t && !opaque(up)) pushQ(S, tile, [[x, y + h, z], [x + 1, y + h, z], [x + 1, y + h, z + 1], [x, y + h, z + 1]], 1);
       for (const [dx, dz] of D4) {
         const nx = x + dx, nz = z + dz;
         if (!inb(nx, y, nz)) continue;
         const nt = get(nx, y, nz);
         if (opaque(nt)) continue;
         let y0 = y;
-        if (nt === WATER) {
-          const hn = waterH(nx, y, nz);
+        if (nt === t) {
+          const hn = fluidH(nx, y, nz, t);
           if (hn >= h - 0.001) continue;
           y0 = y + hn;
         }
         const y1 = y + h;
-        if (dx) { const xx = dx > 0 ? x + 1 : x; wq([[xx, y0, z], [xx, y0, z + 1], [xx, y1, z + 1], [xx, y1, z]], 0.86); }
-        else { const zz = dz > 0 ? z + 1 : z; wq([[x, y0, zz], [x + 1, y0, zz], [x + 1, y1, zz], [x, y1, zz]], 0.74); }
+        if (dx) { const xx = dx > 0 ? x + 1 : x; pushQ(S, tile, [[xx, y0, z], [xx, y0, z + 1], [xx, y1, z + 1], [xx, y1, z]], 0.86); }
+        else { const zz = dz > 0 ? z + 1 : z; pushQ(S, tile, [[x, y0, zz], [x + 1, y0, zz], [x + 1, y1, zz], [x, y1, zz]], 0.74); }
       }
       continue;
     }
@@ -386,7 +446,7 @@ function buildChunk(cx, cz) {
     const ft = FACE_TILES[t];
     if (!ft) continue;
 
-    if (t === SAPLING) {
+    if (isPlant(t)) {
       const tile = ft[1];
       const quads = [[x, z, x + 1, z + 1], [x + 1, z, x, z + 1]];
       for (const q of quads) {
@@ -432,7 +492,8 @@ function buildChunk(cx, cz) {
   }
   const key = cz * NC + cx;
   putMesh(chunkMeshes, key, pos, uv, col, ind, material, 0);
-  putMesh(waterMeshes, key, wpos, wuv, wcol, wind, waterMat, 2);
+  putMesh(lavaMeshes, key, lS.pos, lS.uv, lS.col, lS.ind, lavaMat, 1);
+  putMesh(waterMeshes, key, wS.pos, wS.uv, wS.col, wS.ind, waterMat, 2);
 }
 
 // Değişen chunk'ları yeniden çizer (boşsa hiçbir şey yapmaz)
@@ -442,7 +503,7 @@ export function rebuild() {
   dirty.clear();
 }
 
-// ---- Hedef bulma: target/prev su olmayan blok, wtarget bakılan ilk su ----
+// ---- Hedef bulma: target/prev sıvı olmayan blok, wtarget bakılan ilk su ya da lav ----
 export let target = null, prev = null, wtarget = null;
 
 export function updateTarget(camera) {
@@ -454,7 +515,7 @@ export function updateTarget(camera) {
     const x = Math.floor(o.x + d.x * s), y = Math.floor(o.y + d.y * s), z = Math.floor(o.z + d.z * s);
     if (x === lx && y === ly && z === lz) continue;
     const t = get(x, y, z);
-    if (t === WATER) { if (!wtarget) wtarget = [x, y, z]; }
+    if (t === WATER || t === LAVA) { if (!wtarget) wtarget = [x, y, z]; }
     else if (t) {
       target = [x, y, z];
       prev = (lx === -1 && ly === -1 && lz === -1) ? null : [lx, ly, lz];
@@ -464,4 +525,4 @@ export function updateTarget(camera) {
   }
   hl.visible = !!target;
   if (target) hl.position.set(target[0] + 0.5, target[1] + 0.5, target[2] + 0.5);
-         }
+}
