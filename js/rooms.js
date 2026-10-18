@@ -106,17 +106,17 @@ export async function joinRoom(codeRaw, playerName) {
   return enterRoom(code, meta, playerName);
 }
 
-// Yerel listedeki odaların gerçekten sana ait olup olmadığını kontrol eder
+// Listedeki odaların gerçekten sana ait olup olmadığını ve herkese açık mı olduğunu kontrol eder
 export async function checkOwned(list) {
   await ready();
   return Promise.all(list.map(async m => {
     try {
       const s = await get(ref(db, `rooms/${m.code}/meta`));
-      if (!s.exists()) return { code: m.code, name: m.name, status: 'gone' };
+      if (!s.exists()) return { code: m.code, name: m.name, status: 'gone', public: false };
       const v = s.val();
-      return { code: m.code, name: v.name || m.name, status: v.owner === myUid ? 'own' : 'other' };
+      return { code: m.code, name: v.name || m.name, status: v.owner === myUid ? 'own' : 'other', public: !!v.public };
     } catch (e) {
-      return { code: m.code, name: m.name, status: 'err' };
+      return { code: m.code, name: m.name, status: 'err', public: false };
     }
   }));
 }
@@ -153,4 +153,4 @@ export async function watchPublicRooms(cb) {
     arr.sort((a, b) => b.created - a.created);
     cb(arr, null);
   }, e => cb(null, e));
-}
+                            }
