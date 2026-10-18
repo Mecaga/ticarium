@@ -1,7 +1,7 @@
 import { login, db, ref, set, get, update, remove, onValue, onDisconnect } from './firebase.js';
 
 let loginP = null, myUid = null;
-const ready = () => loginP || (loginP = login().then(id => (myUid = id)));
+const ready = () => loginP || (loginP = login().then(id => (myUid = id)).catch(e => { loginP = null; throw e; }));
 
 let current = null;
 const CH = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -34,22 +34,22 @@ async function enterRoom(code, meta, playerName) {
   }
   current = cur;
   return {
-    code, name: meta.name, seed: meta.seed, isOwner, solo: false, playerName,
+    code, name: meta.name, seed: meta.seed, kind: meta.kind || 'normal', isOwner, solo: false, playerName,
     pvp: !!meta.pvp, max: meta.max || 8, keep: !!meta.keep
   };
 }
 
-// Kayıtlı dünyayı yeni odaya kopyalar (300'lük paketlerle)
-async function copyBlocks(code, blocks) {
-  const keys = Object.keys(blocks);
+// Verileri 300'lük paketlerle kopyalar
+async function copyTo(path, obj) {
+  const keys = Object.keys(obj);
   for (let i = 0; i < keys.length; i += 300) {
     const part = {};
-    for (const k of keys.slice(i, i + 300)) part[k] = Number(blocks[k]) || 0;
-    await update(ref(db, `rooms/${code}/blocks`), part);
+    for (const k of keys.slice(i, i + 300)) part[k] = obj[k];
+    await update(ref(db, path), part);
   }
 }
 
-// source: { type:'random' } | { type:'solo', seed, changes } | { type:'room', code }
+// source: { type:'kind', kind } | { type:'world', id } | { type:'room', code }
 export async function createRoom({ name, isPublic, playerName, pvp, maxPlayers, keep, source }) {
   await ready();
   let code = null;
@@ -60,26 +60,33 @@ export async function createRoom({ name, isPublic, playerName, pvp, maxPlayers, 
   }
   if (!code) throw new Error('Kod üretilemedi, tekrar dene');
 
-  let seed = Math.floor(Math.random() * 1e9) + 1;
-  let blocks = null;
-  if (source && source.type === 'solo') {
-    seed = source.seed;
-    blocks = source.changes || {};
-  } else if (source && source.type === 'room') {
-    const m = await get(ref(db, `rooms/${source.code}/meta`));
+  let seed = Math.floor(Math.random() * 1e9) + 1, kind = 'normal', blocks = null, paints = null;
+  const src = source || { type: 'kind', kind: 'normal' };
+  if (src.type === 'kind') {
+    kind = ['normal', 'flat', 'sky'].includes(src.kind) ? src.kind : 'normal';
+  } else if (src.type === 'world') {
+    const c = await import('./cloud.js');
+    const w = await c.loadWorld(src.id);
+    seed = w.meta.seed; kind = w.meta.kind || 'normal';
+    blocks = w.changes; paints = w.paints;
+  } else if (src.type === 'room') {
+    const m = await get(ref(db, `rooms/${src.code}/meta`));
     if (!m.exists() || m.val().owner !== myUid) throw new Error('Kaynak oda bulunamadı');
-    seed = m.val().seed;
-    const b = await get(ref(db, `rooms/${source.code}/blocks`));
-    blocks = b.exists() ? b.val() : {};
+    seed = m.val().seed; kind = m.val().kind || 'normal';
+    const b = await get(ref(db, `rooms/${src.code}/blocks`));
+    blocks = b.exists() ? b.val() : null;
+    const p = await get(ref(db, `rooms/${src.code}/paints`));
+    paints = p.exists() ? p.val() : null;
   }
 
   const meta = {
     owner: myUid, name, public: !!isPublic,
-    seed, created: Date.now(),
+    seed, kind, created: Date.now(),
     pvp: !!pvp, max: maxPlayers || 8, keep: !!keep
   };
   await set(ref(db, `rooms/${code}/meta`), meta);
-  if (blocks) await copyBlocks(code, blocks);
+  if (blocks && Object.keys(blocks).length) await copyTo(`rooms/${code}/blocks`, blocks);
+  if (paints && Object.keys(paints).length) await copyTo(`rooms/${code}/paints`, paints);
   return enterRoom(code, meta, playerName);
 }
 
