@@ -1,11 +1,11 @@
-import { N, H, solid, get, WATER, SEA, heightAt, spawnPos, losBlocked } from './world.js';
+import { N, H, solid, get, WATER, SEA, spawnPos, losBlocked, surfaceY, worldKind } from './world.js';
 import { dropItems } from './items.js';
 
 // send/remove: online.js doldurur (sadece oda sahibi hayvanları yönetir)
 export const mhooks = { send: null, remove: null };
 
 const KIND = { cow: { drop: 15, dmin: 1, dmax: 3 }, sheep: { drop: 16, dmin: 1, dmax: 2 } };
-const WANT = { cow: 3, sheep: 3 };
+const want = () => (worldKind() === 'sky' ? { cow: 1, sheep: 1 } : { cow: 3, sheep: 3 });
 const kindOf = id => (id.indexOf('sheep') === 0 ? 'sheep' : 'cow');
 
 let group = null, sendT = 0, respT = 15;
@@ -91,42 +91,54 @@ function removeMob(id) {
   mobs.delete(id);
 }
 
+function dropMob(m) {
+  removeMob(m.id);
+  if (mhooks.remove) mhooks.remove(m.id);
+}
+
 function flashMob(m) {
   m.mats.forEach(x => x.emissive.setHex(0xff0000));
   clearTimeout(m.ft);
   m.ft = setTimeout(() => m.mats.forEach(x => x.emissive.setHex(0x000000)), 260);
 }
 
-// Karada, üstü boş rastgele bir nokta
+// Dünyadaki gerçek yüzeye bakar: çim/toprak/kum/kar üstü, üstü boş, suda değil
 function landSpot() {
-  for (let i = 0; i < 50; i++) {
-    const x = 3 + Math.floor(Math.random() * (N - 6)), z = 3 + Math.floor(Math.random() * (N - 6));
-    const h = heightAt(x, z);
-    if (h < SEA + 2) continue;
-    if (!solid(x, h, z) || solid(x, h + 1, z) || solid(x, h + 2, z)) continue;
-    return { x: x + 0.5, y: h + 1.05, z: z + 0.5 };
+  const c = [];
+  const normal = worldKind() === 'normal';
+  for (let x = 2; x < N - 2; x++) for (let z = 2; z < N - 2; z++) {
+    const y = surfaceY(x, z);
+    if (y < 0 || y >= H - 3) continue;
+    const t = get(x, y, z);
+    if (t !== 1 && t !== 2 && t !== 6 && t !== 8) continue;
+    if (normal && y < SEA + 1) continue;
+    if (solid(x, y + 1, z) || solid(x, y + 2, z) || get(x, y + 1, z) === WATER) continue;
+    c.push([x, y, z]);
   }
-  const sp = spawnPos();
-  return { x: sp.x + 2, y: sp.y, z: sp.z + 2 };
+  if (!c.length) return null;
+  const p = c[Math.floor(Math.random() * c.length)];
+  return { x: p[0] + 0.5, y: p[1] + 1.05, z: p[2] + 0.5 };
 }
 
 export function spawnAnimals() {
   if (!group) return;
-  for (const kind in WANT) for (let i = 0; i < WANT[kind]; i++) {
+  const w = want();
+  for (const kind in w) for (let i = 0; i < w[kind]; i++) {
     const id = kind + i;
     if (mobs.has(id)) continue;
     const p = landSpot();
-    createMob(id, p.x, p.y, p.z);
+    if (p) createMob(id, p.x, p.y, p.z);
   }
 }
 
 function topUp() {
-  for (const kind in WANT) {
+  const w = want();
+  for (const kind in w) {
     let n = 0;
     for (const m of mobs.values()) if (m.kind === kind) n++;
-    if (n < WANT[kind]) {
+    if (n < w[kind]) {
       const p = landSpot();
-      createMob(kind + Date.now().toString(36), p.x, p.y, p.z);
+      if (p) createMob(kind + Date.now().toString(36), p.x, p.y, p.z);
     }
   }
 }
@@ -175,8 +187,7 @@ function killMob(m) {
     arr.push({ t: k.drop, c: 1, x: m.x, y: m.y + 0.8, z: m.z, vx: rnd(3), vy: 3 + Math.random() * 2, vz: rnd(3) });
   }
   dropItems(arr);
-  removeMob(m.id);
-  if (mhooks.remove) mhooks.remove(m.id);
+  dropMob(m);
 }
 
 // Hasarı sadece oda sahibi / tek oyunculu uygular
@@ -227,7 +238,11 @@ function sim(m, dt) {
   if (m.vy <= 0 && solid(Math.floor(m.x), Math.floor(ny), Math.floor(m.z))) {
     m.y = Math.floor(ny) + 1; m.vy = 0; m.grounded = true;
   } else { m.y = ny; m.grounded = false; }
-  if (m.y < -5) { const p = landSpot(); m.x = p.x; m.y = p.y; m.z = p.z; m.vy = 0; }
+  if (m.y < -5) {
+    const p = landSpot();
+    if (p) { m.x = p.x; m.y = p.y; m.z = p.z; m.vy = 0; }
+    else dropMob(m);
+  }
 }
 
 export function updateMobs(dt, simulate) {
@@ -237,8 +252,10 @@ export function updateMobs(dt, simulate) {
     if (respT >= 20) { respT = 0; topUp(); }
   }
   for (const m of mobs.values()) {
-    if (simulate) sim(m, dt);
-    else {
+    if (simulate) {
+      sim(m, dt);
+      if (!mobs.has(m.id)) continue;
+    } else {
       const k = Math.min(1, dt * 8), ox = m.x, oz = m.z;
       m.x += (m.tx - m.x) * k; m.y += (m.ty - m.y) * k; m.z += (m.tz - m.z) * k;
       m.yaw += angDiff(m.tyaw, m.yaw) * k;
@@ -259,4 +276,4 @@ export function updateMobs(dt, simulate) {
       mhooks.send(o);
     }
   }
-      }
+        }
