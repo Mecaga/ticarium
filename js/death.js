@@ -64,7 +64,12 @@ export function initDeath() {
   hhooks.onDeath = src => {
     const pos = src.void ? [P.sx, P.sy, P.sz] : [P.x, P.y, P.z];
     const lost = loseOnDeath(pos[0], pos[1], pos[2]);
-    const why = src.name ? src.name + ' seni yendi' : src.void ? 'Boşluğa düştün' : 'Çok yüksekten düştün';
+    const why = src.name ? src.name + ' seni yendi'
+      : src.void ? 'Boşluğa düştün'
+      : src.lava ? 'Lavda yandın'
+      : src.drown ? 'Suda boğuldun'
+      : src.starve ? 'Açlıktan öldün'
+      : 'Çok yüksekten düştün';
     toast(why + ' 💀' + (lost ? ' Eşyaların düştü' : ''));
     if (G.online) G.online.reportDeath(src.id || '');
     autosave(false, true); // ölünce envanteri hemen kaydet (eşya kopyalanmasın)
