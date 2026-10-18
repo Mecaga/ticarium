@@ -6,22 +6,23 @@ import { drawHud, drawMarket, toggleMarket, isMarketOpen, hooks, MARKET_ON } fro
 import { toggleBag, isBagOpen } from './bag.js';
 import { initMenu, showMenu, isMenuOpen } from './menu.js';
 import { initItems, updateItems, dropFromInventory } from './items.js';
-import { killNow, tickHealth, isDead } from './health.js';
+import { killNow, tickHealth, isDead, hp } from './health.js';
 import { initSky, updateSky, setLights, gameClock } from './sky.js';
 import { initMobs, updateMobs } from './mobs.js';
 import { initGravity, updateGravity } from './gravity.js';
 import { G } from './state.js';
 import { initAutosave } from './progress.js';
 import { initActions, breakBlock, placeBlock, attack } from './actions.js';
-import { initDeath } from './death.js';
+import { initDeath, toSpawn } from './death.js';
 import { enterGame, leave } from './session.js';
 import { applyRoomUI, drawHearts, panelOpen, toggleSettings, togglePlayers, phooks } from './panels.js';
 import { initChat, isChatOpen, toggleChat } from './chat.js';
 import { tickHunger, canRegen } from './hunger.js';
 import { sfx } from './sound.js';
-import { updateWater } from './water.js';
+import { updateFluids } from './fluids.js';
 import { initPaints, updatePaints } from './paints.js';
 import { isDrawOpen } from './draw.js';
+import { tickVitals } from './vitals.js';
 
 const $ = id => document.getElementById(id);
 
@@ -74,7 +75,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyB') toggleBag();
   if (e.code === 'KeyF') attack();
   if (e.code === 'KeyP') togglePlayers();
-  if (e.code === 'KeyT' && G.room && !G.room.solo) { e.preventDefault(); toggleChat(); }
+  if (e.code === 'KeyT' && G.room) { e.preventDefault(); toggleChat(); }
   if (e.code === 'KeyQ' && !isDead()) dropFromInventory(eco.sel, 1);
 });
 
@@ -121,15 +122,16 @@ function loop(now) {
   last = now;
   const frozen = isMarketOpen() || isMenuOpen() || isBagOpen() || panelOpen() || isChatOpen() || isDrawOpen() || isDead();
   updatePlayer(dt, frozen);
-  if (!frozen && P.y < -15) killNow({ void: true });
+  if (!frozen && P.y < -15) { if (hp.god) toSpawn(); else killNow({ void: true }); }
   const room = G.room;
   if (room) {
     const moved = Math.hypot(P.x - lx, P.z - lz) / Math.max(dt, 0.001) > 0.5;
     tickHealth(dt, canRegen());
     tickHunger(dt, moved, !isDead());
+    tickVitals(dt, !isDead());
     updateMobs(dt, room.solo || room.isOwner);
     updateGravity(dt);
-    updateWater(dt);
+    updateFluids(dt);
     updatePaints(dt);
     if (P.inWater && !wasWater) sfx.splash();
     const c = 'X ' + Math.floor(P.x) + '  Y ' + Math.floor(P.y) + '  Z ' + Math.floor(P.z) + '  ' + gameClock();
