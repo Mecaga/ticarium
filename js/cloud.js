@@ -21,6 +21,7 @@ export async function setProfile(name) {
   update(ref(db, base() + '/profile'), { name, seen: Date.now() }).catch(() => {});
 }
 
+// ---- Kayıtlı dünyalar (tek oyunculu) ----
 export async function listWorlds() {
   await ready();
   const s = await get(ref(db, base() + '/worlds'));
@@ -75,6 +76,23 @@ export async function loadWorld(id) {
   if (!m.exists()) throw new Error('Dünya bulunamadı');
   const v = d.val() || {};
   return { meta: m.val(), state: v.state || null, changes: v.changes || {}, paints: v.paints || {} };
+}
+
+// ---- Kurduğum odaların listesi (bulutta) ----
+export async function addMyRoom(code, name) {
+  await ready();
+  await set(ref(db, base() + '/myrooms/' + code), { name, t: Date.now() });
+}
+export async function listMyRooms() {
+  await ready();
+  const s = await get(ref(db, base() + '/myrooms'));
+  const a = [];
+  s.forEach(c => { const v = c.val() || {}; a.push({ code: c.key, name: v.name || 'Oda' }); });
+  return a;
+}
+export async function removeMyRoom(code) {
+  await ready();
+  await remove(ref(db, base() + '/myrooms/' + code));
 }
 
 // ---- Oynarken otomatik kayıt: blok değişiklikleri 4 sn'de bir toplu gider ----
