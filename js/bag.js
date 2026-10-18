@@ -1,7 +1,8 @@
-import { TYPES } from './world.js';
+import { TYPES, CATS } from './world.js';
 import { eco } from './economy.js';
 import { drawHud } from './ui.js';
 import { dropFromInventory } from './items.js';
+import { isCreative } from './creative.js';
 
 const css = c => '#' + c.toString(16).padStart(6, '0');
 
@@ -17,7 +18,7 @@ st.textContent = `
 #bagBox h3{margin:12px 0 6px;font-size:14px}
 #bagBox small{opacity:.7;font-size:12px}
 #bagX{position:absolute;top:8px;right:8px;width:36px;height:36px;border:0;border-radius:50%;background:#b3261e;color:#fff;font-size:18px;font-weight:700}
-#bagGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px}
+.bgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:4px}
 .bc,.hs{background:#0006;border:2px solid #fff3;border-radius:8px;padding:6px 2px;text-align:center;font-size:10px;display:flex;flex-direction:column;align-items:center;gap:2px;touch-action:none}
 .bc.pend{border-color:#ffd84a}
 .bc i,.hs i{width:24px;height:24px;border-radius:4px;display:block}
@@ -54,15 +55,24 @@ function assign(i, t) {
   draw(); drawHud();
 }
 
+function cell(t) {
+  const cre = isCreative();
+  return `<div class="bc${pending == t ? ' pend' : ''}" data-t="${t}"><i style="background:${css(TYPES[t].color)}"></i>${TYPES[t].name}<span>${cre ? '∞' : eco.inv[t]}</span></div>`;
+}
+
 function draw() {
-  let h = `<div id="bagBox"><button id="bagX">✕</button><h2>🎒 Çanta</h2>
-    <small>Bloğu alttaki slota sürükle (ya da bloğa dokun, sonra slota dokun)</small><div id="bagGrid">`;
-  for (const t in TYPES) {
-    h += `<div class="bc${pending == t ? ' pend' : ''}" data-t="${t}"><i style="background:${css(TYPES[t].color)}"></i>
-      ${TYPES[t].name}<span>${eco.inv[t]}</span></div>`;
+  const cre = isCreative();
+  let h = `<div id="bagBox"><button id="bagX">✕</button><h2>🎒 Çanta${cre ? ' · 🎨 Yaratıcı' : ''}</h2>
+    <small>Eşyayı alttaki slota sürükle (ya da dokun, sonra slota dokun)</small>`;
+  let any = false;
+  for (const [title, ids] of CATS) {
+    const list = ids.filter(t => TYPES[t] && (cre || eco.inv[t] > 0));
+    if (!list.length) continue;
+    any = true;
+    h += `<h3>${title}</h3><div class="bgrid">${list.map(cell).join('')}</div>`;
   }
-  h += `</div>`;
-  if (pending) {
+  if (!any) h += '<p style="opacity:.7">Çantan boş. Blok kır, fidan ve çiçek topla!</p>';
+  if (pending && !cre) {
     h += `<div class="dropRow"><span>${TYPES[pending].name} bırak:</span>
       <button data-drop="1">1</button><button data-drop="10">10</button><button data-drop="all">Hepsi</button></div>`;
   }
