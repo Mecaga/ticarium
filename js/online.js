@@ -7,6 +7,7 @@ import { hooks as ih, spawnItem, removeItem, clearItems } from './items.js';
 import { hurt, canHurt, hp } from './health.js';
 import { mhooks, spawnAnimals, applyRemote, hurtMob } from './mobs.js';
 import { makeAvatar, tint, animateAvatar } from './avatars.js';
+import { setPaint, removePaint } from './paints.js';
 
 const DMG = 4;
 const pvp = { on: false };
@@ -19,12 +20,22 @@ let cb = {};
 let ownerId = null, myName = '?';
 let primed = false, lastHit = {}, lastDied = {}, lastSw = {};
 let chatLive = false, chatTimer = null;
+let outB = {}, outT = 0;
 const group = new THREE.Group();
 
 function scheduleRebuild() {
   if (dirty) return;
   dirty = true;
   setTimeout(() => { dirty = false; rebuild(); }, 60);
+}
+
+// Blok değişiklikleri toplu gönderilir (akan su gibi çok değişiklik için)
+function flushBlocks() {
+  outT = 0;
+  const o = outB;
+  outB = {};
+  if (!code || !Object.keys(o).length) return;
+  update(ref(db, `rooms/${code}/blocks`), o).catch(() => {});
 }
 
 // opts: { isOwner, pvp, name, onPrices, onMeta, onCount, onBlock, onChat, onKill }
@@ -46,7 +57,7 @@ export function startOnline(sc, roomCode, opts = {}) {
     if (cb.onMeta) cb.onMeta({ pvp: pvp.on, max: m.max || 8, keep: !!m.keep });
   }));
 
-  // Bloklar
+  // Bloklar (su dahil, 17..24 seviyeli)
   const bref = ref(db, `rooms/${code}/blocks`);
   const apply = s => {
     const [x, y, z] = s.key.split('_').map(Number);
@@ -56,6 +67,18 @@ export function startOnline(sc, roomCode, opts = {}) {
     if (cb.onBlock) cb.onBlock(x, y, z, t);
   };
   unsubs.push(onChildAdded(bref, apply), onChildChanged(bref, apply));
+
+  // Çizim blokları (tuval)
+  const pref2 = ref(db, `rooms/${code}/paints`);
+  const papply = s => {
+    const [x, y, z] = s.key.split('_').map(Number);
+    setPaint(x, y, z, String(s.val()));
+  };
+  unsubs.push(
+    onChildAdded(pref2, papply),
+    onChildChanged(pref2, papply),
+    onChildRemoved(pref2, s => { const [x, y, z] = s.key.split('_').map(Number); removePaint(x, y, z); })
+  );
 
   // Sohbet (son 20 mesaj)
   chatTimer = setTimeout(() => { chatLive = true; }, 1500);
@@ -197,7 +220,15 @@ function sendPos() {
 
 export function sendBlock(x, y, z, t) {
   if (!code) return;
-  set(ref(db, `rooms/${code}/blocks/${x}_${y}_${z}`), t).catch(() => {});
+  outB[x + '_' + y + '_' + z] = t;
+  if (!outT) outT = setTimeout(flushBlocks, 120);
+}
+
+export function sendPaint(k, data) {
+  if (!code) return;
+  const r = ref(db, `rooms/${code}/paints/${k}`);
+  if (data) set(r, data).catch(() => {});
+  else remove(r).catch(() => {});
 }
 
 export function sendChat(text) {
@@ -291,6 +322,7 @@ export function updateOthers(dt) {
 }
 
 export function stopOnline() {
+  if (outT) { clearTimeout(outT); flushBlocks(); }
   if (timer) clearInterval(timer);
   if (chatTimer) clearTimeout(chatTimer);
   timer = null; chatTimer = null;
@@ -305,5 +337,5 @@ export function stopOnline() {
   clearItems();
   pvp.on = false;
   cb = {};
-  code = null; last = ''; ownerId = null;
-    }
+  code = null; last = ''; ownerId = null; outB = {};
+                                                                       }
