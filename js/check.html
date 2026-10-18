@@ -15,13 +15,16 @@ div{padding:3px 0;font-size:15px}
 <div id="out">Kontrol ediliyor...</div>
 <script>
 var files = {
-  'css/style.css': '', 'js/main.js': 'initChat', 'js/world.js': 'export const SEA', 'js/textures.js': 'export function initAtlas',
-  'js/player.js': 'inWater', 'js/input.js': '', 'js/economy.js': '', 'js/ui.js': '', 'js/bag.js': '', 'js/items.js': '',
+  'css/style.css': '#chatBox', 'js/main.js': 'initChat', 'js/world.js': 'export const SEA', 'js/textures.js': 'initAtlas',
+  'js/player.js': 'inWater', 'js/input.js': 'export function initInput', 'js/economy.js': 'export function startPriceTicker',
+  'js/ui.js': 'MARKET_ON', 'js/bag.js': 'export function toggleBag', 'js/items.js': 'export function dropItems',
   'js/health.js': 'starve', 'js/hunger.js': 'export function tickHunger', 'js/mobs.js': 'export function findMob',
-  'js/sky.js': 'export function gameClock', 'js/save.js': '', 'js/gravity.js': 'WATER', 'js/menu.js': '', 'js/rooms.js': '',
-  'js/online.js': 'sendMobHit', 'js/firebase.js': '', 'js/state.js': '', 'js/sound.js': 'splash',
-  'js/avatars.js': 'export function animateAvatar', 'js/progress.js': 'food', 'js/panels.js': 'setChatVisible',
-  'js/death.js': 'spawnPos', 'js/actions.js': 'findMob', 'js/session.js': 'spawnAnimals', 'js/chat.js': 'export function initChat'
+  'js/sky.js': 'export function gameClock', 'js/save.js': 'export function getMine', 'js/gravity.js': 'WATER',
+  'js/menu.js': 'export async function leaveToMenu', 'js/rooms.js': 'export async function checkOwned',
+  'js/online.js': 'sendMobHit', 'js/firebase.js': 'serverTimestamp', 'js/state.js': 'export const G',
+  'js/sound.js': 'splash', 'js/avatars.js': 'export function animateAvatar', 'js/progress.js': 'food',
+  'js/panels.js': 'setChatVisible', 'js/death.js': 'spawnPos', 'js/actions.js': 'findMob',
+  'js/session.js': 'spawnAnimals', 'js/chat.js': 'export function initChat'
 };
 var names = Object.keys(files), out = document.getElementById('out');
 var rows = [], bad = 0, old = 0, done = 0;
@@ -29,8 +32,7 @@ names.forEach(function (f, i) {
   fetch(f + '?t=' + Date.now(), { cache: 'no-store' }).then(function (r) {
     if (!r.ok) { bad++; rows[i] = '<div class="bad">❌ EKSİK: ' + f + '</div>'; return; }
     return r.text().then(function (t) {
-      var m = files[f];
-      if (m && t.indexOf(m) < 0) { old++; rows[i] = '<div class="old">⚠️ ESKİ SÜRÜM: ' + f + '</div>'; }
+      if (t.indexOf(files[f]) < 0) { old++; rows[i] = '<div class="old">⚠️ ESKİ SÜRÜM: ' + f + '</div>'; }
       else rows[i] = '<div class="ok">✅ ' + f + '</div>';
     });
   }).catch(function () {
@@ -39,7 +41,7 @@ names.forEach(function (f, i) {
     done++;
     if (done === names.length) {
       var head = (bad || old) ? '<div class="bad">' + bad + ' eksik, ' + old + ' eski sürüm. Kırmızı ve sarıları güncelle:</div>'
-        : '<div class="ok">Hepsi güncel ✅</div>';
+        : '<div class="ok">Hepsi güncel ✅ Oyun yine hata veriyorsa tarayıcı önbelleğidir.</div>';
       out.innerHTML = head + rows.join('');
     }
   });
