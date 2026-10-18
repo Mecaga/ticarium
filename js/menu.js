@@ -1,4 +1,3 @@
-import { addMine } from './save.js';
 import { makeLists } from './menu-lists.js';
 import { makeWorlds } from './menu-worlds.js';
 
@@ -48,8 +47,8 @@ export async function leaveToMenu() {
 }
 
 function enter(info) {
-  // Sadece kendi kurduğun odalar "Odalarım"a kaydolur
-  if (!info.solo && info.isOwner) addMine(info.code, info.name);
+  // Kurduğun oda buluttaki "kurduğum odalar" listesine yazılır
+  if (!info.solo && info.isOwner) loadC().then(c => c.addMyRoom(info.code, info.name)).catch(() => {});
   $('menu').style.display = 'none';
   onEnter(info);
 }
@@ -63,7 +62,11 @@ async function run(btn, fn) {
 export function initMenu(cb) {
   onEnter = cb;
   lists = makeLists({ loadR, loadC, run, enter, err, pname, setUnsub: f => { unsub = f; } });
-  worlds = makeWorlds({ loadC, run, enter, err, pname, show });
+  worlds = makeWorlds({
+    loadC, run, enter, err, pname, show,
+    myRooms: () => lists.myRooms(),
+    joinMine: async code => { const r = await loadR(); enter(await r.joinRoom(code, pname())); }
+  });
   try { $('nameIn').value = localStorage.getItem('tc_name') || ''; } catch (e) {}
 
   $('mWorlds').onclick = () => { show('sWorlds'); worlds.start(); };
