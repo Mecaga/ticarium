@@ -1,17 +1,24 @@
-import { hasSolo, loadSolo, addMine } from './save.js';
+import { addMine } from './save.js';
 import { makeLists } from './menu-lists.js';
+import { makeWorlds } from './menu-worlds.js';
 
 const $ = id => document.getElementById(id);
-let R = null, onEnter = null, unsub = null, lists = null;
+let R = null, C = null, onEnter = null, unsub = null, lists = null, worlds = null;
 const loadR = async () => R || (R = await import('./rooms.js'));
-const screens = ['sMain', 'sCreate', 'sList', 'sJoin', 'sMine'];
+const loadC = async () => C || (C = await import('./cloud.js'));
+const screens = ['sMain', 'sCreate', 'sList', 'sJoin', 'sMine', 'sWorlds', 'sNew'];
+
+const nice = m => /permission_denied|permission denied/i.test(m)
+  ? 'Firebase kuralları izin vermiyor. Realtime Database → Rules → yeni kuralları yapıştır → Publish'
+  : m;
+const err = m => { $('mErr').textContent = nice(String(m || '')); };
 
 function show(id) {
   screens.forEach(s => { const el = $(s); if (el) el.style.display = s === id ? 'block' : 'none'; });
   $('mErr').textContent = '';
   if (id !== 'sList' && unsub) { unsub(); unsub = null; }
 }
-const err = m => { $('mErr').textContent = m; };
+
 const pname = () => {
   const n = $('nameIn').value.trim() || 'Oyuncu' + Math.floor(Math.random() * 900 + 100);
   try { localStorage.setItem('tc_name', n); } catch (e) {}
@@ -20,10 +27,19 @@ const pname = () => {
 
 export const isMenuOpen = () => $('menu').style.display !== 'none';
 
+async function diag() {
+  const el = $('mAuth');
+  el.textContent = '☁️ Bağlanıyor...';
+  try {
+    const c = await loadC();
+    el.textContent = await c.diag();
+  } catch (e) { el.textContent = '❌ ' + (e.code || e.message || e); }
+}
+
 export function showMenu() {
   $('menu').style.display = 'flex';
-  $('mSoloCont').style.display = hasSolo() ? 'block' : 'none';
   show('sMain');
+  diag();
 }
 
 export async function leaveToMenu() {
@@ -46,21 +62,19 @@ async function run(btn, fn) {
 
 export function initMenu(cb) {
   onEnter = cb;
-  lists = makeLists({ loadR, run, enter, err, pname, setUnsub: f => { unsub = f; } });
+  lists = makeLists({ loadR, loadC, run, enter, err, pname, setUnsub: f => { unsub = f; } });
+  worlds = makeWorlds({ loadC, run, enter, err, pname, show });
   try { $('nameIn').value = localStorage.getItem('tc_name') || ''; } catch (e) {}
+
+  $('mWorlds').onclick = () => { show('sWorlds'); worlds.start(); };
+  $('wNew').onclick = () => worlds.openNew();
+  $('nwDo').onclick = e => run(e.currentTarget, () => worlds.create());
+  $('nwBack').onclick = () => { show('sWorlds'); worlds.start(); };
 
   $('mCreate').onclick = () => { show('sCreate'); lists.fillWorlds(); };
   $('mList').onclick = () => { show('sList'); lists.startList(); };
   $('mJoin').onclick = () => show('sJoin');
   $('mMine').onclick = () => { show('sMine'); lists.startMine(); };
-  $('mSolo').onclick = () => {
-    if (hasSolo() && !confirm('Kayıtlı tek oyunculu dünyan silinecek. Yeni dünya açılsın mı?')) return;
-    enter({ solo: true, seed: Math.floor(Math.random() * 1e9) + 1, resume: false });
-  };
-  $('mSoloCont').onclick = () => {
-    const s = loadSolo();
-    if (s) enter({ solo: true, seed: s.seed, resume: true });
-  };
   document.querySelectorAll('.back').forEach(b => { b.onclick = () => show('sMain'); });
 
   $('cDo').onclick = e => run(e.currentTarget, async () => {
