@@ -14,8 +14,10 @@ import { toSpawn, clearDeath } from './death.js';
 import { applyRoomUI, updateInfo, closePanels, refreshSettings, refreshPlayers } from './panels.js';
 import { trackSapling, clearSaplings } from './actions.js';
 import { addChat, clearChat } from './chat.js';
-import { setSimulate, revalidate } from './water.js';
+import { setSimulate, revalidate } from './fluids.js';
 import { setPaint, clearPaints, stack } from './paints.js';
+import { resetMode } from './creative.js';
+import { resetVitals } from './vitals.js';
 
 // Ayarlar → Dünyayı sil: bulut kaydını siler
 saveHooks.onDelete = async () => {
@@ -35,14 +37,11 @@ export function enterGame(info) {
   const data = my.data;
   delete my.data;
 
-  resetEco();
+  resetMode();
+  resetEco();       // çanta boş başlar
   resetHealth();
   resetFood();
-  // Başlangıç eşyaları: kova ve tuval hızlı slotlarda
-  eco.inv[30] = 1; eco.inv[32] = 2;
-  eco.hotbar = [1, 2, 3, 30, 32];
-  eco.hsel = 0; eco.sel = 1;
-  if (info.kind === 'sky') eco.inv[12] = 2;
+  resetVitals();
 
   generate(info.seed, info.kind || 'normal');
   setSimulate(!!(info.solo || info.isOwner));
@@ -115,6 +114,7 @@ export async function leave() {
   if (c) { try { await c.stopSaver(); } catch (e) {} }
   if (G.online) { G.online.stopOnline(); G.online = null; }
   setSimulate(false);
+  resetMode();
   clearItems(); clearMobs(); clearGravity(); clearDeath(); closePanels(); clearSaplings(); clearChat(); clearPaints();
   G.room = null;
   applyRoomUI();
