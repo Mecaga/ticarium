@@ -1,6 +1,6 @@
 import {
   get, set, rebuild, target, prev, wtarget, waterLvl, TYPES, H, inBounds,
-  BEDROCK, SAPLING, WATER, BUCKET, WBUCKET, CANVAS, planTree
+  BEDROCK, SAPLING, WATER, LAVA, BUCKET, WBUCKET, LBUCKET, CANVAS, APPLE, planTree, isPlant
 } from './world.js';
 import { P, collides } from './player.js';
 import { eco } from './economy.js';
@@ -14,12 +14,21 @@ import { food, eat } from './hunger.js';
 import { findMob, hurtMob } from './mobs.js';
 import { getPaint, setPaint, removePaint, stack } from './paints.js';
 import { openDraw, isDrawOpen } from './draw.js';
+import { dropItems } from './items.js';
+import { isCreative } from './creative.js';
 
-const FOOD = { 15: 6 };   // Et: +6 açlık
+const FOOD = { 15: 6, 46: 4 };   // Et +6, Elma +4
 const MOB_DMG = 3;
+const D6 = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
 const saplings = new Map();
 let lastAtk = 0;
 export const clearSaplings = () => saplings.clear();
+
+// Yaratıcı modda eşya harcanmaz, toplanmaz
+const give = (t, n = 1) => { if (!isCreative()) eco.inv[t] += n; };
+const take = (t, n = 1) => { if (!isCreative()) eco.inv[t] -= n; };
+const isLog = t => t === 4 || t === 13;
+const isLeaf = t => t === 5 || t === 14;
 
 export function trackSapling(x, y, z) {
   const r = G.room;
@@ -47,9 +56,74 @@ function growSaplings() {
 }
 
 export function initActions() {
-  // Düşen kum/kar ve akan su da kaydedilsin, odadaki herkese gitsin
+  // Düşen kum/kar ve akan sıvılar da kaydedilsin, odadaki herkese gitsin
   ghooks.onChange = (x, y, z, t) => commit(x, y, z, t);
   setInterval(growSaplings, 2000);
+}
+
+// ---- Ağaç kesme: gövde + bağlı yapraklar ----
+function leafDrop(x, y, z, t) {
+  const r = Math.random(), arr = [];
+  const mk = id => ({
+    t: id, c: 1, x: x + 0.5, y: y + 0.5, z: z + 0.5,
+    vx: (Math.random() - 0.5) * 2, vy: 2 + Math.random() * 2, vz: (Math.random() - 0.5) * 2
+  });
+  if (r < 0.09) arr.push(mk(SAPLING));
+  else if (t === 5 && r < 0.16) arr.push(mk(APPLE));
+  if (arr.length) dropItems(arr);
+}
+
+function hasLeafNear(x, y, z) {
+  for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) for (let dy = -2; dy <= 2; dy++) {
+    if (isLeaf(get(x + dx, y + dy, z + dz))) return true;
+  }
+  return false;
+}
+
+// Gövdeye 4 blok içinde kütük bulunmayan yapraklar çürür
+function decayLeaves(cx, cy, cz) {
+  const R = 6, key = (x, y, z) => x + ',' + y + ',' + z;
+  const dist = new Map(), queue = [];
+  for (let x = cx - R - 2; x <= cx + R + 2; x++) for (let z = cz - R - 2; z <= cz + R + 2; z++) {
+    for (let y = cy - R - 2; y <= cy + R + 2; y++) {
+      if (isLog(get(x, y, z))) { dist.set(key(x, y, z), 0); queue.push([x, y, z, 0]); }
+    }
+  }
+  for (let i = 0; i < queue.length; i++) {
+    const [x, y, z, d] = queue[i];
+    if (d >= 4) continue;
+    for (const [dx, dy, dz] of D6) {
+      const nx = x + dx, ny = y + dy, nz = z + dz;
+      if (!isLeaf(get(nx, ny, nz))) continue;
+      const k = key(nx, ny, nz);
+      if (dist.has(k)) continue;
+      dist.set(k, d + 1);
+      queue.push([nx, ny, nz, d + 1]);
+    }
+  }
+  for (let x = cx - R; x <= cx + R; x++) for (let z = cz - R; z <= cz + R; z++) {
+    for (let y = cy - R; y <= cy + R; y++) {
+      const t = get(x, y, z);
+      if (!isLeaf(t) || dist.has(key(x, y, z))) continue;
+      setTimeout(() => {
+        if (!G.room || get(x, y, z) !== t) return;
+        set(x, y, z, 0);
+        commit(x, y, z, 0);
+        if (!isCreative()) leafDrop(x, y, z, t);
+        rebuild();
+      }, 150 + Math.random() * 1500);
+    }
+  }
+}
+
+// Kırılan gövdenin üstündeki gövdeyi keser (ağaç gibiyse), yaprakları çürütür
+function chopTree(x, y, z, L) {
+  const col = [];
+  for (let cy = y + 1; get(x, cy, z) === L; cy++) col.push(cy);
+  const top = col.length ? col[col.length - 1] : y;
+  if (!hasLeafNear(x, top, z)) return;
+  for (const yy of col) { set(x, yy, z, 0); commit(x, yy, z, 0); give(L); }
+  decayLeaves(x, top, z);
 }
 
 export function breakBlock() {
@@ -67,42 +141,43 @@ export function breakBlock() {
     }
   }
   set(x, y, z, 0);
-  eco.inv[t]++;
-  if ((t === 5 || t === 14) && Math.random() < 0.25) {
-    eco.inv[SAPLING]++;
-    toast('🌱 Fidan buldun!');
-  }
+  give(t);
   commit(x, y, z, 0);
+  if (isLeaf(t) && !isCreative()) leafDrop(x, y, z, t);
+  if (isLog(t)) chopTree(x, y, z, t);
   queueFall(x, y + 1, z); // üstündeki kum/kar düşsün
   sfx.breakB();
   rebuild(); drawHud();
 }
 
-// Boş kova: bakılan su kaynağını alır
+// Boş kova: bakılan su ya da lav kaynağını alır
 function useBucket() {
   if (eco.inv[BUCKET] < 1) return toast('Kova yok.');
-  if (!wtarget) return toast('Bir su kaynağına bakıp Koy\'a bas');
+  if (!wtarget) return toast('Bir su ya da lav kaynağına bakıp Koy\'a bas');
   const [x, y, z] = wtarget;
-  if (waterLvl(x, y, z) !== 0) return toast('Sadece su kaynağı alınır (akan su alınamaz)');
+  const t = get(x, y, z);
+  if (waterLvl(x, y, z) !== 0) return toast('Sadece kaynak alınır (akan sıvı alınamaz)');
   set(x, y, z, 0);
   commit(x, y, z, 0);
-  eco.inv[BUCKET]--; eco.inv[WBUCKET]++;
+  take(BUCKET); give(t === LAVA ? LBUCKET : WBUCKET);
   sfx.splash();
-  toast('🪣 Kova doldu');
+  toast(t === LAVA ? '🪣 Lav kovası doldu' : '🪣 Kova doldu');
   rebuild(); drawHud();
 }
 
-// Dolu kova: bakılan yüzeye su kaynağı döker
-function pourBucket() {
-  if (eco.inv[WBUCKET] < 1) return toast('Su kovası yok.');
+// Dolu kova: bakılan yüzeye kaynak döker (su ve lav karşılaşırsa taş olur)
+function pour(item) {
+  if (eco.inv[item] < 1) return toast('Kova boş.');
   if (!prev) return toast('Dökmek için bir yüzeye bak');
   const [x, y, z] = prev;
   if (!inBounds(x, y, z)) return toast('Dünya sınırı');
+  const fl = item === LBUCKET ? LAVA : WATER;
   const c = get(x, y, z);
-  if (c !== 0 && c !== SAPLING && c !== WATER) return;
-  set(x, y, z, WATER);
-  commit(x, y, z, WATER);
-  eco.inv[WBUCKET]--; eco.inv[BUCKET]++;
+  if (c !== 0 && !isPlant(c) && c !== WATER && c !== LAVA) return;
+  const res = (c === WATER || c === LAVA) && c !== fl ? 3 : fl;   // karşıt sıvıya dökersen taş
+  set(x, y, z, res);
+  commit(x, y, z, res);
+  take(item); give(BUCKET);
   sfx.splash();
   rebuild(); drawHud();
 }
@@ -124,13 +199,13 @@ function useCanvas() {
   const place = data => {
     if (eco.inv[CANVAS] < 1) return toast('Tuval yok.');
     const c = get(x, y, z);
-    if (c !== 0 && c !== SAPLING && c !== WATER) return toast('Orası doldu');
+    if (c !== 0 && !isPlant(c) && c !== WATER) return toast('Orası doldu');
     set(x, y, z, CANVAS);
     if (collides(P.x, P.y, P.z)) { set(x, y, z, 0); return toast('Oyuncunun üstüne konmaz'); }
     commit(x, y, z, CANVAS);
     setPaint(x, y, z, data);
     recordPaint(x, y, z, data);
-    eco.inv[CANVAS]--;
+    take(CANVAS);
     sfx.place();
     rebuild(); drawHud();
   };
@@ -145,28 +220,31 @@ export function placeBlock() {
   if (FOOD[t]) {
     if (eco.inv[t] < 1) return toast(TYPES[t].name + ' yok.');
     if (food.cur >= food.max) return toast('Karnın tok');
-    eco.inv[t]--;
+    take(t);
     eat(FOOD[t]);
     sfx.eat();
     drawHud();
     return toast('🍗 Yedin (+' + FOOD[t] + ')');
   }
   if (t === BUCKET) return useBucket();
-  if (t === WBUCKET) return pourBucket();
+  if (t === WBUCKET || t === LBUCKET) return pour(t);
   if (t === CANVAS) return useCanvas();
   if (!prev) return;
   if (eco.inv[t] < 1) return toast(TYPES[t].name + ' yok.');
   const [x, y, z] = prev;
   if (!inBounds(x, y, z)) return toast(y >= H ? 'Yükseklik sınırı (' + H + ')' : 'Dünya sınırı');
-  if (t === SAPLING && ![1, 2, 6, 8].includes(get(x, y - 1, z))) {
-    return toast('Fidan çimene, toprağa, kuma ya da kara dikilir');
+  if (isPlant(t)) {
+    if (get(x, y, z) !== 0) return;
+    const g = get(x, y - 1, z);
+    if (t === SAPLING && ![1, 2, 6, 8].includes(g)) return toast('Fidan çimene, toprağa, kuma ya da kara dikilir');
+    if (t !== SAPLING && ![1, 2].includes(g)) return toast('Çiçek çimene ya da toprağa dikilir');
   }
   set(x, y, z, t);
   if (collides(P.x, P.y, P.z)) { set(x, y, z, 0); return; }
   commit(x, y, z, t);
   if (t === SAPLING) trackSapling(x, y, z);
   if (isFalling(t)) queueFall(x, y, z); // altı boşsa düşer
-  eco.inv[t]--;
+  take(t);
   sfx.place();
   rebuild(); drawHud();
 }
