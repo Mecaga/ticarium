@@ -5,7 +5,8 @@ export function hash(x, y, s) {
 }
 
 const TILE_NAMES = ['grassTop', 'grassSide', 'dirt', 'stone', 'woodSide', 'woodTop', 'leaves', 'sand', 'brick', 'snow',
-  'glass', 'gold', 'bedrock', 'sapling', 'birchSide', 'birchTop', 'birchLeaf', 'meat', 'wool', 'water'];
+  'glass', 'gold', 'bedrock', 'sapling', 'birchSide', 'birchTop', 'birchLeaf', 'meat', 'wool', 'water',
+  'bucket', 'wbucket', 'paint'];
 const TI = {};
 TILE_NAMES.forEach((n, i) => { TI[n] = i; });
 export const T = TILE_NAMES.length;
@@ -28,7 +29,10 @@ export const FACE_TILES = {
   14: [TI.birchLeaf, TI.birchLeaf, TI.birchLeaf],
   15: [TI.meat, TI.meat, TI.meat],
   16: [TI.wool, TI.wool, TI.wool],
-  17: [TI.water, TI.water, TI.water]
+  17: [TI.water, TI.water, TI.water],
+  30: [TI.bucket, TI.bucket, TI.bucket],
+  31: [TI.wbucket, TI.wbucket, TI.wbucket],
+  32: [TI.paint, TI.paint, TI.paint]
 };
 
 export const atlas = { tex: null, T };
@@ -39,7 +43,8 @@ const BASE = {
   woodSide: [107, 68, 35], woodTop: [150, 110, 62], leaves: [47, 125, 50], sand: [230, 214, 144],
   brick: [181, 73, 58], snow: [245, 245, 245], glass: [159, 216, 232], gold: [255, 215, 0],
   bedrock: [62, 62, 66], sapling: [60, 170, 70], birchSide: [226, 223, 212], birchTop: [196, 178, 128],
-  birchLeaf: [132, 184, 84], meat: [196, 70, 80], wool: [236, 236, 232], water: [50, 115, 205]
+  birchLeaf: [132, 184, 84], meat: [196, 70, 80], wool: [236, 236, 232], water: [50, 115, 205],
+  bucket: [170, 175, 182], wbucket: [170, 175, 182], paint: [245, 240, 225]
 };
 
 // Kaldırım taşı için hücre noktaları (kenarlar birleşsin diye sarmalı)
@@ -69,6 +74,14 @@ function buildAtlas() {
         const crown = dxx * dxx + dyy * dyy < 1 && hash(x, y, 31) < 0.9;
         if (!stalk && !crown) continue; // şeffaf kalır
         if (stalk) { r = 96; g = 140; b = 60; }
+      } else if (name === 'bucket' || name === 'wbucket') {
+        const w = y < 5 ? 6 : (y < 12 ? 5 : 4);
+        const body = y >= 3 && y <= 14 && Math.abs(x - 7.5) <= w;
+        const handle = (y <= 2 && y >= 1 && x >= 4 && x <= 11) || ((x === 4 || x === 11) && y >= 2 && y <= 4);
+        if (!body && !handle) continue;
+        if (handle) { r = 85; g = 85; b = 92; }
+        else if (name === 'wbucket' && y >= 4 && y <= 7 && Math.abs(x - 7.5) <= w - 1) { r = 55; g = 125; b = 225; }
+        else if (y === 3 || y === 14 || Math.abs(x - 7.5) > w - 1) { r = 120; g = 124; b = 132; }
       } else {
         switch (name) {
           case 'grassSide':
@@ -127,6 +140,14 @@ function buildAtlas() {
             k = 0.88 + hash(x, y, 71) * 0.24;
             if ((x + y * 2) % 7 === 0 && hash(x, y, 72) < 0.5) k *= 1.18;
             break;
+          case 'paint':
+            if (x < 2 || y < 2 || x > 13 || y > 13) { r = 112; g = 80; b = 48; k = 0.9 + hash(x, y, 81) * 0.2; }
+            else {
+              k = 0.97 + hash(x, y, 82) * 0.06;
+              if ((x * 3 + y * 5) % 13 === 0) { r = 214; g = 72; b = 72; k = 1; }
+              else if ((x * 5 + y * 2) % 17 === 0) { r = 60; g = 110; b = 210; k = 1; }
+            }
+            break;
         }
       }
       ctx.fillStyle = `rgb(${Math.min(255, r * k) | 0},${Math.min(255, g * k) | 0},${Math.min(255, b * k) | 0})`;
@@ -143,4 +164,4 @@ function buildAtlas() {
 export function initAtlas() {
   atlas.tex = buildAtlas();
   return atlas.tex;
-  }
+}
