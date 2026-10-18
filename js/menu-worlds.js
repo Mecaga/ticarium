@@ -12,8 +12,10 @@ st.textContent = `
 .wrow{display:flex;gap:6px;margin-top:8px}
 .mbox .wrow button{margin:0 !important}
 .mbox .wrow .wmain{flex:1;text-align:left;background:#1565c0}
+.mbox .wrow .wroom{background:#6a4fb3}
 .mbox .wrow .wsm{width:46px;flex:none;background:#444;padding:0}
 .mbox .wrow .wdel{background:#b3261e}
+.whead{font-size:13px;opacity:.85;margin:12px 0 2px}
 #wInfo{font-size:13px;opacity:.85;margin:2px 0 4px}
 #worldList{max-height:48vh;overflow:auto;touch-action:pan-y}
 #worldList p{opacity:.7;text-align:center}
@@ -32,9 +34,9 @@ const ago = ts => {
   return Math.floor(h / 24) + ' gün önce';
 };
 
-// ctx: { loadC, run, enter, err, pname, show }
+// ctx: { loadC, run, enter, err, pname, show, myRooms, joinMine }
 export function makeWorlds(ctx) {
-  const { loadC, run, enter, err, pname, show } = ctx;
+  const { loadC, run, enter, err, pname, show, myRooms, joinMine } = ctx;
 
   async function start() {
     const box = $('worldList');
@@ -45,7 +47,7 @@ export function makeWorlds(ctx) {
       c.setProfile(pname());
       list = await c.listWorlds();
     } catch (e) { box.innerHTML = ''; return err(e.code || e.message); }
-    $('wInfo').textContent = 'Dünyalarım (' + list.length + '/6) · bulutta kayıtlı';
+    $('wInfo').textContent = 'Dünyalarım (' + list.length + '/6) · bulutta kayıtlı · odalar bu sayıya girmez';
     $('wNew').disabled = list.length >= 6;
     box.innerHTML = '';
     if (!list.length) box.innerHTML = '<p>Henüz dünya yok. "Yeni Dünya" ile başla!</p>';
@@ -89,6 +91,31 @@ export function makeWorlds(ctx) {
       row.append(b, ren, del);
       box.appendChild(row);
     }
+
+    // Özel odalarım (herkese açık olanlar "Odalarım" menüsünde)
+    let rooms = [];
+    try { rooms = (await myRooms()).filter(m => !m.public); } catch (e) {}
+    if (rooms.length) {
+      const hd = document.createElement('div');
+      hd.className = 'whead';
+      hd.textContent = '🏠 Özel odalarım (herkese açık olanlar "Odalarım"da)';
+      box.appendChild(hd);
+      for (const m of rooms) {
+        const row = document.createElement('div');
+        row.className = 'wrow';
+        const b = document.createElement('button');
+        b.className = 'wmain wroom';
+        b.textContent = '🔒 ' + m.name;
+        const s = document.createElement('small');
+        s.style.cssText = 'display:block;font-weight:400;opacity:.85';
+        s.textContent = 'Kod: ' + m.code + ' · özel oda';
+        b.appendChild(s);
+        b.onclick = () => run(b, () => joinMine(m.code));
+        row.appendChild(b);
+        box.appendChild(row);
+      }
+    }
+
     if (hasSolo() && list.length < 6) {
       const imp = document.createElement('button');
       imp.textContent = '📥 Eski yerel dünyayı buluta aktar';
