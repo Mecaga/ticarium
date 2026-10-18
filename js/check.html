@@ -20,10 +20,10 @@ var files = {
   'js/ui.js': 'MARKET_ON', 'js/bag.js': 'export function toggleBag', 'js/items.js': 'export function dropItems',
   'js/health.js': 'starve', 'js/hunger.js': 'export function tickHunger', 'js/mobs.js': 'export function findMob',
   'js/sky.js': 'export function gameClock', 'js/save.js': 'export function getMine', 'js/gravity.js': 'WATER',
-  'js/menu.js': 'export async function leaveToMenu', 'js/rooms.js': 'export async function checkOwned',
-  'js/online.js': 'sendMobHit', 'js/firebase.js': 'serverTimestamp', 'js/state.js': 'export const G',
-  'js/sound.js': 'splash', 'js/avatars.js': 'export function animateAvatar', 'js/progress.js': 'food',
-  'js/panels.js': 'setChatVisible', 'js/death.js': 'spawnPos', 'js/actions.js': 'findMob',
+  'js/menu.js': 'export async function leaveToMenu', 'js/menu-lists.js': 'export function makeLists',
+  'js/rooms.js': 'export async function checkOwned', 'js/online.js': 'sendMobHit', 'js/firebase.js': 'serverTimestamp',
+  'js/state.js': 'export const G', 'js/sound.js': 'splash', 'js/avatars.js': 'export function animateAvatar',
+  'js/progress.js': 'food', 'js/panels.js': 'setChatVisible', 'js/death.js': 'spawnPos', 'js/actions.js': 'findMob',
   'js/session.js': 'spawnAnimals', 'js/chat.js': 'export function initChat'
 };
 var names = Object.keys(files), out = document.getElementById('out');
@@ -32,7 +32,7 @@ names.forEach(function (f, i) {
   fetch(f + '?t=' + Date.now(), { cache: 'no-store' }).then(function (r) {
     if (!r.ok) { bad++; rows[i] = '<div class="bad">❌ EKSİK: ' + f + '</div>'; return; }
     return r.text().then(function (t) {
-      if (t.indexOf(files[f]) < 0) { old++; rows[i] = '<div class="old">⚠️ ESKİ SÜRÜM: ' + f + '</div>'; }
+      if (t.indexOf(files[f]) < 0) { old++; rows[i] = '<div class="old">⚠️ ESKİ/BOŞ/YARIM: ' + f + ' (' + t.length + ' karakter)</div>'; }
       else rows[i] = '<div class="ok">✅ ' + f + '</div>';
     });
   }).catch(function () {
@@ -40,7 +40,7 @@ names.forEach(function (f, i) {
   }).then(function () {
     done++;
     if (done === names.length) {
-      var head = (bad || old) ? '<div class="bad">' + bad + ' eksik, ' + old + ' eski sürüm. Kırmızı ve sarıları güncelle:</div>'
+      var head = (bad || old) ? '<div class="bad">' + bad + ' eksik, ' + old + ' sorunlu. Kırmızı ve sarıları güncelle:</div>'
         : '<div class="ok">Hepsi güncel ✅ Oyun yine hata veriyorsa tarayıcı önbelleğidir.</div>';
       out.innerHTML = head + rows.join('');
     }
