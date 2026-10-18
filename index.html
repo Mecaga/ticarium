@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Ticarium 3D</title>
-<link rel="stylesheet" href="css/style.css?v=14">
+<link rel="stylesheet" href="css/style.css?v=17">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
@@ -36,17 +36,28 @@
     <h1>Ticarium</h1>
     <div id="sMain">
       <input id="nameIn" maxlength="14" placeholder="Oyuncu adın">
-      <button id="mSoloCont" style="display:none">💾 Kayıtlı Dünyama Devam Et</button>
+      <button id="mWorlds">🌍 Dünyalarım (tek oyunculu)</button>
       <button id="mCreate">Oda Kur</button>
       <button id="mList">Açık Odalar</button>
       <button id="mJoin">Kodla Katıl</button>
       <button id="mMine">Odalarım (kayıtlı)</button>
-      <button id="mSolo" class="alt">Yeni Tek Oyunculu Dünya</button>
+    </div>
+    <div id="sWorlds" style="display:none">
+      <div id="wInfo"></div>
+      <div id="worldList"></div>
+      <button id="wNew">➕ Yeni Dünya</button>
+      <button class="back alt">Geri</button>
+    </div>
+    <div id="sNew" style="display:none">
+      <input id="nwName" maxlength="24" placeholder="Dünya adı">
+      <select id="nwKind"></select>
+      <button id="nwDo">Dünyayı Kur</button>
+      <button id="nwBack" class="alt">Geri</button>
     </div>
     <div id="sCreate">
       <input id="cName" maxlength="24" placeholder="Oda adı">
       <label class="chk">Dünya
-        <select id="cWorld" style="flex:1;min-width:0"><option value="random">🎲 Rastgele yeni dünya</option></select>
+        <select id="cWorld" style="flex:1;min-width:0"><option value="kind:normal">🌍 Rastgele dünya (Normal)</option></select>
       </label>
       <label class="chk"><input type="checkbox" id="cPublic" checked> Herkese açık (listede görünsün)</label>
       <label class="chk"><input type="checkbox" id="cPvp"> PVP açık (oyuncular birbirine vurabilir)</label>
@@ -77,6 +88,7 @@
       <button class="back alt">Geri</button>
     </div>
     <div id="mErr"></div>
+    <div id="mAuth"></div>
   </div>
 </div>
 
@@ -97,13 +109,14 @@ window.addEventListener('unhandledrejection', function (e) {
 
 var ids = ['flash','coord','coins','roomInfo','msg','hearts','hotbar','look','joy','joyBase','joyKnob','bJump','bBreak','bPlace',
   'bAttack','bMarket','bPlayers','bLeave','bSettings','market','panel','settings','setBox','players','plBox','menu','nameIn',
-  'mSoloCont','mCreate','mList','mJoin','mMine','mSolo','cName','cWorld','cPublic','cPvp','cKeep','cMax','cDo','sMain','sCreate',
-  'sList','sJoin','sMine','roomList','mineList','jCode','jDo','mErr'];
+  'mWorlds','mCreate','mList','mJoin','mMine','sWorlds','sNew','wInfo','worldList','wNew','nwName','nwKind','nwDo','nwBack',
+  'cName','cWorld','cPublic','cPvp','cKeep','cMax','cDo','sMain','sCreate','sList','sJoin','sMine','roomList','mineList',
+  'jCode','jDo','mErr','mAuth'];
 var missing = ids.filter(function (i) { return !document.getElementById(i); });
 if (missing.length) {
   showErr('index.html eski, eksik elemanlar: ' + missing.join(', '));
 } else {
-  import('./js/main.js?v=14').catch(function (e) {
+  import('./js/main.js?v=17').catch(function (e) {
     showErr('Yükleme hatası (bir js dosyası eski ya da eksik olabilir): ' + (e.message || e));
   });
 }
