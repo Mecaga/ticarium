@@ -6,7 +6,9 @@ export function hash(x, y, s) {
 
 const TILE_NAMES = ['grassTop', 'grassSide', 'dirt', 'stone', 'woodSide', 'woodTop', 'leaves', 'sand', 'brick', 'snow',
   'glass', 'gold', 'bedrock', 'sapling', 'birchSide', 'birchTop', 'birchLeaf', 'meat', 'wool', 'water',
-  'bucket', 'wbucket', 'paint'];
+  'bucket', 'wbucket', 'paint', 'lava', 'lbucket', 'apple',
+  'lavender', 'daisy', 'poppy', 'bpoppy', 'tulipo', 'tulipp'];
+const FLOWERS = new Set(['lavender', 'daisy', 'poppy', 'bpoppy', 'tulipo', 'tulipp']);
 const TI = {};
 TILE_NAMES.forEach((n, i) => { TI[n] = i; });
 export const T = TILE_NAMES.length;
@@ -30,9 +32,18 @@ export const FACE_TILES = {
   15: [TI.meat, TI.meat, TI.meat],
   16: [TI.wool, TI.wool, TI.wool],
   17: [TI.water, TI.water, TI.water],
+  25: [TI.lava, TI.lava, TI.lava],
   30: [TI.bucket, TI.bucket, TI.bucket],
   31: [TI.wbucket, TI.wbucket, TI.wbucket],
-  32: [TI.paint, TI.paint, TI.paint]
+  32: [TI.paint, TI.paint, TI.paint],
+  33: [TI.lbucket, TI.lbucket, TI.lbucket],
+  40: [TI.lavender, TI.lavender, TI.lavender],
+  41: [TI.daisy, TI.daisy, TI.daisy],
+  42: [TI.poppy, TI.poppy, TI.poppy],
+  43: [TI.bpoppy, TI.bpoppy, TI.bpoppy],
+  44: [TI.tulipo, TI.tulipo, TI.tulipo],
+  45: [TI.tulipp, TI.tulipp, TI.tulipp],
+  46: [TI.apple, TI.apple, TI.apple]
 };
 
 export const atlas = { tex: null, T };
@@ -44,7 +55,10 @@ const BASE = {
   brick: [181, 73, 58], snow: [245, 245, 245], glass: [159, 216, 232], gold: [255, 215, 0],
   bedrock: [62, 62, 66], sapling: [60, 170, 70], birchSide: [226, 223, 212], birchTop: [196, 178, 128],
   birchLeaf: [132, 184, 84], meat: [196, 70, 80], wool: [236, 236, 232], water: [50, 115, 205],
-  bucket: [170, 175, 182], wbucket: [170, 175, 182], paint: [245, 240, 225]
+  bucket: [170, 175, 182], wbucket: [170, 175, 182], lbucket: [170, 175, 182], paint: [245, 240, 225],
+  lava: [240, 100, 20], apple: [200, 30, 30],
+  lavender: [150, 90, 205], daisy: [248, 248, 248], poppy: [208, 34, 40],
+  bpoppy: [48, 82, 205], tulipo: [243, 134, 32], tulipp: [240, 120, 172]
 };
 
 // Kaldırım taşı için hücre noktaları (kenarlar birleşsin diye sarmalı)
@@ -58,6 +72,35 @@ function cobble(x, y) {
     if (d < d1) { d2 = d1; d1 = d; id = i; } else if (d < d2) d2 = d;
   }
   return { id, edge: d2 - d1 };
+}
+
+// Çiçek ve elma pikselleri (null = şeffaf)
+function plantPix(name, x, y) {
+  if (name === 'apple') {
+    if (y >= 2 && y <= 4 && x === 8) return [95, 60, 30];
+    if (y === 3 && x >= 9 && x <= 11) return [70, 150, 60];
+    const r = Math.hypot((x - 7.5) * 0.95, y - 9.5);
+    if (r < 5.2) return (x === 5 && y === 7) ? [250, 150, 150] : [200, 30, 30];
+    return null;
+  }
+  const stem = (x === 7 || x === 8) && y >= 8;
+  const leaf = (y === 11 && (x === 6 || x === 9)) || (y === 12 && (x === 5 || x === 10));
+  if (stem || leaf) return [70, 150, 60];
+  const r = Math.hypot(x - 7.5, y - 4.5);
+  switch (name) {
+    case 'daisy': if (r < 1.4) return [250, 205, 40]; if (r < 3.8) return [248, 248, 248]; break;
+    case 'poppy': if (r < 1.4) return [25, 25, 25]; if (r < 3.8) return [208, 34, 40]; break;
+    case 'bpoppy': if (r < 1.4) return [14, 20, 90]; if (r < 3.8) return [48, 82, 205]; break;
+    case 'lavender':
+      if (x >= 6 && x <= 9 && y >= 1 && y <= 8 && ((x + y) % 2 === 0 || x === 7 || x === 8)) return y < 3 ? [190, 140, 235] : [150, 90, 205];
+      break;
+    case 'tulipo': case 'tulipp': {
+      const e = Math.pow((x - 7.5) / 2.8, 2) + Math.pow((y - 5.5) / 3.2, 2);
+      if (e < 1 || ((x === 6 || x === 9) && y === 2)) return name === 'tulipo' ? [243, 134, 32] : [240, 120, 172];
+      break;
+    }
+  }
+  return null;
 }
 
 function buildAtlas() {
@@ -74,13 +117,20 @@ function buildAtlas() {
         const crown = dxx * dxx + dyy * dyy < 1 && hash(x, y, 31) < 0.9;
         if (!stalk && !crown) continue; // şeffaf kalır
         if (stalk) { r = 96; g = 140; b = 60; }
-      } else if (name === 'bucket' || name === 'wbucket') {
+      } else if (FLOWERS.has(name) || name === 'apple') {
+        const c = plantPix(name, x, y);
+        if (!c) continue;
+        [r, g, b] = c;
+        k = 0.93 + hash(x, y, i) * 0.14;
+      } else if (name === 'bucket' || name === 'wbucket' || name === 'lbucket') {
         const w = y < 5 ? 6 : (y < 12 ? 5 : 4);
         const body = y >= 3 && y <= 14 && Math.abs(x - 7.5) <= w;
         const handle = (y <= 2 && y >= 1 && x >= 4 && x <= 11) || ((x === 4 || x === 11) && y >= 2 && y <= 4);
         if (!body && !handle) continue;
         if (handle) { r = 85; g = 85; b = 92; }
-        else if (name === 'wbucket' && y >= 4 && y <= 7 && Math.abs(x - 7.5) <= w - 1) { r = 55; g = 125; b = 225; }
+        else if (name !== 'bucket' && y >= 4 && y <= 7 && Math.abs(x - 7.5) <= w - 1) {
+          if (name === 'wbucket') { r = 55; g = 125; b = 225; } else { r = 240; g = 110; b = 20; }
+        }
         else if (y === 3 || y === 14 || Math.abs(x - 7.5) > w - 1) { r = 120; g = 124; b = 132; }
       } else {
         switch (name) {
@@ -140,6 +190,11 @@ function buildAtlas() {
             k = 0.88 + hash(x, y, 71) * 0.24;
             if ((x + y * 2) % 7 === 0 && hash(x, y, 72) < 0.5) k *= 1.18;
             break;
+          case 'lava':
+            k = 0.88 + hash(x, y, 91) * 0.24;
+            if (hash(x, y, 92) < 0.16) { r = 255; g = 215; b = 70; k = 1; }
+            else if (hash(x, y, 93) < 0.12) { r = 150; g = 30; b = 0; k = 1; }
+            break;
           case 'paint':
             if (x < 2 || y < 2 || x > 13 || y > 13) { r = 112; g = 80; b = 48; k = 0.9 + hash(x, y, 81) * 0.2; }
             else {
@@ -164,4 +219,4 @@ function buildAtlas() {
 export function initAtlas() {
   atlas.tex = buildAtlas();
   return atlas.tex;
-}
+      }
