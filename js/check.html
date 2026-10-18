@@ -15,16 +15,19 @@ div{padding:3px 0;font-size:15px}
 <div id="out">Kontrol ediliyor...</div>
 <script>
 var files = {
-  'css/style.css': '#chatBox', 'js/main.js': 'initChat', 'js/world.js': 'export const SEA', 'js/textures.js': 'initAtlas',
+  'index.html': 'sWorlds', 'css/style.css': '#chatBox',
+  'js/main.js': 'updateWater', 'js/world.js': 'export const wh', 'js/textures.js': 'wbucket',
   'js/player.js': 'inWater', 'js/input.js': 'export function initInput', 'js/economy.js': 'export function startPriceTicker',
   'js/ui.js': 'MARKET_ON', 'js/bag.js': 'export function toggleBag', 'js/items.js': 'export function dropItems',
-  'js/health.js': 'starve', 'js/hunger.js': 'export function tickHunger', 'js/mobs.js': 'export function findMob',
-  'js/sky.js': 'export function gameClock', 'js/save.js': 'export function getMine', 'js/gravity.js': 'WATER',
-  'js/menu.js': 'export async function leaveToMenu', 'js/menu-lists.js': 'export function makeLists',
-  'js/rooms.js': 'export async function checkOwned', 'js/online.js': 'sendMobHit', 'js/firebase.js': 'serverTimestamp',
+  'js/health.js': 'starve', 'js/hunger.js': 'export function tickHunger', 'js/mobs.js': 'surfaceY',
+  'js/sky.js': 'export function gameClock', 'js/save.js': 'saveHooks', 'js/gravity.js': 'WATER',
+  'js/menu.js': 'async function diag', 'js/menu-lists.js': 'KINDS', 'js/menu-worlds.js': 'export function makeWorlds',
+  'js/rooms.js': "type === 'world'", 'js/online.js': 'sendPaint', 'js/firebase.js': 'serverTimestamp',
   'js/state.js': 'export const G', 'js/sound.js': 'splash', 'js/avatars.js': 'export function animateAvatar',
-  'js/progress.js': 'food', 'js/panels.js': 'setChatVisible', 'js/death.js': 'spawnPos', 'js/actions.js': 'findMob',
-  'js/session.js': 'spawnAnimals', 'js/chat.js': 'export function initChat'
+  'js/progress.js': 'recordPaint', 'js/panels.js': 'setChatVisible', 'js/death.js': 'spawnPos',
+  'js/actions.js': 'useCanvas', 'js/session.js': 'setSimulate', 'js/chat.js': 'export function initChat',
+  'js/cloud.js': 'export async function createWorld', 'js/water.js': 'export function updateWater',
+  'js/paints.js': 'export function setPaint', 'js/draw.js': 'export function openDraw'
 };
 var names = Object.keys(files), out = document.getElementById('out');
 var rows = [], bad = 0, old = 0, done = 0;
