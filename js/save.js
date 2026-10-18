@@ -1,5 +1,9 @@
+// Eski yerel (cihazdaki) kayıt: sadece buluta aktarmak için duruyor.
 const KEY = 'tc_solo_v2';
 const MINE = 'tc_mine_v1';
+
+// session.js: dünyayı sil denince bulut kaydını siler
+export const saveHooks = { onDelete: null };
 
 export function loadSolo() {
   try {
@@ -8,11 +12,12 @@ export function loadSolo() {
   } catch (e) { return null; }
 }
 export const hasSolo = () => !!loadSolo();
-export function saveSolo(d) {
-  try { localStorage.setItem(KEY, JSON.stringify(d)); return true; } catch (e) { return false; }
+export function clearLocal() {
+  try { localStorage.removeItem(KEY); } catch (e) {}
 }
 export function clearSolo() {
-  try { localStorage.removeItem(KEY); } catch (e) {}
+  if (saveHooks.onDelete) saveHooks.onDelete();
+  else clearLocal();
 }
 
 export function getMine() {
