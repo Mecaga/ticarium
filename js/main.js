@@ -13,6 +13,7 @@ import { initGravity, updateGravity } from './world/gravity.js';
 import { G } from './core/state.js';
 import { initAutosave } from './game/progress.js';
 import { initActions, breakBlock, placeBlock, attack } from './game/actions.js';
+import { initMining, breakDown, breakUp, updateMining } from './game/mining.js';
 import { initDeath, toSpawn } from './game/death.js';
 import { enterGame, leave } from './game/session.js';
 import { applyRoomUI, drawHearts, panelOpen, toggleSettings, togglePlayers, phooks } from './ui/panels.js';
@@ -88,12 +89,13 @@ initSky(scene);
 initGravity(scene);
 initPaints(scene);
 initActions();
+initMining(scene, breakBlock);
 initDeath();
 initAutosave();
 initChat();
 
 initInput(renderer.domElement, {
-  jump, breakBlock, placeBlock,
+  jump, breakDown, breakUp, placeBlock,
   market: toggleMarket,
   select: n => {
     if (n < 1 || n > eco.hotbar.length) return;
@@ -146,6 +148,7 @@ function loop(now) {
   const uw = isWater(Math.floor(camera.position.x), Math.floor(camera.position.y), Math.floor(camera.position.z));
   updateSky(dt, camera, uw);
   updateTarget(camera);
+  updateMining(dt, !frozen && !!room);
   renderer.render(scene, camera);
 }
 requestAnimationFrame(loop);
