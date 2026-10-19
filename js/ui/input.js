@@ -2,6 +2,7 @@ import { P } from '../entities/player.js';
 
 export const input = { jx: 0, jy: 0, keys: {} };
 
+// actions: jump, breakDown, breakUp, placeBlock, market, select
 export function initInput(canvas, actions) {
   // Klavye
   addEventListener('keydown', e => {
@@ -12,7 +13,7 @@ export function initInput(canvas, actions) {
   });
   addEventListener('keyup', e => input.keys[e.code] = false);
 
-  // Fare
+  // Fare: sol tuşu basılı tutunca kırar, bırakınca durur
   canvas.addEventListener('click', () => {
     if (!('ontouchstart' in window)) canvas.requestPointerLock();
   });
@@ -23,10 +24,13 @@ export function initInput(canvas, actions) {
   });
   addEventListener('mousedown', e => {
     if (!document.pointerLockElement) return;
-    if (e.button === 0) actions.breakBlock();
+    if (e.button === 0) actions.breakDown();
     if (e.button === 2) actions.placeBlock();
   });
+  addEventListener('mouseup', e => { if (e.button === 0) actions.breakUp(); });
   addEventListener('contextmenu', e => e.preventDefault());
+  addEventListener('blur', () => actions.breakUp());
+  document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement) actions.breakUp(); });
 
   // Joystick (sol alan)
   const joy = document.getElementById('joy');
@@ -85,14 +89,23 @@ export function initInput(canvas, actions) {
     for (const t of e.changedTouches) if (t.identifier === lookId) lookId = null;
   });
 
-  // Butonlar
+  // Tek dokunuşluk butonlar
   const bind = (id, fn) => {
     const el = document.getElementById(id);
     el.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); fn(); }, { passive: false });
     el.addEventListener('mousedown', e => { e.stopPropagation(); fn(); });
   };
+  // Basılı tutulan buton (kırma)
+  const hold = (id, down, up) => {
+    const el = document.getElementById(id);
+    el.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); down(); }, { passive: false });
+    el.addEventListener('touchend', e => { e.preventDefault(); up(); }, { passive: false });
+    el.addEventListener('touchcancel', e => { e.preventDefault(); up(); }, { passive: false });
+    el.addEventListener('mousedown', e => { e.stopPropagation(); down(); });
+    addEventListener('mouseup', up);
+  };
   bind('bJump', actions.jump);
-  bind('bBreak', actions.breakBlock);
+  hold('bBreak', actions.breakDown, actions.breakUp);
   bind('bPlace', actions.placeBlock);
   bind('bMarket', actions.market);
 }
