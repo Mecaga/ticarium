@@ -1,7 +1,8 @@
-import { N, H, get, set, wh, waterLvl, inBounds, isPlant, WATER, LAVA } from './world.js';
+import { N, H, get, set, wh, waterLvl, inBounds, isPlant, WATER, LAVA, OBSIDIAN } from './world.js';
 import { ghooks } from './gravity.js';
 
 const STONE = 3;
+const OBS = OBSIDIAN;
 const H4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const D6 = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
 const q = new Set();
@@ -43,12 +44,12 @@ function feed(x, y, z, t) {
   return (l === 0 || !free(x, y - 1, z)) ? l + 1 : 99;
 }
 
-// Su ve lav değerse lav taşa döner
+// Su ve lav değerse: lav kaynağı obsidiyen, akan lav taş olur
 function contact(x, y, z, t) {
   for (const [dx, dy, dz] of D6) {
-    const nt = get(x + dx, y + dy, z + dz);
-    if (t === WATER && nt === LAVA) change(x + dx, y + dy, z + dz, STONE);
-    else if (t === LAVA && nt === WATER) { change(x, y, z, STONE); return true; }
+    const nx = x + dx, ny = y + dy, nz = z + dz, nt = get(nx, ny, nz);
+    if (t === WATER && nt === LAVA) change(nx, ny, nz, waterLvl(nx, ny, nz) === 0 ? OBS : STONE);
+    else if (t === LAVA && nt === WATER) { change(x, y, z, waterLvl(x, y, z) === 0 ? OBS : STONE); return true; }
   }
   return false;
 }
