@@ -1,6 +1,6 @@
 import {
   get, set, rebuild, target, prev, wtarget, waterLvl, TYPES, H, inBounds,
-  BEDROCK, SAPLING, WATER, LAVA, BUCKET, WBUCKET, LBUCKET, CANVAS, APPLE, planTree, isPlant
+  BEDROCK, SAPLING, WATER, LAVA, BUCKET, WBUCKET, LBUCKET, CANVAS, APPLE, OBSIDIAN, planTree, isPlant
 } from '../world/world.js';
 import { P, collides } from '../entities/player.js';
 import { eco } from './economy.js';
@@ -16,6 +16,7 @@ import { getPaint, setPaint, removePaint, stack } from '../world/paints.js';
 import { openDraw, isDrawOpen } from '../ui/draw.js';
 import { dropItems } from '../entities/items.js';
 import { isCreative } from './creative.js';
+import { isTool } from './mining.js';
 
 const FOOD = { 15: 6, 46: 4 };   // Et +6, Elma +4
 const MOB_DMG = 3;
@@ -126,7 +127,9 @@ function chopTree(x, y, z, L) {
   decayLeaves(x, top, z);
 }
 
-export function breakBlock() {
+// Bakılan bloğu kırar. mining.js süre dolunca çağırır.
+// canDrop=false: gereken alet yok, eşya düşmez. Bedrock'ta sadece uyarı verir.
+export function breakBlock(canDrop = true) {
   if (isDead() || isDrawOpen() || !target) return;
   const [x, y, z] = target;
   const t = get(x, y, z);
@@ -141,9 +144,10 @@ export function breakBlock() {
     }
   }
   set(x, y, z, 0);
-  give(t);
+  if (canDrop) give(t);
+  else toast('⚠️ Bu blok için daha iyi kazma gerekir, eşya düşmedi');
   commit(x, y, z, 0);
-  if (isLeaf(t) && !isCreative()) leafDrop(x, y, z, t);
+  if (isLeaf(t) && canDrop && !isCreative()) leafDrop(x, y, z, t);
   if (isLog(t)) chopTree(x, y, z, t);
   queueFall(x, y + 1, z); // üstündeki kum/kar düşsün
   sfx.breakB();
@@ -165,7 +169,7 @@ function useBucket() {
   rebuild(); drawHud();
 }
 
-// Dolu kova: bakılan yüzeye kaynak döker (su ve lav karşılaşırsa taş olur)
+// Dolu kova: bakılan yüzeye kaynak döker. Su lav kaynağına değerse obsidiyen, akan lava değerse taş olur.
 function pour(item) {
   if (eco.inv[item] < 1) return toast('Kova boş.');
   if (!prev) return toast('Dökmek için bir yüzeye bak');
@@ -174,7 +178,8 @@ function pour(item) {
   const fl = item === LBUCKET ? LAVA : WATER;
   const c = get(x, y, z);
   if (c !== 0 && !isPlant(c) && c !== WATER && c !== LAVA) return;
-  const res = (c === WATER || c === LAVA) && c !== fl ? 3 : fl;   // karşıt sıvıya dökersen taş
+  let res = fl;
+  if ((c === WATER || c === LAVA) && c !== fl) res = (c === LAVA && waterLvl(x, y, z) === 0) ? OBSIDIAN : 3;
   set(x, y, z, res);
   commit(x, y, z, res);
   take(item); give(BUCKET);
@@ -217,6 +222,7 @@ function useCanvas() {
 export function placeBlock() {
   if (isDead() || isDrawOpen()) return;
   const t = eco.sel;
+  if (isTool(t)) return toast('Bu bir alet: bloğa basılı tutup kır');
   if (FOOD[t]) {
     if (eco.inv[t] < 1) return toast(TYPES[t].name + ' yok.');
     if (food.cur >= food.max) return toast('Karnın tok');
