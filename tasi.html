@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Klasör taşıma aracı</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#1d2330;color:#fff;padding:16px;max-width:560px;margin:auto}
+input{width:100%;padding:12px;margin:6px 0;border-radius:8px;border:0;font-size:16px;box-sizing:border-box}
+button{width:100%;padding:12px;margin:6px 0;border:0;border-radius:8px;font-weight:700;font-size:15px;color:#fff;background:#2e7d32}
+button.alt{background:#1565c0}
+button:disabled{opacity:.45}
+pre{background:#0008;padding:10px;border-radius:8px;white-space:pre-wrap;word-break:break-all;font-size:12px;max-height:55vh;overflow:auto}
+small{opacity:.75}
+</style>
+</head>
+<body>
+<h3>📁 js/ klasör düzenleme aracı</h3>
+<small>Önce önizle (hiçbir şey değişmez), sorun yoksa taşı. Hepsi tek commit olur.</small>
+<input id="u" value="mecaga" placeholder="GitHub kullanıcı adı">
+<input id="r" value="ticarium" placeholder="Repo adı">
+<input id="t" type="password" placeholder="Token (github_pat_...)">
+<button class="alt" id="b1">1) Önizle</button>
+<button id="b2" disabled>2) Taşı ve commit et</button>
+<pre id="log">Hazır.</pre>
+<script>
+var MAP = {
+  core: ['state', 'save', 'firebase', 'sound'],
+  world: ['world', 'textures', 'fluids', 'gravity', 'sky', 'paints'],
+  entities: ['player', 'mobs', 'avatars', 'items', 'health', 'hunger', 'vitals'],
+  net: ['cloud', 'rooms', 'online'],
+  ui: ['menu', 'menu-lists', 'menu-worlds', 'panels', 'chat', 'bag', 'draw', 'ui', 'input'],
+  game: ['actions', 'session', 'progress', 'death', 'creative', 'commands', 'economy']
+};
+var OBSOLETE = ['js/water.js'];
+var where = {};
+Object.keys(MAP).forEach(function (f) { MAP[f].forEach(function (n) { where[n] = f; }); });
+
+var $ = function (id) { return document.getElementById(id); };
+var logEl = $('log');
+function log(s) { logEl.textContent += '\n' + s; logEl.scrollTop = logEl.scrollHeight; }
+var plan = null;
+
+function newPath(p) {
+  var m = /^js\/([\w-]+)\.js$/.exec(p);
+  if (!m || !where[m[1]]) return p;
+  return 'js/' + where[m[1]] + '/' + m[1] + '.js';
+}
+function dirOf(p) { return p.slice(0, p.lastIndexOf('/')); }
+function resolve(fromDir, spec) {
+  var parts = fromDir.split('/');
+  spec.split('/').forEach(function (s) {
+    if (s === '.' || s === '') return;
+    if (s === '..') parts.pop(); else parts.push(s);
+  });
+  return parts.join('/');
+}
+function relative(fromDir, toPath) {
+  var a = fromDir.split('/'), b = toPath.split('/'), i = 0;
+  while (i < a.length && i < b.length - 1 && a[i] === b[i]) i++;
+  var out = [];
+  for (var k = 0; k < a.length - i; k++) out.push('..');
+  var s = out.concat(b.slice(i)).join('/');
+  return s.charAt(0) === '.' ? s : './' + s;
+}
+
+// import / export-from / dinamik import yollarını yeni konuma göre yeniden yazar
+function rewrite(src, oldPath, existing, warns) {
+  var oldDir = dirOf(oldPath), newDir = dirOf(newPath(oldPath)), changed = 0;
+  var text = src.replace(/((?:from|import)\s*\(?\s*)(['"])(\.{1,2}\/[^'"]+)\2/g, function (all, pre, q, spec) {
+    var qi = spec.search(/[?#]/);
+    var suffix = qi >= 0 ? spec.slice(qi) : '';
+    var clean = qi >= 0 ? spec.slice(0, qi) : spec;
+    var target = resolve(oldDir, clean);
+    var unmapped = /^js\/[\w-]+\.js$/.test(target) && !where[target.slice(3, -3)] && target !== 'js/main.js';
+    if (!existing.has(target) || OBSOLETE.indexOf(target) >= 0 || unmapped) {
+      warns.push(oldPath + ' → ' + spec + ' bulunamadı ya da eski dosya');
+    }
+    var rel = relative(newDir, newPath(target)) + suffix;
+    if (rel !== spec) changed++;
+    return pre + q + rel + q;
+  });
+  return { text: text, changed: changed };
+}
+
+function fixCheck(src) {
+  return src.replace(/'js\/([\w-]+)\.js'(\s*:)/g, function (all, n, colon) {
+    return "'" + newPath('js/' + n + '.js') + "'" + colon;
+  });
+}
+
+function api(path, o) {
+  o = o || {};
+  var h = { Authorization: 'Bearer ' + $('t').value.trim(), Accept: 'application/vnd.github+json' };
+  if (o.body) h['Content-Type'] = 'application/json';
+  return fetch('https://api.github.com/repos/' + $('u').value.trim() + '/' + $('r').value.trim() + path, {
+    method: o.method || 'GET', headers: h, body: o.body ? JSON.stringify(o.body) : undefined
+  }).then(function (r) {
+    return r.json().then(function (j) {
+      if (!r.ok) throw new Error((j && j.message) || ('HTTP ' + r.status));
+      return j;
+    });
+  });
+}
+
+function dec(b64) {
+  var bin = atob(b64.replace(/\n/g, ''));
+  var bytes = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder('utf-8').decode(bytes);
+}
+
+async function preview() {
+  logEl.textContent = 'Repo okunuyor...';
+  $('b2').disabled = true; plan = null;
+  try {
+    var repo = await api('');
+    var branch = repo.default_branch;
+    var ref = await api('/git/ref/heads/' + branch);
+    var head = ref.object.sha;
+    var commit = await api('/git/commits/' + head);
+    var tree = await api('/git/trees/' + commit.tree.sha + '?recursive=1');
+    var blobs = tree.tree.filter(function (e) { return e.type === 'blob'; });
+    var existing = new Set(blobs.map(function (e) { return e.path; }));
+    var items = [], deletes = [], warns = [], skipped = [];
+
+    for (var i = 0; i < blobs.length; i++) {
+      var e = blobs[i], path = e.path;
+      var m = /^js\/([\w-]+)\.js$/.exec(path);
+      var isRoot = path === 'index.html' || path === 'check.html';
+      if (!m && !isRoot) continue;
+      if (m && OBSOLETE.indexOf(path) >= 0) { deletes.push(path); continue; }
+      if (m && !where[m[1]] && m[1] !== 'main') { skipped.push(path); continue; }
+      var b = await api('/git/blobs/' + e.sha);
+      var text = dec(b.content), np = path, out = text, n = 0;
+      if (m) {
+        var r = rewrite(text, path, existing, warns);
+        out = r.text; n = r.changed; np = newPath(path);
+      } else if (path === 'index.html') {
+        out = text.replace(/\?v=(\d+)/g, function (a, v) { return '?v=' + (+v + 1); });
+        n = out === text ? 0 : 1;
+      } else {
+        out = fixCheck(text);
+        n = out === text ? 0 : 1;
+      }
+      if (np !== path || out !== text) items.push({ old: path, np: np, text: out, n: n });
+    }
+
+    items.forEach(function (it) {
+      log((it.np !== it.old ? '📦 ' + it.old + ' → ' + it.np : '✏️ ' + it.old) + (it.n ? '  (' + it.n + ' yol güncellendi)' : ''));
+    });
+    deletes.forEach(function (d) { log('🗑 ' + d + ' (eski dosya, silinecek)'); });
+    skipped.forEach(function (s) { log('⏭ ' + s + ' (listede yok, dokunulmadı)'); });
+    warns.forEach(function (w) { log('⚠️ ' + w); });
+
+    if (!items.length) return log('\nTaşınacak dosya yok (zaten taşınmış olabilir ya da js/ klasörü bulunamadı).');
+    if (warns.length) return log('\n❌ Uyarılar var. Önce check.html\'deki sarı/kırmızı dosyaları güncelle. Taşıma kapalı.');
+    plan = { items: items, deletes: deletes, head: head, baseTree: commit.tree.sha, branch: branch };
+    $('b2').disabled = false;
+    log('\n✅ Hazır. Şimdi "2) Taşı ve commit et" düğmesine bas.');
+  } catch (err) {
+    log('\n❌ Hata: ' + err.message);
+    if (/Bad credentials|Not Found|Resource not accessible/i.test(err.message)) {
+      log('Token, kullanıcı adı ya da repo adı yanlış olabilir. Token\'a "Contents: Read and write" izni verdin mi?');
+    }
+  }
+}
+
+async function commitIt() {
+  if (!plan) return;
+  $('b2').disabled = true;
+  try {
+    log('\nDosyalar yükleniyor...');
+    var entries = [];
+    for (var i = 0; i < plan.items.length; i++) {
+      var it = plan.items[i];
+      var bl = await api('/git/blobs', { method: 'POST', body: { content: it.text, encoding: 'utf-8' } });
+      if (it.np !== it.old) entries.push({ path: it.old, mode: '100644', type: 'blob', sha: null });
+      entries.push({ path: it.np, mode: '100644', type: 'blob', sha: bl.sha });
+    }
+    plan.deletes.forEach(function (d) { entries.push({ path: d, mode: '100644', type: 'blob', sha: null }); });
+    var tr = await api('/git/trees', { method: 'POST', body: { base_tree: plan.baseTree, tree: entries } });
+    var cm = await api('/git/commits', { method: 'POST', body: { message: 'js/ dosyaları klasörlere taşındı', tree: tr.sha, parents: [plan.head] } });
+    await api('/git/refs/heads/' + plan.branch, { method: 'PATCH', body: { sha: cm.sha } });
+    log('✅ Taşıma tamam! 2 dakika bekle, sonra check.html\'i aç, oyunu ?v=19 ile aç.');
+    plan = null;
+  } catch (err) {
+    log('❌ Hata: ' + err.message);
+    log('Hiçbir şey değişmedi (tek commit, yarım kalmaz). Önizlemeyi tekrar çalıştır.');
+  }
+}
+
+$('b1').onclick = preview;
+$('b2').onclick = commitIt;
+</script>
+</body>
+</html>
