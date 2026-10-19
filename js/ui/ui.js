@@ -1,5 +1,5 @@
-import { TYPES } from './world.js';
-import { eco, sell, buy, priceOf, buyCost } from './economy.js';
+import { TYPES } from '../world/world.js';
+import { eco, sell, buy, priceOf, buyCost } from '../game/economy.js';
 
 // Pazarı geri açmak için true yap
 export const MARKET_ON = false;

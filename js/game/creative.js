@@ -1,7 +1,7 @@
 import { eco } from './economy.js';
-import { TYPES } from './world.js';
-import { hp, healFull } from './health.js';
-import { drawHud } from './ui.js';
+import { TYPES } from '../world/world.js';
+import { hp, healFull } from '../entities/health.js';
+import { drawHud } from '../ui/ui.js';
 
 const mode = { creative: false, saved: null };
 export const isCreative = () => mode.creative;

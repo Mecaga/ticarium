@@ -1,6 +1,6 @@
-import { G } from './state.js';
-import { sfx } from './sound.js';
-import { runCommand } from './commands.js';
+import { G } from '../core/state.js';
+import { sfx } from '../core/sound.js';
+import { runCommand } from '../game/commands.js';
 
 const st = document.createElement('style');
 st.textContent = `

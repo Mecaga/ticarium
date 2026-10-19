@@ -1,9 +1,9 @@
-import { G } from './state.js';
+import { G } from '../core/state.js';
 import { toast } from './ui.js';
-import { sfx } from './sound.js';
-import { autosave, canSave, setChanges } from './progress.js';
-import { clearSolo } from './save.js';
-import { showFood } from './hunger.js';
+import { sfx } from '../core/sound.js';
+import { autosave, canSave, setChanges } from '../game/progress.js';
+import { clearSolo } from '../core/save.js';
+import { showFood } from '../entities/hunger.js';
 import { setChatVisible } from './chat.js';
 
 const $ = id => document.getElementById(id);
@@ -116,7 +116,7 @@ $('setBox').addEventListener('click', async e => {
     return;
   }
   try {
-    const r = await import('./rooms.js');
+    const r = await import('../net/rooms.js');
     if (b.id === 'setPvp') await r.updateSettings({ pvp: !room.pvp });
     if (b.id === 'setKeep') await r.updateSettings({ keep: !room.keep });
     if (b.dataset.m) await r.updateSettings({ max: +b.dataset.m });

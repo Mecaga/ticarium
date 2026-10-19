@@ -1,8 +1,8 @@
-import { TYPES, CATS } from './world.js';
-import { eco } from './economy.js';
+import { TYPES, CATS } from '../world/world.js';
+import { eco } from '../game/economy.js';
 import { drawHud } from './ui.js';
-import { dropFromInventory } from './items.js';
-import { isCreative } from './creative.js';
+import { dropFromInventory } from '../entities/items.js';
+import { isCreative } from '../game/creative.js';
 
 const css = c => '#' + c.toString(16).padStart(6, '0');
 

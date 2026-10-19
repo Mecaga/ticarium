@@ -1,7 +1,7 @@
-import { solid, atlas, sideTile, TYPES } from './world.js';
-import { eco } from './economy.js';
+import { solid, atlas, sideTile, TYPES } from '../world/world.js';
+import { eco } from '../game/economy.js';
 import { P } from './player.js';
-import { drawHud, toast } from './ui.js';
+import { drawHud, toast } from '../ui/ui.js';
 
 // online.js bunları doldurur; boşsa eşyalar sadece bu cihazda yaşar
 export const hooks = { push: null, take: null, expire: null, myId: '' };

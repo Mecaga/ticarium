@@ -1,13 +1,13 @@
-import { db, uid, ref, set, update, remove, push, get as dbGet, onValue } from './firebase.js';
+import { db, uid, ref, set, update, remove, push, get as dbGet, onValue } from '../core/firebase.js';
 import { onChildAdded, onChildChanged, onChildRemoved, runTransaction, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-import { set as setBlock, rebuild, TYPES, losBlocked } from './world.js';
-import { P, knock } from './player.js';
-import { eco, net, clampRaw, priceOf } from './economy.js';
-import { hooks as ih, spawnItem, removeItem, clearItems } from './items.js';
-import { hurt, canHurt, hp } from './health.js';
-import { mhooks, spawnAnimals, applyRemote, hurtMob } from './mobs.js';
-import { makeAvatar, tint, animateAvatar } from './avatars.js';
-import { setPaint, removePaint } from './paints.js';
+import { set as setBlock, rebuild, TYPES, losBlocked } from '../world/world.js';
+import { P, knock } from '../entities/player.js';
+import { eco, net, clampRaw, priceOf } from '../game/economy.js';
+import { hooks as ih, spawnItem, removeItem, clearItems } from '../entities/items.js';
+import { hurt, canHurt, hp } from '../entities/health.js';
+import { mhooks, spawnAnimals, applyRemote, hurtMob } from '../entities/mobs.js';
+import { makeAvatar, tint, animateAvatar } from '../entities/avatars.js';
+import { setPaint, removePaint } from '../world/paints.js';
 
 const DMG = 4;
 const pvp = { on: false };

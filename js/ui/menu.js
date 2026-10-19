@@ -3,8 +3,8 @@ import { makeWorlds } from './menu-worlds.js';
 
 const $ = id => document.getElementById(id);
 let R = null, C = null, onEnter = null, unsub = null, lists = null, worlds = null;
-const loadR = async () => R || (R = await import('./rooms.js'));
-const loadC = async () => C || (C = await import('./cloud.js'));
+const loadR = async () => R || (R = await import('../net/rooms.js'));
+const loadC = async () => C || (C = await import('../net/cloud.js'));
 const screens = ['sMain', 'sCreate', 'sList', 'sJoin', 'sMine', 'sWorlds', 'sNew'];
 
 const nice = m => /permission_denied|permission denied/i.test(m)

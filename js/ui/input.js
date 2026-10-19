@@ -1,4 +1,4 @@
-import { P } from './player.js';
+import { P } from '../entities/player.js';
 
 export const input = { jx: 0, jy: 0, keys: {} };
 

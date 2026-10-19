@@ -1,5 +1,5 @@
 import { get, set, atlas, sideTile, inBounds, H, SAPLING, WATER } from './world.js';
-import { P, collides } from './player.js';
+import { P, collides } from '../entities/player.js';
 
 const FALLING = new Set([6, 8]); // kum, kar
 export const isFalling = t => FALLING.has(t);

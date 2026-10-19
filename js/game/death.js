@@ -1,14 +1,14 @@
-import { H, spawnPos } from './world.js';
-import { P, pHooks, collides } from './player.js';
+import { H, spawnPos } from '../world/world.js';
+import { P, pHooks, collides } from '../entities/player.js';
 import { eco } from './economy.js';
-import { drawHud, toast } from './ui.js';
-import { dropItems } from './items.js';
-import { hhooks, hurt, respawnHealth } from './health.js';
-import { setFood } from './hunger.js';
-import { G } from './state.js';
+import { drawHud, toast } from '../ui/ui.js';
+import { dropItems } from '../entities/items.js';
+import { hhooks, hurt, respawnHealth } from '../entities/health.js';
+import { setFood } from '../entities/hunger.js';
+import { G } from '../core/state.js';
 import { autosave } from './progress.js';
-import { sfx } from './sound.js';
-import { drawHearts, flash } from './panels.js';
+import { sfx } from '../core/sound.js';
+import { drawHearts, flash } from '../ui/panels.js';
 
 const deathEl = document.createElement('div');
 deathEl.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:#200;opacity:0;pointer-events:none;transition:opacity .4s;z-index:7;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;font-weight:700';

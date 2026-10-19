@@ -1,23 +1,23 @@
-import { generate, rebuild, set, SAPLING } from './world.js';
+import { generate, rebuild, set, SAPLING } from '../world/world.js';
 import { resetEco, eco } from './economy.js';
-import { resetHealth } from './health.js';
-import { resetFood } from './hunger.js';
-import { drawHud, drawMarket, isMarketOpen, toast, MARKET_ON } from './ui.js';
-import { clearItems, hooks as itemHooks } from './items.js';
-import { clearMobs, spawnAnimals } from './mobs.js';
-import { clearGravity, flushGravity } from './gravity.js';
-import { saveHooks } from './save.js';
-import { leaveToMenu } from './menu.js';
-import { G } from './state.js';
+import { resetHealth } from '../entities/health.js';
+import { resetFood } from '../entities/hunger.js';
+import { drawHud, drawMarket, isMarketOpen, toast, MARKET_ON } from '../ui/ui.js';
+import { clearItems, hooks as itemHooks } from '../entities/items.js';
+import { clearMobs, spawnAnimals } from '../entities/mobs.js';
+import { clearGravity, flushGravity } from '../world/gravity.js';
+import { saveHooks } from '../core/save.js';
+import { leaveToMenu } from '../ui/menu.js';
+import { G } from '../core/state.js';
 import { applyState, autosave, canSave, bindCloud } from './progress.js';
 import { toSpawn, clearDeath } from './death.js';
-import { applyRoomUI, updateInfo, closePanels, refreshSettings, refreshPlayers } from './panels.js';
+import { applyRoomUI, updateInfo, closePanels, refreshSettings, refreshPlayers } from '../ui/panels.js';
 import { trackSapling, clearSaplings } from './actions.js';
-import { addChat, clearChat } from './chat.js';
-import { setSimulate, revalidate } from './fluids.js';
-import { setPaint, clearPaints, stack } from './paints.js';
+import { addChat, clearChat } from '../ui/chat.js';
+import { setSimulate, revalidate } from '../world/fluids.js';
+import { setPaint, clearPaints, stack } from '../world/paints.js';
 import { resetMode } from './creative.js';
-import { resetVitals } from './vitals.js';
+import { resetVitals } from '../entities/vitals.js';
 
 // Ayarlar → Dünyayı sil: bulut kaydını siler
 saveHooks.onDelete = async () => {
@@ -71,7 +71,7 @@ export function enterGame(info) {
 
   if (info.solo) { spawnAnimals(); revalidate(); return; }
 
-  import('./online.js')
+  import('../net/online.js')
     .then(m => {
       if (G.room !== my) return;
       G.online = m;

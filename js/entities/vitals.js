@@ -1,5 +1,5 @@
 import { P } from './player.js';
-import { get, WATER, LAVA } from './world.js';
+import { get, WATER, LAVA } from '../world/world.js';
 import { hurt, hp } from './health.js';
 
 // Nefes (boğulma) ve lav hasarı

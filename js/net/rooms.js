@@ -1,4 +1,4 @@
-import { login, db, ref, set, get, update, remove, onValue, onDisconnect } from './firebase.js';
+import { login, db, ref, set, get, update, remove, onValue, onDisconnect } from '../core/firebase.js';
 
 let loginP = null, myUid = null;
 const ready = () => loginP || (loginP = login().then(id => (myUid = id)).catch(e => { loginP = null; throw e; }));

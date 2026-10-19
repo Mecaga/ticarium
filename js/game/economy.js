@@ -1,4 +1,4 @@
-import { TYPES } from './world.js';
+import { TYPES } from '../world/world.js';
 
 export const eco = {
   coins: 50,

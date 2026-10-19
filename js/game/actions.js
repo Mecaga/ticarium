@@ -1,20 +1,20 @@
 import {
   get, set, rebuild, target, prev, wtarget, waterLvl, TYPES, H, inBounds,
   BEDROCK, SAPLING, WATER, LAVA, BUCKET, WBUCKET, LBUCKET, CANVAS, APPLE, planTree, isPlant
-} from './world.js';
-import { P, collides } from './player.js';
+} from '../world/world.js';
+import { P, collides } from '../entities/player.js';
 import { eco } from './economy.js';
-import { drawHud, toast } from './ui.js';
-import { queueFall, ghooks, isFalling } from './gravity.js';
-import { isDead } from './health.js';
+import { drawHud, toast } from '../ui/ui.js';
+import { queueFall, ghooks, isFalling } from '../world/gravity.js';
+import { isDead } from '../entities/health.js';
 import { recordChange, recordPaint } from './progress.js';
-import { G } from './state.js';
-import { sfx } from './sound.js';
-import { food, eat } from './hunger.js';
-import { findMob, hurtMob } from './mobs.js';
-import { getPaint, setPaint, removePaint, stack } from './paints.js';
-import { openDraw, isDrawOpen } from './draw.js';
-import { dropItems } from './items.js';
+import { G } from '../core/state.js';
+import { sfx } from '../core/sound.js';
+import { food, eat } from '../entities/hunger.js';
+import { findMob, hurtMob } from '../entities/mobs.js';
+import { getPaint, setPaint, removePaint, stack } from '../world/paints.js';
+import { openDraw, isDrawOpen } from '../ui/draw.js';
+import { dropItems } from '../entities/items.js';
 import { isCreative } from './creative.js';
 
 const FOOD = { 15: 6, 46: 4 };   // Et +6, Elma +4

@@ -1,4 +1,4 @@
-import { N, H, solid, get, WATER, SEA, spawnPos, losBlocked, surfaceY, worldKind } from './world.js';
+import { N, H, solid, get, WATER, SEA, spawnPos, losBlocked, surfaceY, worldKind } from '../world/world.js';
 import { dropItems } from './items.js';
 
 // send/remove: online.js doldurur (sadece oda sahibi hayvanları yönetir)

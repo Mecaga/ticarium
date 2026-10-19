@@ -1,4 +1,4 @@
-import { G } from './state.js';
+import { G } from '../core/state.js';
 import { setCreative, isCreative } from './creative.js';
 
 // Sohbet komutları. Sadece oda kurucusu (tek oyunculuda sen) kullanır.

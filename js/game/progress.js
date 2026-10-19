@@ -1,12 +1,12 @@
-import { TYPES, inBounds } from './world.js';
-import { P, collides } from './player.js';
+import { TYPES, inBounds } from '../world/world.js';
+import { P, collides } from '../entities/player.js';
 import { eco } from './economy.js';
-import { drawHud, toast } from './ui.js';
-import { flushGravity } from './gravity.js';
-import { isDead } from './health.js';
-import { food, setFood } from './hunger.js';
-import { G } from './state.js';
-import { stack } from './paints.js';
+import { drawHud, toast } from '../ui/ui.js';
+import { flushGravity } from '../world/gravity.js';
+import { isDead } from '../entities/health.js';
+import { food, setFood } from '../entities/hunger.js';
+import { G } from '../core/state.js';
+import { stack } from '../world/paints.js';
 import { survivalInv } from './creative.js';
 
 // Başkasının odasında envanter/konum kaydı tutulsun mu? (false: sadece kendi dünyan/odan kaydolur)

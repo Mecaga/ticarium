@@ -1,4 +1,4 @@
-import { login, db, ref, set, get, update, remove, push, uid } from './firebase.js';
+import { login, db, ref, set, get, update, remove, push, uid } from '../core/firebase.js';
 
 export const MAX_WORLDS = 6;
 

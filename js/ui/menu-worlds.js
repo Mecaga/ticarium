@@ -1,4 +1,4 @@
-import { hasSolo, loadSolo, clearLocal } from './save.js';
+import { hasSolo, loadSolo, clearLocal } from '../core/save.js';
 
 const $ = id => document.getElementById(id);
 export const KINDS = {

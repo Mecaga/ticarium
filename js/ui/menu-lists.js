@@ -1,4 +1,4 @@
-import { getMine, removeMine } from './save.js';
+import { getMine, removeMine } from '../core/save.js';
 import { KINDS } from './menu-worlds.js';
 
 const $ = id => document.getElementById(id);

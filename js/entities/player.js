@@ -1,5 +1,5 @@
-import { N, get, solid, heightAt, WATER, spawnPos } from './world.js';
-import { input } from './input.js';
+import { N, get, solid, heightAt, WATER, spawnPos } from '../world/world.js';
+import { input } from '../ui/input.js';
 
 const R = 0.3, PH = 1.7;
 const sp0 = spawnPos();
