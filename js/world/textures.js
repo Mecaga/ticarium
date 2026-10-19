@@ -7,8 +7,13 @@ export function hash(x, y, s) {
 const TILE_NAMES = ['grassTop', 'grassSide', 'dirt', 'stone', 'woodSide', 'woodTop', 'leaves', 'sand', 'brick', 'snow',
   'glass', 'gold', 'bedrock', 'sapling', 'birchSide', 'birchTop', 'birchLeaf', 'meat', 'wool', 'water',
   'bucket', 'wbucket', 'paint', 'lava', 'lbucket', 'apple',
-  'lavender', 'daisy', 'poppy', 'bpoppy', 'tulipo', 'tulipp'];
+  'lavender', 'daisy', 'poppy', 'bpoppy', 'tulipo', 'tulipp',
+  'obsidian', 'netherite', 'pickW', 'pickS', 'pickI', 'pickD', 'pickN', 'axe', 'shovel'];
 const FLOWERS = new Set(['lavender', 'daisy', 'poppy', 'bpoppy', 'tulipo', 'tulipp']);
+const HEAD = {
+  pickW: [176, 136, 72], pickS: [150, 150, 150], pickI: [222, 222, 228], pickD: [80, 225, 215],
+  pickN: [92, 76, 88], axe: [222, 222, 228], shovel: [222, 222, 228]
+};
 const TI = {};
 TILE_NAMES.forEach((n, i) => { TI[n] = i; });
 export const T = TILE_NAMES.length;
@@ -37,13 +42,22 @@ export const FACE_TILES = {
   31: [TI.wbucket, TI.wbucket, TI.wbucket],
   32: [TI.paint, TI.paint, TI.paint],
   33: [TI.lbucket, TI.lbucket, TI.lbucket],
+  34: [TI.obsidian, TI.obsidian, TI.obsidian],
+  35: [TI.netherite, TI.netherite, TI.netherite],
   40: [TI.lavender, TI.lavender, TI.lavender],
   41: [TI.daisy, TI.daisy, TI.daisy],
   42: [TI.poppy, TI.poppy, TI.poppy],
   43: [TI.bpoppy, TI.bpoppy, TI.bpoppy],
   44: [TI.tulipo, TI.tulipo, TI.tulipo],
   45: [TI.tulipp, TI.tulipp, TI.tulipp],
-  46: [TI.apple, TI.apple, TI.apple]
+  46: [TI.apple, TI.apple, TI.apple],
+  50: [TI.pickW, TI.pickW, TI.pickW],
+  51: [TI.pickS, TI.pickS, TI.pickS],
+  52: [TI.pickI, TI.pickI, TI.pickI],
+  53: [TI.pickD, TI.pickD, TI.pickD],
+  54: [TI.pickN, TI.pickN, TI.pickN],
+  55: [TI.axe, TI.axe, TI.axe],
+  56: [TI.shovel, TI.shovel, TI.shovel]
 };
 
 export const atlas = { tex: null, T };
@@ -58,7 +72,10 @@ const BASE = {
   bucket: [170, 175, 182], wbucket: [170, 175, 182], lbucket: [170, 175, 182], paint: [245, 240, 225],
   lava: [240, 100, 20], apple: [200, 30, 30],
   lavender: [150, 90, 205], daisy: [248, 248, 248], poppy: [208, 34, 40],
-  bpoppy: [48, 82, 205], tulipo: [243, 134, 32], tulipp: [240, 120, 172]
+  bpoppy: [48, 82, 205], tulipo: [243, 134, 32], tulipp: [240, 120, 172],
+  obsidian: [26, 16, 44], netherite: [74, 64, 70],
+  pickW: [176, 136, 72], pickS: [150, 150, 150], pickI: [222, 222, 228], pickD: [80, 225, 215],
+  pickN: [92, 76, 88], axe: [222, 222, 228], shovel: [222, 222, 228]
 };
 
 // Kaldırım taşı için hücre noktaları (kenarlar birleşsin diye sarmalı)
@@ -103,6 +120,22 @@ function plantPix(name, x, y) {
   return null;
 }
 
+// Kazma, balta, kürek pikselleri (null = şeffaf)
+function toolPix(name, x, y) {
+  if (name === 'axe') {
+    const e = Math.pow((x - 10.5) / 3.2, 2) + Math.pow((y - 5) / 3.4, 2);
+    if (e < 1) return HEAD[name];
+  } else if (name === 'shovel') {
+    const e = Math.pow((x - 11.5) / 2.6, 2) + Math.pow((y - 4.5) / 3.6, 2);
+    if (e < 1) return HEAD[name];
+  } else {
+    const dx = x - 5.5, dy = y - 10.5, r = Math.hypot(dx, dy);
+    if (r >= 5.2 && r <= 7.2 && dx >= -1 && dy <= 1) return HEAD[name];
+  }
+  if ((x + y === 16 || x + y === 17) && x >= 3 && x <= 11) return [122, 86, 42];
+  return null;
+}
+
 function buildAtlas() {
   const cv = document.createElement('canvas');
   cv.width = 16 * T; cv.height = 16;
@@ -122,6 +155,11 @@ function buildAtlas() {
         if (!c) continue;
         [r, g, b] = c;
         k = 0.93 + hash(x, y, i) * 0.14;
+      } else if (HEAD[name]) {
+        const c = toolPix(name, x, y);
+        if (!c) continue;
+        [r, g, b] = c;
+        k = 0.94 + hash(x, y, i) * 0.12;
       } else if (name === 'bucket' || name === 'wbucket' || name === 'lbucket') {
         const w = y < 5 ? 6 : (y < 12 ? 5 : 4);
         const body = y >= 3 && y <= 14 && Math.abs(x - 7.5) <= w;
@@ -150,6 +188,16 @@ function buildAtlas() {
             else if (h > 0.93) { r = 120; g = 120; b = 126; k = 1; }
             break;
           }
+          case 'obsidian':
+            k = 0.8 + hash(x, y, 101) * 0.4;
+            if (hash(x, y, 102) < 0.09) { r = 92; g = 52; b = 150; k = 1; }
+            else if (hash(x, y, 103) < 0.08) { r = 8; g = 4; b = 16; k = 1; }
+            break;
+          case 'netherite':
+            k = 0.9 + hash(x, y, 104) * 0.2;
+            if (x % 8 === 0 || y % 8 === 0) { r = 40; g = 34; b = 38; k = 1; }
+            else if (hash(x, y, 105) < 0.07) { r = 130; g = 104; b = 92; k = 1; }
+            break;
           case 'woodSide': if (x % 4 === 0) k *= 0.78; break;
           case 'woodTop': {
             const d = Math.max(Math.abs(x - 7.5), Math.abs(y - 7.5));
@@ -219,4 +267,4 @@ function buildAtlas() {
 export function initAtlas() {
   atlas.tex = buildAtlas();
   return atlas.tex;
-      }
+  }
