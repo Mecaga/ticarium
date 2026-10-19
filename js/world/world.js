@@ -8,6 +8,7 @@ export const BEDROCK = 11, SAPLING = 12, BIRCH_LOG = 13, BIRCH_LEAF = 14, MEAT =
 export const WATER_MAX = 24;    // 17 kaynak su, 18..24 akan su
 export const LAVA = 25, LAVA_MAX = 28;   // 25 kaynak lav, 26..28 akan lav
 export const BUCKET = 30, WBUCKET = 31, CANVAS = 32, LBUCKET = 33;
+export const OBSIDIAN = 34, NETHERITE = 35;
 export const FLOWER_MIN = 40, FLOWER_MAX = 45, APPLE = 46;
 export const isPlant = t => t === SAPLING || (t >= FLOWER_MIN && t <= FLOWER_MAX);
 
@@ -21,7 +22,7 @@ export const TYPES = {
   7:  { name: 'Tuğla',  color: 0xb5493a, base: 30 },
   8:  { name: 'Kar',    color: 0xf5f5f5, base: 12 },
   9:  { name: 'Cam',    color: 0x9fd8e8, base: 20 },
-  10: { name: 'Altın',  color: 0xffd700, base: 80 },
+  10: { name: 'Altın blok', color: 0xffd700, base: 80 },
   12: { name: 'Fidan',  color: 0x4caf50, base: 14 },
   13: { name: 'Huş odun',   color: 0xe4e0d2, base: 25 },
   14: { name: 'Huş yaprak', color: 0x8fc060, base: 5 },
@@ -31,21 +32,30 @@ export const TYPES = {
   31: { name: 'Su kovası', color: 0x4a90e2, base: 45 },
   32: { name: 'Tuval',  color: 0xd9c9a0, base: 35 },
   33: { name: 'Lav kovası', color: 0xe8661a, base: 60 },
+  34: { name: 'Obsidiyen', color: 0x1b1030, base: 90 },
+  35: { name: 'Netherit blok', color: 0x4a3f45, base: 200 },
   40: { name: 'Lavanta', color: 0x9a5fd0, base: 6 },
   41: { name: 'Papatya', color: 0xf5f5f5, base: 6 },
   42: { name: 'Gelincik', color: 0xd02228, base: 6 },
   43: { name: 'Mavi gelincik', color: 0x3050cd, base: 8 },
   44: { name: 'Turuncu lale', color: 0xf3861f, base: 8 },
   45: { name: 'Pembe lale', color: 0xf078ac, base: 8 },
-  46: { name: 'Elma',   color: 0xc81e1e, base: 12 }
+  46: { name: 'Elma',   color: 0xc81e1e, base: 12 },
+  50: { name: 'Ahşap kazma', color: 0xb08850, base: 20 },
+  51: { name: 'Taş kazma', color: 0x9a9a9a, base: 30 },
+  52: { name: 'Demir kazma', color: 0xd8d8d8, base: 60 },
+  53: { name: 'Elmas kazma', color: 0x4de0d0, base: 150 },
+  54: { name: 'Netherit kazma', color: 0x5a4a52, base: 250 },
+  55: { name: 'Demir balta', color: 0xd0d0d0, base: 60 },
+  56: { name: 'Demir kürek', color: 0xc8c8c8, base: 50 }
 };
 
 // Çanta kategorileri
 export const CATS = [
-  ['🧱 Bloklar', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 16]],
+  ['🧱 Bloklar', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 16, 34, 35]],
   ['🌱 Fidan ve çiçekler', [12, 40, 41, 42, 43, 44, 45]],
   ['🍎 Yiyecek', [15, 46]],
-  ['🪣 Aletler', [30, 31, 33, 32]]
+  ['🪣 Aletler', [30, 31, 33, 32, 50, 51, 52, 53, 54, 55, 56]]
 ];
 
 // ---- Dünya verisi ----
@@ -319,6 +329,21 @@ function genNormal(seed) {
       if (get(x + dx, y, z + dz) === 3) set(x + dx, y, z + dz, LAVA);
     }
   }
+
+  // Derin yer altı: obsidiyen kümeleri ve nadir netherit bloklar
+  const rnd5 = mulberry((seed ^ 0x9e3779b1) >>> 0);
+  for (let i = 0; i < 4; i++) {
+    const x = 3 + Math.floor(rnd5() * (N - 6)), z = 3 + Math.floor(rnd5() * (N - 6));
+    const y = 2 + Math.floor(rnd5() * 2);
+    for (let k = 0; k < 3; k++) {
+      const xx = x + Math.floor(rnd5() * 3) - 1, zz = z + Math.floor(rnd5() * 3) - 1;
+      if (get(xx, y, zz) === 3) set(xx, y, zz, OBSIDIAN);
+    }
+  }
+  for (let i = 0; i < 3; i++) {
+    const x = 3 + Math.floor(rnd5() * (N - 6)), z = 3 + Math.floor(rnd5() * (N - 6));
+    if (get(x, 2, z) === 3) set(x, 2, z, NETHERITE);
+  }
 }
 
 // kind: 'normal' | 'flat' | 'sky'
@@ -525,4 +550,4 @@ export function updateTarget(camera) {
   }
   hl.visible = !!target;
   if (target) hl.position.set(target[0] + 0.5, target[1] + 0.5, target[2] + 0.5);
-}
+  }
