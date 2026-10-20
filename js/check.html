@@ -15,19 +15,19 @@ div{padding:3px 0;font-size:15px}
 <div id="out">Kontrol ediliyor...</div>
 <script>
 var files = {
-  'index.html': 'BlokDiyar', 'css/style.css': '#chatBox', 'js/main.js': 'initMining',
+  'index.html': 'Kaydet ve Çık', 'css/style.css': '#chatBox', 'js/main.js': 'chunksReady',
   'js/core/state.js': 'export const G', 'js/core/save.js': 'saveHooks', 'js/core/firebase.js': 'serverTimestamp', 'js/core/sound.js': 'splash',
-  'js/world/world.js': 'OBSIDIAN', 'js/world/textures.js': 'pickW', 'js/world/fluids.js': 'OBS', 'js/world/gravity.js': 'WATER',
-  'js/world/sky.js': 'export function gameClock', 'js/world/paints.js': 'export function setPaint',
-  'js/entities/player.js': 'inWater', 'js/entities/mobs.js': 'surfaceY', 'js/entities/avatars.js': 'export function animateAvatar',
-  'js/entities/items.js': 'export function dropItems', 'js/entities/health.js': 'god', 'js/entities/hunger.js': 'export function tickHunger',
+  'js/world/world.js': 'export function chunksReady', 'js/world/textures.js': 'pickW', 'js/world/fluids.js': 'eachFlow',
+  'js/world/gravity.js': 'WATER', 'js/world/sky.js': 'FOG_NEAR', 'js/world/paints.js': 'isLoaded',
+  'js/entities/player.js': 'isLoaded', 'js/entities/mobs.js': 'lavaT', 'js/entities/avatars.js': 'export function animateAvatar',
+  'js/entities/items.js': 'isLoaded', 'js/entities/health.js': 'god', 'js/entities/hunger.js': 'export function tickHunger',
   'js/entities/vitals.js': 'export function tickVitals',
-  'js/net/cloud.js': 'addMyRoom', 'js/net/rooms.js': "type === 'world'", 'js/net/online.js': 'sendPaint',
-  'js/ui/menu.js': 'async function diag', 'js/ui/menu-lists.js': 'myRooms', 'js/ui/menu-worlds.js': 'export function makeWorlds',
-  'js/ui/panels.js': 'setChatVisible', 'js/ui/chat.js': 'runCommand', 'js/ui/bag.js': 'CATS', 'js/ui/draw.js': 'export function openDraw',
-  'js/ui/ui.js': 'MARKET_ON', 'js/ui/input.js': 'breakDown',
-  'js/game/actions.js': 'isTool', 'js/game/mining.js': 'export function updateMining', 'js/game/session.js': 'resetVitals',
-  'js/game/progress.js': 'survivalInv', 'js/game/death.js': 'drown', 'js/game/creative.js': 'export function setCreative',
+  'js/net/cloud.js': 'replaceWorldData', 'js/net/rooms.js': 'hostWorld', 'js/net/online.js': 'recomputeSim',
+  'js/ui/menu.js': 'leaveRoom(opts)', 'js/ui/menu-lists.js': 'worldRooms', 'js/ui/menu-worlds.js': 'playWorld',
+  'js/ui/dialog.js': 'export function askDialog', 'js/ui/panels.js': 'setChatVisible', 'js/ui/chat.js': 'runCommand',
+  'js/ui/bag.js': 'CATS', 'js/ui/draw.js': 'export function openDraw', 'js/ui/ui.js': 'MARKET_ON', 'js/ui/input.js': 'breakDown',
+  'js/game/actions.js': 'isTool', 'js/game/mining.js': 'makeCrack', 'js/game/session.js': 'requestLeave',
+  'js/game/progress.js': 'SAVE_GUEST = true', 'js/game/death.js': 'drown', 'js/game/creative.js': 'export function setCreative',
   'js/game/commands.js': 'cmdVer', 'js/game/economy.js': 'export function startPriceTicker'
 };
 var names = Object.keys(files), out = document.getElementById('out');
