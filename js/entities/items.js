@@ -1,4 +1,4 @@
-import { solid, atlas, sideTile, TYPES } from '../world/world.js';
+import { solid, atlas, sideTile, TYPES, isLoaded } from '../world/world.js';
 import { eco } from '../game/economy.js';
 import { P } from './player.js';
 import { drawHud, toast } from '../ui/ui.js';
@@ -100,6 +100,10 @@ async function tryTake(it) {
 export function updateItems(dt, canPick) {
   const now = Date.now(), tm = now / 1000, R = 0.16;
   for (const it of list.values()) {
+    // Yüklü olmayan chunk'taki eşya donar: düşüp yok olmaz, başkasının eşyasını silmez
+    if (!isLoaded(Math.floor(it.x), Math.floor(it.z))) { it.mesh.visible = false; continue; }
+    it.mesh.visible = true;
+
     it.vy = Math.max(-30, it.vy - 18 * dt);
     let nx = it.x + it.vx * dt, ny = it.y + it.vy * dt, nz = it.z + it.vz * dt;
     if (solid(Math.floor(nx), Math.floor(it.y), Math.floor(it.z))) { it.vx *= -0.3; nx = it.x; }
@@ -130,4 +134,4 @@ export function updateItems(dt, canPick) {
       if (dx * dx + dy * dy + dz * dz < 2.25) tryTake(it);
     }
   }
-                    }
+}
