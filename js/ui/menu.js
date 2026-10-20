@@ -29,10 +29,8 @@ export const isMenuOpen = () => $('menu').style.display !== 'none';
 async function diag() {
   const el = $('mAuth');
   el.textContent = '☁️ Bağlanıyor...';
-  try {
-    const c = await loadC();
-    el.textContent = await c.diag();
-  } catch (e) { el.textContent = '❌ ' + (e.code || e.message || e); }
+  try { el.textContent = await (await loadC()).diag(); }
+  catch (e) { el.textContent = '❌ ' + (e.code || e.message || e); }
 }
 
 export function showMenu() {
@@ -41,14 +39,13 @@ export function showMenu() {
   diag();
 }
 
-export async function leaveToMenu() {
-  try { if (R) await R.leaveRoom(); } catch (e) {}
+// opts.keepOpen: host çıkarken oda açık kalsın
+export async function leaveToMenu(opts = {}) {
+  try { if (R) await R.leaveRoom(opts); } catch (e) {}
   showMenu();
 }
 
 function enter(info) {
-  // Kurduğun oda buluttaki "kurduğum odalar" listesine yazılır
-  if (!info.solo && info.isOwner) loadC().then(c => c.addMyRoom(info.code, info.name)).catch(() => {});
   $('menu').style.display = 'none';
   onEnter(info);
 }
@@ -62,11 +59,7 @@ async function run(btn, fn) {
 export function initMenu(cb) {
   onEnter = cb;
   lists = makeLists({ loadR, loadC, run, enter, err, pname, setUnsub: f => { unsub = f; } });
-  worlds = makeWorlds({
-    loadC, run, enter, err, pname, show,
-    myRooms: () => lists.myRooms(),
-    joinMine: async code => { const r = await loadR(); enter(await r.joinRoom(code, pname())); }
-  });
+  worlds = makeWorlds({ loadC, loadR, run, enter, err, pname, show, worldRooms: () => lists.worldRooms() });
   try { $('nameIn').value = localStorage.getItem('tc_name') || ''; } catch (e) {}
 
   $('mWorlds').onclick = () => { show('sWorlds'); worlds.start(); };
@@ -79,23 +72,26 @@ export function initMenu(cb) {
   $('mJoin').onclick = () => show('sJoin');
   $('mMine').onclick = () => { show('sMine'); lists.startMine(); };
   document.querySelectorAll('.back').forEach(b => { b.onclick = () => show('sMain'); });
+  lists.initCreate();
 
   $('cDo').onclick = e => run(e.currentTarget, async () => {
+    const wid = $('cWorld').value;
+    if (!wid) throw new Error('Önce Dünyalarım\'dan bir dünya kur');
     const r = await loadR();
-    const pn = pname();
     err('Oda hazırlanıyor...');
-    enter(await r.createRoom({
-      name: $('cName').value.trim() || pn + ' odası',
+    enter(await r.hostWorld({
+      wid,
+      name: $('cName').value.trim(),
       isPublic: $('cPublic').checked,
       pvp: $('cPvp').checked,
       keep: $('cKeep').checked,
       maxPlayers: +$('cMax').value,
-      playerName: pn,
-      source: lists.pickSource()
+      playerName: pname(),
+      enter: true
     }));
   });
   $('jDo').onclick = e => run(e.currentTarget, async () => {
     const r = await loadR();
     enter(await r.joinRoom($('jCode').value, pname()));
   });
-}
+    }
