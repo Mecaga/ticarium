@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>BlokDiyar</title>
-<link rel="stylesheet" href="css/style.css?v=19">
+<link rel="stylesheet" href="css/style.css?v=20">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
@@ -26,7 +26,7 @@
 <div class="btn" id="bMarket">🏪 Pazar</div>
 <div class="btn" id="bPlayers">👥</div>
 <div class="btn" id="bSettings">⚙️ Ayarlar</div>
-<div class="btn" id="bLeave">🚪 Çık</div>
+<div class="btn" id="bLeave">💾 Kaydet ve Çık</div>
 <div id="market"><div id="panel"></div></div>
 <div id="settings"><div id="setBox"></div></div>
 <div id="players"><div id="plBox"></div></div>
@@ -36,11 +36,11 @@
     <h1>BlokDiyar</h1>
     <div id="sMain">
       <input id="nameIn" maxlength="14" placeholder="Oyuncu adın">
-      <button id="mWorlds">🌍 Dünyalarım (dünyalar + özel odalar)</button>
-      <button id="mCreate">Oda Kur</button>
-      <button id="mList">Açık Odalar</button>
-      <button id="mJoin">Kodla Katıl</button>
-      <button id="mMine">Odalarım (herkese açık)</button>
+      <button id="mWorlds">🌍 Dünyalarım</button>
+      <button id="mCreate">🏠 Oda Kur</button>
+      <button id="mList">🌐 Açık Odalar</button>
+      <button id="mJoin">🔑 Kodla Katıl</button>
+      <button id="mMine">⭐ Odalarım (Herkese Açık)</button>
     </div>
     <div id="sWorlds" style="display:none">
       <div id="wInfo"></div>
@@ -55,11 +55,11 @@
       <button id="nwBack" class="alt">Geri</button>
     </div>
     <div id="sCreate">
-      <input id="cName" maxlength="24" placeholder="Oda adı">
       <label class="chk">Dünya
-        <select id="cWorld" style="flex:1;min-width:0"><option value="kind:normal">🌍 Rastgele dünya (Normal)</option></select>
+        <select id="cWorld" style="flex:1;min-width:0"></select>
       </label>
-      <label class="chk"><input type="checkbox" id="cPublic"> Herkese açık (Açık Odalar'da görünsün)</label>
+      <input id="cName" maxlength="24" placeholder="Oda adı (dünya adı otomatik gelir)">
+      <label class="chk"><input type="checkbox" id="cPublic" checked> Herkese açık (Açık Odalar'da görünsün)</label>
       <label class="chk"><input type="checkbox" id="cPvp"> PVP açık (oyuncular birbirine vurabilir)</label>
       <label class="chk"><input type="checkbox" id="cKeep"> Envanteri koru (ölünce eşyalar düşmez)</label>
       <label class="chk">Oyuncu limiti
@@ -116,7 +116,7 @@ var missing = ids.filter(function (i) { return !document.getElementById(i); });
 if (missing.length) {
   showErr('index.html eski, eksik elemanlar: ' + missing.join(', '));
 } else {
-  import('./js/main.js?v=19').catch(function (e) {
+  import('./js/main.js?v=20').catch(function (e) {
     showErr('Yükleme hatası (bir js dosyası eski ya da eksik olabilir): ' + (e.message || e));
   });
 }
