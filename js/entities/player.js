@@ -1,4 +1,4 @@
-import { N, get, solid, heightAt, WATER, spawnPos } from '../world/world.js';
+import { get, solid, WATER, spawnPos, isLoaded } from '../world/world.js';
 import { input } from '../ui/input.js';
 
 const R = 0.3, PH = 1.7;
@@ -9,9 +9,9 @@ export const pHooks = { onFall: null };
 export const P = {
   x: sp0.x, y: sp0.y, z: sp0.z,
   vy: 0, ground: false, yaw: 0, pitch: 0,
-  kx: 0, kz: 0,    // geri tepme hızı
-  sx: sp0.x, sy: sp0.y, sz: sp0.z,   // en son güvenle durduğu yer
-  fallY: sp0.y,    // havadayken ulaştığı en yüksek nokta
+  kx: 0, kz: 0,
+  sx: sp0.x, sy: sp0.y, sz: sp0.z,
+  fallY: sp0.y,
   inWater: false, underWater: false
 };
 
@@ -22,11 +22,10 @@ export function collides(x, y, z) {
 }
 
 export function jump() {
-  if (P.inWater) { P.vy = P.underWater ? 4.4 : 6.8; P.ground = false; return; } // kulaç at
+  if (P.inWater) { P.vy = P.underWater ? 4.4 : 6.8; P.ground = false; return; }
   if (P.ground) { P.vy = 8; P.ground = false; }
 }
 
-// Vurulunca geri tepme (dx, dz: saldırgandan uzaklaşma yönü)
 export function knock(dx, dz) {
   const l = Math.hypot(dx, dz) || 1;
   P.kx = dx / l * 8;
@@ -37,6 +36,7 @@ export function knock(dx, dz) {
 
 export function updatePlayer(dt, frozen) {
   if (frozen) return;
+  if (!isLoaded(Math.floor(P.x), Math.floor(P.z))) return;   // chunk yüklenene kadar düşme
   const wx = Math.floor(P.x), wz = Math.floor(P.z);
   P.inWater = get(wx, Math.floor(P.y + 0.4), wz) === WATER;
   P.underWater = get(wx, Math.floor(P.y + 1.6), wz) === WATER;
@@ -56,9 +56,9 @@ export function updatePlayer(dt, frozen) {
   if (!collides(P.x, P.y, P.z + vz * dt)) P.z += vz * dt;
 
   if (P.inWater) {
-    P.vy = Math.max(-3, P.vy - 7 * dt);          // suda yavaş batış
+    P.vy = Math.max(-3, P.vy - 7 * dt);
     P.vy *= Math.max(0, 1 - 2.5 * dt);
-    P.fallY = P.y;                               // suya düşünce hasar yok
+    P.fallY = P.y;
   } else {
     P.vy = Math.max(-40, P.vy - 22 * dt);
   }
@@ -67,7 +67,6 @@ export function updatePlayer(dt, frozen) {
   if (!collides(P.x, ny, P.z)) { P.y = ny; P.ground = false; }
   else { if (P.vy < 0) { P.ground = true; landed = true; } P.vy = 0; }
 
-  // Düşme hasarı: 3 bloktan fazla düşersen, fazla her blok 1 can
   if (P.ground) {
     const d = P.fallY - P.y;
     if (landed && d > 3 && pHooks.onFall) pHooks.onFall(Math.floor(d - 3));
@@ -76,8 +75,5 @@ export function updatePlayer(dt, frozen) {
     P.fallY = P.y;
   }
 
-  // Dünyanın içinde yere basıyorsa güvenli nokta olarak kaydet
-  if (P.ground && P.x >= 0 && P.x < N && P.z >= 0 && P.z < N) {
-    P.sx = P.x; P.sy = P.y; P.sz = P.z;
-  }
-}
+  if (P.ground) { P.sx = P.x; P.sy = P.y; P.sz = P.z; }
+    }
