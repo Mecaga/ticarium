@@ -21,7 +21,6 @@ const HARD = {
   40: [0.05, null, 0], 41: [0.05, null, 0], 42: [0.05, null, 0], 43: [0.05, null, 0], 44: [0.05, null, 0], 45: [0.05, null, 0]
 };
 
-// Bu blok için süre ve eşya düşer mi (elindeki alete göre)
 export function breakInfo(t) {
   if (isCreative()) return { time: 0.15, drop: true };
   const h = HARD[t] || [1, null, 0];
@@ -33,8 +32,12 @@ export function breakInfo(t) {
   return { time, drop: !!okTool };
 }
 
-// ---- Çatlak animasyonu: 10 aşamalı doku ----
+// online.js: (x, y, z, aşama) kırarken, (null) bırakınca. Diğer oyuncular çatlağı canlı görür.
+export const mineHooks = { onProgress: null };
+
+let cvCache = null;
 function crackCanvas() {
+  if (cvCache) return cvCache;
   const cv = document.createElement('canvas');
   cv.width = 160; cv.height = 16;
   const g = cv.getContext('2d');
@@ -60,49 +63,59 @@ function crackCanvas() {
       }
     }
   }
-  return cv;
+  return (cvCache = cv);
 }
 
-const M = { down: false, key: '', p: 0, cool: 0, tick: 0 };
-let mesh = null, tex = null, doBreak = null;
-
-export function initMining(scene, onBreak) {
-  doBreak = onBreak;
-  tex = new THREE.CanvasTexture(crackCanvas());
+// Çatlak katmanı (yerel kırma ve her uzaktaki oyuncu için ayrı kopya)
+export function makeCrack(scene) {
+  const tex = new THREE.CanvasTexture(crackCanvas());
   tex.magFilter = THREE.NearestFilter;
   tex.minFilter = THREE.NearestFilter;
   tex.generateMipmaps = false;
   tex.repeat.set(0.1, 1);
   const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false });
-  mesh = new THREE.Mesh(new THREE.BoxGeometry(1.012, 1.012, 1.012), mat);
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(1.012, 1.012, 1.012), mat);
   mesh.visible = false;
   scene.add(mesh);
+  return {
+    show(x, y, z, stage) { tex.offset.x = stage * 0.1; mesh.position.set(x + 0.5, y + 0.5, z + 0.5); mesh.visible = true; },
+    hide() { mesh.visible = false; },
+    remove() { scene.remove(mesh); tex.dispose(); mat.dispose(); mesh.geometry.dispose(); }
+  };
+}
+
+const M = { down: false, key: '', p: 0, cool: 0, tick: 0, bt: 0, sent: 0, last: -1 };
+let crack = null, doBreak = null;
+
+export function initMining(scene, onBreak) {
+  doBreak = onBreak;
+  crack = makeCrack(scene);
 }
 
 function stop() {
-  M.key = ''; M.p = 0; M.tick = 0;
-  if (mesh) mesh.visible = false;
+  M.key = ''; M.p = 0; M.tick = 0; M.bt = 0; M.last = -1;
+  if (crack) crack.hide();
+  if (M.sent) { M.sent = 0; if (mineHooks.onProgress) mineHooks.onProgress(null); }
 }
 
 export function breakDown() { M.down = true; }
 export function breakUp() { M.down = false; stop(); }
 
-// Her karede çağrılır. active: oyuncu kırabilir durumda mı (panel/menü açık değil)
 export function updateMining(dt, active) {
   if (M.cool > 0) M.cool -= dt;
-  if (!M.down || !active || isDead() || !target) { if (M.key || (mesh && mesh.visible)) stop(); return; }
+  if (!M.down || !active || isDead() || !target) { if (M.key || M.sent) stop(); return; }
   const [x, y, z] = target;
   const t = get(x, y, z);
   if (t === BEDROCK) {
-    if (M.cool <= 0) { doBreak(true); M.cool = 0.8; }   // uyarı yazısı
+    if (M.cool <= 0) { doBreak(true); M.cool = 0.8; }
     stop();
     return;
   }
   const key = x + '_' + y + '_' + z + '_' + t;
-  if (key !== M.key) { M.key = key; M.p = 0; M.tick = 0; }
+  if (key !== M.key) { stop(); M.key = key; }
   if (M.cool > 0) return;
   const info = breakInfo(t);
-  M.p += dt; M.tick += dt;
+  M.p += dt; M.tick += dt; M.bt += dt;
   if (M.tick >= 0.35) { M.tick = 0; sfx.breakB(); }
   if (M.p >= info.time) {
     doBreak(info.drop);
@@ -111,7 +124,11 @@ export function updateMining(dt, active) {
     return;
   }
   const stage = Math.min(9, Math.floor(M.p / info.time * 10));
-  tex.offset.x = stage * 0.1;
-  mesh.position.set(x + 0.5, y + 0.5, z + 0.5);
-  mesh.visible = info.time > 0.25;
-}
+  if (info.time > 0.25) {
+    crack.show(x, y, z, stage);
+    if (stage !== M.last || M.bt >= 0.4) {
+      M.bt = 0; M.last = stage; M.sent = 1;
+      if (mineHooks.onProgress) mineHooks.onProgress(x, y, z, stage);
+    }
+  }
+      }
