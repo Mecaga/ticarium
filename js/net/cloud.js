@@ -6,7 +6,6 @@ let lp = null;
 export const ready = () => lp || (lp = login().catch(e => { lp = null; throw e; }));
 const base = () => 'users/' + uid;
 
-// Menüde gösterilen bağlantı durumu
 export async function diag() {
   try {
     const id = await ready();
@@ -21,16 +20,19 @@ export async function setProfile(name) {
   update(ref(db, base() + '/profile'), { name, seen: Date.now() }).catch(() => {});
 }
 
-// ---- Kayıtlı dünyalar (tek oyunculu) ----
+// ---- Kayıtlı dünyalar ----
 export async function listWorlds() {
   await ready();
   const s = await get(ref(db, base() + '/worlds'));
   const a = [];
   s.forEach(c => {
     const v = c.val() || {};
-    a.push({ id: c.key, name: v.name || 'Dünya', kind: v.kind || 'normal', seed: v.seed, created: v.created || 0, updated: v.updated || 0 });
+    a.push({
+      id: c.key, name: v.name || 'Dünya', kind: v.kind || 'normal', seed: v.seed,
+      created: v.created || 0, updated: v.updated || 0, lastIn: v.lastIn || v.updated || v.created || 0, room: v.room || null
+    });
   });
-  a.sort((x, y) => y.updated - x.updated);
+  a.sort((x, y) => y.lastIn - x.lastIn);
   return a;
 }
 
@@ -43,16 +45,13 @@ async function batch(path, obj) {
   }
 }
 
-export async function createWorld({ name, kind, seed, changes, state, paints }) {
+export async function createWorld({ name, kind, seed }) {
   await ready();
   const s = await get(ref(db, base() + '/worlds'));
   if (s.size >= MAX_WORLDS) throw new Error('En fazla ' + MAX_WORLDS + ' dünya kaydedebilirsin. Birini sil.');
   const id = push(ref(db, base() + '/worlds')).key;
   const now = Date.now();
-  await set(ref(db, base() + '/worlds/' + id), { name, kind: kind || 'normal', seed, created: now, updated: now });
-  if (changes && Object.keys(changes).length) await batch(base() + '/wdata/' + id + '/changes', changes);
-  if (paints && Object.keys(paints).length) await batch(base() + '/wdata/' + id + '/paints', paints);
-  if (state) await set(ref(db, base() + '/wdata/' + id + '/state'), state);
+  await set(ref(db, base() + '/worlds/' + id), { name, kind: kind || 'normal', seed, created: now, updated: now, lastIn: now, v: 2 });
   return { id, name, kind: kind || 'normal', seed };
 }
 
@@ -78,21 +77,26 @@ export async function loadWorld(id) {
   return { meta: m.val(), state: v.state || null, changes: v.changes || {}, paints: v.paints || {} };
 }
 
-// ---- Kurduğum odaların listesi (bulutta) ----
-export async function addMyRoom(code, name) {
+// Dünyanın açık odasının kodu (yoksa null)
+export async function setWorldRoom(id, code) {
   await ready();
-  await set(ref(db, base() + '/myrooms/' + code), { name, t: Date.now() });
+  await update(ref(db, base() + '/worlds/' + id), { room: code || null });
 }
-export async function listMyRooms() {
-  await ready();
-  const s = await get(ref(db, base() + '/myrooms'));
-  const a = [];
-  s.forEach(c => { const v = c.val() || {}; a.push({ code: c.key, name: v.name || 'Oda' }); });
-  return a;
+export function touchWorld(id) {
+  update(ref(db, base() + '/worlds/' + id), { lastIn: Date.now() }).catch(() => {});
 }
-export async function removeMyRoom(code) {
+
+export async function loadState(id) {
   await ready();
-  await remove(ref(db, base() + '/myrooms/' + code));
+  const s = await get(ref(db, base() + '/wdata/' + id + '/state'));
+  return s.exists() ? s.val() : null;
+}
+
+// Oda kapanırken/host çıkarken odadaki değişiklikler dünyaya geri yazılır
+export async function replaceWorldData(id, changes, paints) {
+  await ready();
+  await set(ref(db, base() + '/wdata/' + id + '/changes'), changes && Object.keys(changes).length ? changes : null);
+  await set(ref(db, base() + '/wdata/' + id + '/paints'), paints && Object.keys(paints).length ? paints : null);
 }
 
 // ---- Oynarken otomatik kayıt: blok değişiklikleri 4 sn'de bir toplu gider ----
