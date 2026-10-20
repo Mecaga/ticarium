@@ -1,4 +1,4 @@
-import { generate, initRender, rebuild, updateTarget, isWater } from './world/world.js';
+import { generate, initRender, rebuild, updateTarget, isWater, updateChunks, chunksReady } from './world/world.js';
 import { P, updatePlayer, jump } from './entities/player.js';
 import { eco, startPriceTicker } from './game/economy.js';
 import { initInput } from './ui/input.js';
@@ -15,7 +15,7 @@ import { initAutosave } from './game/progress.js';
 import { initActions, breakBlock, placeBlock, attack } from './game/actions.js';
 import { initMining, breakDown, breakUp, updateMining } from './game/mining.js';
 import { initDeath, toSpawn } from './game/death.js';
-import { enterGame, leave } from './game/session.js';
+import { enterGame, leave, requestLeave } from './game/session.js';
 import { applyRoomUI, drawHearts, panelOpen, toggleSettings, togglePlayers, phooks } from './ui/panels.js';
 import { initChat, isChatOpen, toggleChat } from './ui/chat.js';
 import { tickHunger, canRegen } from './entities/hunger.js';
@@ -31,8 +31,8 @@ const $ = id => document.getElementById(id);
 const scene = new THREE.Scene();
 G.scene = scene;
 scene.background = new THREE.Color(0x87ceeb);
-scene.fog = new THREE.Fog(0x87ceeb, 30, 75);
-const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 120);
+scene.fog = new THREE.Fog(0x87ceeb, 36, 72);
+const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 140);
 camera.rotation.order = 'YXZ';
 const renderer = new THREE.WebGLRenderer({ antialias: false });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -62,6 +62,12 @@ bDrop.className = 'btn';
 bDrop.id = 'bDrop';
 bDrop.textContent = '⬇️';
 document.body.appendChild(bDrop);
+
+// Dünya yükleniyor ekranı
+const loadEl = document.createElement('div');
+loadEl.textContent = '🌍 Dünya yükleniyor...';
+loadEl.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:#000a;color:#fff;font-size:20px;font-weight:700;display:none;align-items:center;justify-content:center;z-index:9;pointer-events:none';
+document.body.appendChild(loadEl);
 
 function bindBtn(id, fn) {
   const el = $(id);
@@ -103,7 +109,7 @@ initInput(renderer.domElement, {
   }
 });
 
-bindBtn('bLeave', leave);
+bindBtn('bLeave', requestLeave);
 bindBtn('bAttack', attack);
 bindBtn('bSettings', toggleSettings);
 bindBtn('bPlayers', togglePlayers);
@@ -118,25 +124,37 @@ drawHearts(20, 20);
 
 // Döngü
 let last = performance.now(), lastCoord = '', lx = P.x, lz = P.z, wasWater = false;
+let fpsN = 0, fpsT = 0, fps = 0;
 function loop(now) {
   requestAnimationFrame(loop);
-  const dt = Math.min(0.05, (now - last) / 1000);
+  const raw = (now - last) / 1000;
+  const dt = Math.min(0.05, raw);
   last = now;
-  const frozen = isMarketOpen() || isMenuOpen() || isBagOpen() || panelOpen() || isChatOpen() || isDrawOpen() || isDead();
+  fpsN++; fpsT += raw;
+  if (fpsT >= 0.5) { fps = Math.round(fpsN / fpsT); fpsN = 0; fpsT = 0; }
+
+  const room = G.room;
+  let ready = true;
+  if (room) {
+    updateChunks(P.x, P.z, 6);          // 7x7 chunk yüklenir, uzaktakiler bellekten atılır
+    ready = chunksReady(P.x, P.z);
+  }
+  loadEl.style.display = room && !ready ? 'flex' : 'none';
+
+  const frozen = isMarketOpen() || isMenuOpen() || isBagOpen() || panelOpen() || isChatOpen() || isDrawOpen() || isDead() || (!!room && !ready);
   updatePlayer(dt, frozen);
   if (!frozen && P.y < -15) { if (hp.god) toSpawn(); else killNow({ void: true }); }
-  const room = G.room;
   if (room) {
     const moved = Math.hypot(P.x - lx, P.z - lz) / Math.max(dt, 0.001) > 0.5;
     tickHealth(dt, canRegen());
     tickHunger(dt, moved, !isDead());
     tickVitals(dt, !isDead());
-    updateMobs(dt, room.solo || room.isOwner);
+    updateMobs(dt, !!room.sim);
     updateGravity(dt);
     updateFluids(dt);
     updatePaints(dt);
     if (P.inWater && !wasWater) sfx.splash();
-    const c = 'X ' + Math.floor(P.x) + '  Y ' + Math.floor(P.y) + '  Z ' + Math.floor(P.z) + '  ' + gameClock();
+    const c = 'X ' + Math.floor(P.x) + '  Y ' + Math.floor(P.y) + '  Z ' + Math.floor(P.z) + '  ' + gameClock() + '  ' + fps + ' FPS';
     if (c !== lastCoord) { $('coord').textContent = c; lastCoord = c; }
   }
   wasWater = P.inWater; lx = P.x; lz = P.z;
