@@ -1,4 +1,4 @@
-import { wlHook, get, CANVAS } from './world.js';
+import { wlHook, get, CANVAS, isLoaded } from './world.js';
 
 // Kırılan tuvallerin çizimleri (son kırılan ilk yerleştirilir)
 export const stack = [];
@@ -64,13 +64,14 @@ export function clearPaints() {
   }
 }
 
-// Tuval bloğu başka biri tarafından kırıldıysa çizimi de kaldır
+// Tuval bloğu başka biri tarafından kırıldıysa çizimi de kaldır (yüklü olmayan chunk'a dokunmaz)
 export function updatePaints(dt) {
   acc += dt;
   if (acc < 1) return;
   acc = 0;
   for (const [k, p] of [...items]) {
     const [x, y, z] = k.split('_').map(Number);
+    if (!isLoaded(x, z)) continue;
     if (get(x, y, z) === CANVAS) p.miss = 0;
     else if (++p.miss >= 3) removePaint(x, y, z);
   }
