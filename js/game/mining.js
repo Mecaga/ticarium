@@ -131,4 +131,4 @@ export function updateMining(dt, active) {
       if (mineHooks.onProgress) mineHooks.onProgress(x, y, z, stage);
     }
   }
-      }
+}
