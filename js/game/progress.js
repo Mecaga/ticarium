@@ -9,14 +9,13 @@ import { G } from '../core/state.js';
 import { stack } from '../world/paints.js';
 import { survivalInv } from './creative.js';
 
-// Başkasının odasında envanter/konum kaydı tutulsun mu? (false: sadece kendi dünyan/odan kaydolur)
-const SAVE_GUEST = false;
+// Odadaki herkesin envanteri kendi hesabına kaydedilir
+const SAVE_GUEST = true;
 
-let CL = null;   // cloud.js (tek oyunculu dünyalar için)
+let CL = null;   // cloud.js (tek oyunculu dünya ve oda sahibi için)
 export function bindCloud(m) { CL = m; }
 const key = (x, y, z) => x + '_' + y + '_' + z;
 
-// Eski çağrılar için (panels.js)
 export const setChanges = () => {};
 export const getChanges = () => ({});
 
@@ -34,10 +33,10 @@ export function recordPaint(x, y, z, data) {
 
 export function canSave() {
   const r = G.room;
-  return !!r && !r.noSave && ((r.solo && !!r.wid) || r.isOwner || SAVE_GUEST);
+  if (!r || r.noSave) return false;
+  return r.solo ? !!r.wid : SAVE_GUEST;
 }
 
-// "Kaydedildi" rozeti
 const badge = document.createElement('div');
 badge.textContent = '💾 Kaydedildi';
 badge.style.cssText = 'position:fixed;top:92px;left:8px;background:#1b5e20cc;color:#fff;padding:3px 10px;border-radius:8px;font-size:12px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:6';
@@ -50,7 +49,7 @@ function flashSaved() {
 }
 
 function snapshotState() {
-  const real = survivalInv();   // yaratıcı moddaysa gerçek çanta kaydedilir
+  const real = survivalInv();
   const inv = {};
   for (const t in TYPES) inv['t' + t] = real[t] || 0;
   const r = n => +n.toFixed(2);
@@ -87,24 +86,22 @@ export function applyState(s) {
 export function autosave(manual, force) {
   const room = G.room;
   if (!room) return;
-  if (!canSave()) {
-    if (manual) toast('Başkasının odasında ilerleme kaydedilmez');
-    return;
-  }
+  if (!canSave()) { if (manual) toast('Bu dünyada kayıt kapalı'); return; }
   if (isDead() && !force) return;
-  flushGravity(); // havada kalan kum/kar kaybolmasın
+  flushGravity();
   const st = snapshotState();
-  if (room.solo) {
+  // Tek oyunculu dünya ve oda sahibi: dünyanın kendi kaydı. Diğer oyuncular: kendi hesabındaki oda kaydı.
+  if (room.solo || (room.isOwner && room.wid)) {
     if (!CL) return;
     CL.saveState(room.wid, st).then(ok => {
       if (ok) flashSaved();
       if (manual) toast(ok ? '💾 Kaydedildi' : 'Kaydedilemedi (bağlantıyı kontrol et)');
     });
-    CL.flush();
+    if (room.solo) CL.flush();
   } else if (G.online) {
     G.online.saveProgress(st);
     flashSaved();
-    if (manual) toast('💾 Kaydedildi (dünya otomatik kayıtlı)');
+    if (manual) toast('💾 Kaydedildi');
   }
 }
 
@@ -112,4 +109,4 @@ export function initAutosave() {
   setInterval(() => autosave(false), 15000);
   addEventListener('pagehide', () => autosave(false));
   document.addEventListener('visibilitychange', () => { if (document.hidden) autosave(false); });
-    }
+}
