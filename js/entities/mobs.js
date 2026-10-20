@@ -1,7 +1,8 @@
-import { N, H, solid, get, WATER, SEA, spawnPos, losBlocked, surfaceY, worldKind } from '../world/world.js';
+import { H, solid, get, WATER, LAVA, SEA, losBlocked, surfaceY, worldKind, isLoaded, skyTops } from '../world/world.js';
 import { dropItems } from './items.js';
+import { P } from './player.js';
 
-// send/remove: online.js doldurur (sadece oda sahibi hayvanları yönetir)
+// send/remove: online.js doldurur (sadece oda yönetimi sende olan cihaz hayvanları yönetir)
 export const mhooks = { send: null, remove: null };
 
 const KIND = { cow: { drop: 15, dmin: 1, dmax: 3 }, sheep: { drop: 16, dmin: 1, dmax: 2 } };
@@ -76,7 +77,7 @@ function createMob(id, x, y, z, f) {
     x, y, z, yaw: Math.random() * 6.28, vy: 0, grounded: false,
     tx: x, ty: y, tz: z, tyaw: 0,
     dir: Math.random() * 6.28, timer: Math.random() * 3, moving: false, speed: 0, phase: 0,
-    hp: 6, kx: 0, kz: 0, panic: 0, f: f || 0, ft: 0, alive: true
+    hp: 6, kx: 0, kz: 0, panic: 0, f: f || 0, ft: 0, alive: true, lavaT: 0
   };
   mm.mesh.position.set(x, y, z);
   group.add(mm.mesh);
@@ -102,22 +103,32 @@ function flashMob(m) {
   m.ft = setTimeout(() => m.mats.forEach(x => x.emissive.setHex(0x000000)), 260);
 }
 
-// Dünyadaki gerçek yüzeye bakar: çim/toprak/kum/kar üstü, üstü boş, suda değil
+// Oyuncunun yakınında, yüklü chunk içinde, kuru ve boş bir yüzey
 function landSpot() {
-  const c = [];
-  const normal = worldKind() === 'normal';
-  for (let x = 2; x < N - 2; x++) for (let z = 2; z < N - 2; z++) {
+  const sky = worldKind() === 'sky', normal = worldKind() === 'normal';
+  const minD = sky ? 2 : 6;
+  const ok = (x, z) => {
+    if (!isLoaded(x, z)) return null;
     const y = surfaceY(x, z);
-    if (y < 0 || y >= H - 3) continue;
+    if (y < 0 || y >= H - 3) return null;
     const t = get(x, y, z);
-    if (t !== 1 && t !== 2 && t !== 6 && t !== 8) continue;
-    if (normal && y < SEA + 1) continue;
-    if (solid(x, y + 1, z) || solid(x, y + 2, z) || get(x, y + 1, z) === WATER) continue;
-    c.push([x, y, z]);
+    if (t !== 1 && t !== 2 && t !== 6 && t !== 8) return null;
+    if (normal && y < SEA + 1) return null;
+    const a = get(x, y + 1, z);
+    if (solid(x, y + 1, z) || solid(x, y + 2, z) || a === WATER || a === LAVA) return null;
+    if (Math.hypot(x + 0.5 - P.x, z + 0.5 - P.z) < minD) return null;
+    return { x: x + 0.5, y: y + 1.05, z: z + 0.5 };
+  };
+  if (sky) {
+    const tops = skyTops().sort(() => Math.random() - 0.5);
+    for (const [x, , z] of tops) { const p = ok(x, z); if (p) return p; }
+    return null;
   }
-  if (!c.length) return null;
-  const p = c[Math.floor(Math.random() * c.length)];
-  return { x: p[0] + 0.5, y: p[1] + 1.05, z: p[2] + 0.5 };
+  for (let i = 0; i < 80; i++) {
+    const p = ok(Math.floor(P.x + (Math.random() - 0.5) * 70), Math.floor(P.z + (Math.random() - 0.5) * 70));
+    if (p) return p;
+  }
+  return null;
 }
 
 export function spawnAnimals() {
@@ -135,15 +146,16 @@ function topUp() {
   const w = want();
   for (const kind in w) {
     let n = 0;
-    for (const m of mobs.values()) if (m.kind === kind) n++;
-    if (n < w[kind]) {
+    for (const m of mobs.values()) if (m.kind === kind && Math.hypot(m.x - P.x, m.z - P.z) < 90) n++;
+    for (; n < w[kind]; n++) {
       const p = landSpot();
-      if (p) createMob(kind + Date.now().toString(36), p.x, p.y, p.z);
+      if (!p) break;
+      createMob(kind + Date.now().toString(36) + n, p.x, p.y, p.z);
     }
   }
+  for (const m of [...mobs.values()]) if (Math.hypot(m.x - P.x, m.z - P.z) > 140) dropMob(m);
 }
 
-// data: { id: {x,y,z,yaw,f} }  snap=true: konumu hemen uygula (sahip ilk yükleme)
 export function applyRemote(data, snap) {
   if (!group) return;
   for (const id in data) {
@@ -164,7 +176,6 @@ export function clearMobs() {
   sendT = 0; respT = 15;
 }
 
-// Nişan çizgisindeki en yakın hayvan
 export function findMob(ex, ey, ez, dx, dy, dz, range) {
   let best = null, bt = 99;
   for (const m of mobs.values()) {
@@ -190,7 +201,6 @@ function killMob(m) {
   dropMob(m);
 }
 
-// Hasarı sadece oda sahibi / tek oyunculu uygular
 export function hurtMob(id, d, fx, fz) {
   const m = mobs.get(id);
   if (!m || !m.alive) return;
@@ -205,6 +215,8 @@ export function hurtMob(id, d, fx, fz) {
 }
 
 function sim(m, dt) {
+  const fx0 = Math.floor(m.x), fz0 = Math.floor(m.z);
+  if (!isLoaded(fx0, fz0)) { m.speed = 0; return; }   // chunk yüklü değilse bekler
   const dec = Math.pow(0.02, dt);
   m.kx *= dec; m.kz *= dec;
   if (m.panic > 0) m.panic -= dt;
@@ -214,25 +226,29 @@ function sim(m, dt) {
     m.dir = Math.random() * Math.PI * 2;
     m.timer = 2 + Math.random() * 4;
   }
-  const inW = get(Math.floor(m.x), Math.floor(m.y + 0.3), Math.floor(m.z)) === WATER;
+  const inW = get(fx0, Math.floor(m.y + 0.3), fz0) === WATER;
+  const inL = get(fx0, Math.floor(m.y + 0.3), fz0) === LAVA;
+  if (inL) {   // lavda kaldıkça hasar alır
+    m.hp -= dt * 2.5; m.lavaT += dt;
+    if (m.lavaT > 0.5) { m.lavaT = 0; m.f++; flashMob(m); }
+    if (m.hp <= 0) { killMob(m); return; }
+  }
   m.speed = m.moving ? (m.panic > 0 ? 2.6 : 1.1) : 0;
   const vx = (m.moving ? -Math.sin(m.dir) * m.speed : 0) + m.kx;
   const vz = (m.moving ? -Math.cos(m.dir) * m.speed : 0) + m.kz;
   if (Math.abs(vx) + Math.abs(vz) > 0.01) {
     const nx = m.x + vx * dt, nz = m.z + vz * dt;
-    if (nx < 1.5 || nx > N - 1.5 || nz < 1.5 || nz > N - 1.5) {
-      m.dir += Math.PI; m.kx = m.kz = 0;
-    } else {
-      const fx = Math.floor(nx), fz = Math.floor(nz), fy = Math.floor(m.y + 0.1);
-      const wet = !inW && (get(fx, fy, fz) === WATER || get(fx, fy - 1, fz) === WATER);
-      if (wet) { m.dir += Math.PI / 2 + Math.random(); m.timer = 1; m.kx = m.kz = 0; }
-      else if (!solid(fx, fy, fz) && !solid(fx, fy + 1, fz)) { m.x = nx; m.z = nz; }
-      else if (m.grounded && !solid(fx, fy + 1, fz) && !solid(fx, fy + 2, fz)) m.vy = 8;
-      else { m.dir = Math.random() * Math.PI * 2; m.kx = m.kz = 0; }
-    }
+    const fx = Math.floor(nx), fz = Math.floor(nz), fy = Math.floor(m.y + 0.1);
+    const wet = !inW && !inL && (get(fx, fy, fz) === WATER || get(fx, fy - 1, fz) === WATER || get(fx, fy, fz) === LAVA || get(fx, fy - 1, fz) === LAVA);
+    if (!isLoaded(fx, fz)) { m.dir += Math.PI; m.kx = m.kz = 0; }
+    else if (wet) { m.dir += Math.PI / 2 + Math.random(); m.timer = 1; m.kx = m.kz = 0; }
+    else if (!solid(fx, fy, fz) && !solid(fx, fy + 1, fz)) { m.x = nx; m.z = nz; }
+    else if (m.grounded && !solid(fx, fy + 1, fz) && !solid(fx, fy + 2, fz)) m.vy = 8;
+    else { m.dir = Math.random() * Math.PI * 2; m.kx = m.kz = 0; }
     if (m.moving) m.yaw += angDiff(m.dir, m.yaw) * Math.min(1, dt * 4);
   }
-  if (inW) m.vy = 1.6; // suda yüzer
+  if (inW) m.vy = 1.6;
+  else if (inL) m.vy = 1.0;
   else m.vy = Math.max(-30, m.vy - 22 * dt);
   const ny = m.y + m.vy * dt;
   if (m.vy <= 0 && solid(Math.floor(m.x), Math.floor(ny), Math.floor(m.z))) {
@@ -251,7 +267,7 @@ export function updateMobs(dt, simulate) {
     respT += dt;
     if (respT >= 20) { respT = 0; topUp(); }
   }
-  for (const m of mobs.values()) {
+  for (const m of [...mobs.values()]) {
     if (simulate) {
       sim(m, dt);
       if (!mobs.has(m.id)) continue;
@@ -261,6 +277,7 @@ export function updateMobs(dt, simulate) {
       m.yaw += angDiff(m.tyaw, m.yaw) * k;
       m.speed = Math.hypot(m.x - ox, m.z - oz) / Math.max(dt, 0.001);
     }
+    m.mesh.visible = isLoaded(Math.floor(m.x), Math.floor(m.z));
     m.mesh.position.set(m.x, m.y, m.z);
     m.mesh.rotation.y = m.yaw;
     m.phase += dt * m.speed * 5;
@@ -276,4 +293,4 @@ export function updateMobs(dt, simulate) {
       mhooks.send(o);
     }
   }
-        }
+                                                }
