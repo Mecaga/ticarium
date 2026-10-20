@@ -1,6 +1,6 @@
-import { N, setWorldLight } from './world.js';
+import { setWorldLight } from './world.js';
 
-const CYCLE = 480; // saniye (8 dk). Saat herkeste aynı: gerçek saatten hesaplanır
+const CYCLE = 480, FOG_NEAR = 36, FOG_FAR = 72;   // sis, yüklü chunk sınırında tam kapanır
 const sm = (a, b, x) => { x = Math.max(0, Math.min(1, (x - a) / (b - a))); return x * x * (3 - 2 * x); };
 const DAY = new THREE.Color(0x87ceeb), NIGHT = new THREE.Color(0x060a1e);
 const DUSK = new THREE.Color(0xff8a50), DEEP = new THREE.Color(0x0f3b7a);
@@ -70,7 +70,7 @@ export function initSky(sc) {
 
   clouds = new THREE.Group();
   cloudMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.88, fog: false });
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 12; i++) {
     const cl = new THREE.Group();
     const parts = 3 + Math.floor(Math.random() * 3);
     for (let p = 0; p < parts; p++) {
@@ -78,7 +78,7 @@ export function initSky(sc) {
       b.position.set(Math.random() * 8 - 4, Math.random() * 0.6, Math.random() * 6 - 3);
       cl.add(b);
     }
-    cl.position.set(Math.random() * (N + 160) - 80, 40 + Math.random() * 8, Math.random() * (N + 160) - 80);
+    cl.position.set(Math.random() * 260 - 130, 40 + Math.random() * 8, Math.random() * 260 - 130);
     clouds.add(cl);
   }
   scene.add(clouds);
@@ -98,8 +98,8 @@ export function updateSky(dt, camera, uw) {
   if (uw) tmp.copy(DEEP).multiplyScalar(0.3 + 0.7 * k);
   scene.background.copy(tmp);
   scene.fog.color.copy(tmp);
-  scene.fog.near = uw ? 0.5 : 30;
-  scene.fog.far = uw ? 24 : 75;
+  scene.fog.near = uw ? 0.5 : FOG_NEAR;
+  scene.fog.far = uw ? 24 : FOG_FAR;
 
   setWorldLight((0.3 + 0.7 * k) * (uw ? 0.9 : 1));
   if (ambient) ambient.intensity = 0.25 + 0.5 * k;
@@ -118,9 +118,11 @@ export function updateSky(dt, camera, uw) {
 
   cloudMat.color.setScalar(0.3 + 0.7 * k);
   clouds.visible = !uw;
-  for (const c of clouds.children) {
+  for (const c of clouds.children) {   // bulutlar karakteri takip eder
     c.position.x += dt * 1.3;
-    if (c.position.x > N + 80) c.position.x = -80;
+    const dx = c.position.x - camera.position.x, dz = c.position.z - camera.position.z;
+    if (dx > 130) c.position.x -= 260; else if (dx < -130) c.position.x += 260;
+    if (dz > 130) c.position.z -= 260; else if (dz < -130) c.position.z += 260;
   }
   uwEl.style.display = uw ? 'block' : 'none';
-}
+                      }
