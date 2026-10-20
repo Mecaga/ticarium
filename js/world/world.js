@@ -1,9 +1,7 @@
 import { hash, atlas, FACE_TILES, T, initAtlas } from './textures.js';
 export { atlas, sideTile } from './textures.js';
 
-export const N = 48, H = 32, CS = 16;
-const NC = N / CS;
-export const SEA = 7;
+export const CW = 25, H = 32, RD = 3, SEA = 7, SNOW_H = 19;   // chunk genişliği 25, 7x7 = 49 chunk görünür
 export const BEDROCK = 11, SAPLING = 12, BIRCH_LOG = 13, BIRCH_LEAF = 14, MEAT = 15, WOOL = 16, WATER = 17;
 export const WATER_MAX = 24;    // 17 kaynak su, 18..24 akan su
 export const LAVA = 25, LAVA_MAX = 28;   // 25 kaynak lav, 26..28 akan lav
@@ -50,7 +48,6 @@ export const TYPES = {
   56: { name: 'Demir kürek', color: 0xc8c8c8, base: 50 }
 };
 
-// Çanta kategorileri
 export const CATS = [
   ['🧱 Bloklar', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 16, 34, 35]],
   ['🌱 Fidan ve çiçekler', [12, 40, 41, 42, 43, 44, 45]],
@@ -58,61 +55,136 @@ export const CATS = [
   ['🪣 Aletler', [30, 31, 33, 32, 50, 51, 52, 53, 54, 55, 56]]
 ];
 
-// ---- Dünya verisi ----
-const world = new Uint8Array(N * H * N);
-const wl = new Uint8Array(N * H * N);   // sıvı seviyesi: 0 kaynak, 1.. akan
-const idx = (x, y, z) => (y * N + z) * N + x;
-const inb = (x, y, z) => x >= 0 && x < N && y >= 0 && y < H && z >= 0 && z < N;
-export const inBounds = inb;
-export const get = (x, y, z) => inb(x, y, z) ? world[idx(x, y, z)] : 0;   // her su 17, her lav 25 döner
-export const waterLvl = (x, y, z) => inb(x, y, z) ? wl[idx(x, y, z)] : 0;
+// ---- Chunk deposu: yüklü chunk'lar + kalıcı değişiklikler (mods) ----
+const chunks = new Map();
+const mods = new Map();      // chunk anahtarı -> Map(hücre indeksi -> ham blok). Chunk atılsa da kaybolmaz.
+const urgent = new Set();    // hemen yeniden çizilecek chunk'lar
+const ck = (cx, cz) => (cx + 4096) * 8192 + (cz + 4096);
+let _seed = 1, _kind = 'normal', _sp = null, lcK = -1, lc = null;
+let group = null, material, waterMat, lavaMat, hl;
+
+function chunkAt(x, z) {
+  const cx = Math.floor(x / CW), cz = Math.floor(z / CW), k = ck(cx, cz);
+  if (k !== lcK) { lcK = k; lc = chunks.get(k) || null; }
+  return lc;
+}
+export const worldKind = () => _kind;
+export const inBounds = (x, y, z) => y >= 0 && y < H;
+export const isLoaded = (x, z) => !!chunkAt(x, z);
+export const get = (x, y, z) => {
+  if (y < 0 || y >= H) return 0;
+  const c = chunkAt(x, z);
+  return c ? c.b[(y * CW + (z - c.cz * CW)) * CW + (x - c.cx * CW)] : 0;
+};
+export const waterLvl = (x, y, z) => {
+  if (y < 0 || y >= H) return 0;
+  const c = chunkAt(x, z);
+  return c ? c.l[(y * CW + (z - c.cz * CW)) * CW + (x - c.cx * CW)] : 0;
+};
 // Kayıt/senkron için: su 17..24, lav 25..28 (seviyeli), diğerleri normal
 export const getRaw = (x, y, z) => {
   const t = get(x, y, z);
-  return (t === WATER || t === LAVA) ? t + wl[idx(x, y, z)] : t;
+  return (t === WATER || t === LAVA) ? t + waterLvl(x, y, z) : t;
 };
 export const isWater = (x, y, z) => get(x, y, z) === WATER;
 export const isLava = (x, y, z) => get(x, y, z) === LAVA;
-// Bitki, su ve lavın içinden geçilir, diğer bloklar katıdır
 export const solid = (x, y, z) => { const t = get(x, y, z); return t !== 0 && !isPlant(t) && t !== WATER && t !== LAVA; };
 const opaque = t => t !== 0 && !isPlant(t) && t !== WATER && t !== LAVA;
 
 export const wh = { fn: null };       // fluids.js: blok değişince haber alır
 export const wlHook = { fn: null };   // paints.js: gündüz/gece ışığı
-let _gen = false, _kind = 'normal', _sp = null;
-export const worldKind = () => _kind;
 
-const dirty = new Set();
-const addDirty = (cx, cz) => { if (cx >= 0 && cz >= 0 && cx < NC && cz < NC) dirty.add(cz * NC + cx); };
-function markDirty(x, z) {
-  const cx = Math.floor(x / CS), cz = Math.floor(z / CS);
-  addDirty(cx, cz);
-  const lx = x - cx * CS, lz = z - cz * CS;
-  if (lx === 0) addDirty(cx - 1, cz);
-  if (lx === CS - 1) addDirty(cx + 1, cz);
-  if (lz === 0) addDirty(cx, cz - 1);
-  if (lz === CS - 1) addDirty(cx, cz + 1);
+function touch(c) { if (c.dirty === 0) { c.dirty = 2; urgent.add(ck(c.cx, c.cz)); } }
+function markDirty(c, lx, lz) {
+  touch(c);
+  if (lx === 0) { const n = chunks.get(ck(c.cx - 1, c.cz)); if (n) touch(n); }
+  if (lx === CW - 1) { const n = chunks.get(ck(c.cx + 1, c.cz)); if (n) touch(n); }
+  if (lz === 0) { const n = chunks.get(ck(c.cx, c.cz - 1)); if (n) touch(n); }
+  if (lz === CW - 1) { const n = chunks.get(ck(c.cx, c.cz + 1)); if (n) touch(n); }
 }
 
-// t: blok türü. 18..24 akan su, 26..28 akan lav (seviye = t - kaynak)
+// t: blok türü. 18..24 akan su, 26..28 akan lav. Yüklü olmayan chunk'ta sadece kalıcı kayda yazılır.
 export const set = (x, y, z, t) => {
-  if (!inb(x, y, z)) return;
-  const i = idx(x, y, z);
-  let lv = 0;
-  if (t > WATER && t <= WATER_MAX) { lv = t - WATER; t = WATER; }
-  else if (t >= LAVA && t <= LAVA_MAX) { lv = t - LAVA; t = LAVA; }
-  if (world[i] === t && wl[i] === lv) return;
-  world[i] = t; wl[i] = lv;
-  markDirty(x, z);
-  if (!_gen && wh.fn) wh.fn(x, y, z);
+  if (y < 0 || y >= H) return;
+  const cx = Math.floor(x / CW), cz = Math.floor(z / CW), k = ck(cx, cz);
+  const lx = x - cx * CW, lz = z - cz * CW, i = (y * CW + lz) * CW + lx;
+  let m = mods.get(k);
+  if (!m) { m = new Map(); mods.set(k, m); }
+  m.set(i, t);
+  const c = chunks.get(k);
+  if (!c) return;
+  let tt = t, lv = 0;
+  if (tt > WATER && tt <= WATER_MAX) { lv = tt - WATER; tt = WATER; }
+  else if (tt >= LAVA && tt <= LAVA_MAX) { lv = tt - LAVA; tt = LAVA; }
+  if (c.b[i] === tt && c.l[i] === lv) return;
+  c.b[i] = tt; c.l[i] = lv;
+  markDirty(c, lx, lz);
+  if (wh.fn) wh.fn(x, y, z);
 };
 
+// ---- Arazi (sonsuz, tohuma bağlı, saf fonksiyonlar) ----
+function vn(x, z, s) {
+  const xi = Math.floor(x), zi = Math.floor(z), xf = x - xi, zf = z - zi;
+  const u = xf * xf * (3 - 2 * xf), v = zf * zf * (3 - 2 * zf);
+  const a = hash(xi, zi, s), b = hash(xi + 1, zi, s), c = hash(xi, zi + 1, s), d = hash(xi + 1, zi + 1, s);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
 export function heightAt(x, z) {
-  const h = 10 + 4 * Math.sin(x * 0.15) + 4 * Math.cos(z * 0.13) + 3 * Math.sin((x + z) * 0.08);
-  return Math.max(3, Math.min(H - 9, Math.floor(h)));
+  const f = 0.6 * vn(x / 38, z / 38, _seed) + 0.3 * vn(x / 17, z / 17, _seed + 1) + 0.1 * vn(x / 7, z / 7, _seed + 2);
+  const g = Math.max(0, Math.min(1, 0.5 + (f - 0.5) * 1.7));
+  return Math.max(3, Math.min(H - 9, Math.floor(3 + g * 21)));
 }
 
-// En üstteki katı blok (su, lav ve bitki sayılmaz), yoksa -1
+export function treeCells(x, y, z, birch) {
+  const th = birch ? 5 : 4, log = birch ? BIRCH_LOG : 4, leaf = birch ? BIRCH_LEAF : 5;
+  const trunk = [], leaves = [];
+  for (let i = 0; i < th; i++) trunk.push([x, y + i, z, log]);
+  const top = y + th - 1;
+  for (let L = top - 1; L <= top + 1; L++) for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
+    const m = Math.abs(dx) + Math.abs(dz);
+    if (m > 3 || (L === top + 1 && m > 1)) continue;
+    if (dx === 0 && dz === 0 && L <= top) continue;
+    leaves.push([x + dx, L, z + dz, leaf]);
+  }
+  return { trunk, leaves };
+}
+function treeAt(x, z) {   // 0 yok, 1 meşe, 2 huş
+  if (hash(x, z, _seed + 7) > 0.012) return 0;
+  const h = heightAt(x, z);
+  if (h <= SEA || h >= SNOW_H) return 0;
+  return hash(x, z, _seed + 8) < 0.3 ? 2 : 1;
+}
+function flowerAt(x, z) {
+  const px = Math.floor(x / 8), pz = Math.floor(z / 8);
+  if (hash(px, pz, _seed + 9) > 0.22 || hash(x, z, _seed + 10) > 0.45) return 0;
+  return FLOWER_MIN + Math.floor(hash(px, pz, _seed + 11) * 6);
+}
+function ruinAt(rx, rz) {   // 48x48'lik bölge başına en fazla bir harabe
+  if (hash(rx, rz, _seed + 12) > 0.22) return null;
+  const x = rx * 48 + 6 + Math.floor(hash(rx, rz, _seed + 13) * 36), z = rz * 48 + 6 + Math.floor(hash(rx, rz, _seed + 14) * 36);
+  const hc = heightAt(x, z);
+  return (hc < SEA + 2 || hc >= SNOW_H) ? null : { x, z, hc };
+}
+function ruinCells(r, put) {
+  for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) put(r.x + dx, r.hc, r.z + dz, 7);
+  for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
+    if (Math.max(Math.abs(dx), Math.abs(dz)) !== 2 || (dx === 0 && dz === 2)) continue;
+    const x = r.x + dx, z = r.z + dz, hs = heightAt(x, z);
+    const top = r.hc + 2 + (hash(x, z, _seed + 15) < 0.5 ? 1 : 0);
+    for (let y = hs + 1; y <= top; y++) {
+      if (hash(x + y * 3, z, _seed + 16) < 0.12) continue;
+      const win = y === r.hc + 2 && (dx === 0 || dz === 0) && hash(x, z + y, _seed + 19) < 0.6;
+      put(x, y, z, win ? 9 : 7);
+    }
+  }
+}
+const SKY_CUBES = [[-3, -3], [0, -3], [-3, 0]];   // L şekli: köşe küp (-3,-3), yanındaki (0,-3), altındaki (-3,0)
+export function skyTops() {
+  const a = [];
+  for (const [ox, oz] of SKY_CUBES) for (let dx = 0; dx < 3; dx++) for (let dz = 0; dz < 3; dz++) a.push([ox + dx, 12, oz + dz]);
+  return a;
+}
+
 export function surfaceY(x, z) {
   for (let y = H - 1; y >= 0; y--) {
     const t = get(x, y, z);
@@ -121,57 +193,34 @@ export function surfaceY(x, z) {
   return -1;
 }
 
-// Doğma noktası (dünya türüne göre)
 export function spawnPos() {
   if (_sp) return _sp;
-  const c = N / 2;
-  if (_kind === 'flat') return (_sp = { x: c + 0.5, y: 3.05, z: c + 0.5 });
-  if (_kind === 'sky') return (_sp = { x: c + 1.5, y: 13.05, z: c - 1.5 });
-  for (let r = 0; r < N / 2 && !_sp; r++) {
+  if (_kind === 'flat') return (_sp = { x: 0.5, y: 3.05, z: 0.5 });
+  if (_kind === 'sky') return (_sp = { x: 1.5, y: 13.05, z: -1.5 });
+  for (let r = 0; r < 200 && !_sp; r++) {
     for (let dx = -r; dx <= r && !_sp; dx++) for (let dz = -r; dz <= r; dz++) {
       if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
-      const x = c + dx, z = c + dz;
-      if (x < 2 || z < 2 || x >= N - 2 || z >= N - 2) continue;
-      if (heightAt(x, z) >= SEA + 2) { _sp = { x: x + 0.5, y: heightAt(x, z) + 2, z: z + 0.5 }; break; }
+      const h = heightAt(dx, dz);
+      if (h >= SEA + 2 && h < SNOW_H) { _sp = { x: dx + 0.5, y: h + 2, z: dz + 0.5 }; break; }
     }
   }
-  return _sp || { x: c + 0.5, y: H - 2, z: c + 0.5 };
+  return _sp || { x: 0.5, y: 20, z: 0.5 };
 }
 
-function mulberry(a) {
-  return function () {
-    a |= 0; a = a + 0x6D2B79F5 | 0;
-    let t = Math.imul(a ^ a >>> 15, 1 | a);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  };
-}
-
-// (x,y,z): gövdenin ilk bloğu. Yer yoksa null, varsa yerleştirilecek bloklar.
+// Fidan büyütme: dünyadaki duruma göre yerleştirilecek bloklar (yer yoksa null)
 export function planTree(x, y, z, birch) {
-  const log = birch ? BIRCH_LOG : 4, leaf = birch ? BIRCH_LEAF : 5;
-  const th = birch ? 5 : 4;
+  const { trunk, leaves } = treeCells(x, y, z, birch);
   const out = [];
-  for (let i = 0; i < th; i++) {
-    const yy = y + i;
-    if (!inb(x, yy, z)) return null;
-    const t = get(x, yy, z);
-    if (t !== 0 && !isPlant(t) && t !== 5 && t !== BIRCH_LEAF) return null;
-    out.push({ x, y: yy, z, t: log });
+  for (const [tx, ty, tz, t] of trunk) {
+    if (ty >= H) return null;
+    const c = get(tx, ty, tz);
+    if (c !== 0 && !isPlant(c) && c !== 5 && c !== BIRCH_LEAF) return null;
+    out.push({ x: tx, y: ty, z: tz, t });
   }
-  const top = y + th - 1;
-  for (let L = top - 1; L <= top + 1; L++) for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
-    const m = Math.abs(dx) + Math.abs(dz);
-    if (m > 3 || (L === top + 1 && m > 1)) continue;
-    if (dx === 0 && dz === 0 && L <= top) continue;
-    const lx = x + dx, lz = z + dz;
-    if (!inb(lx, L, lz) || get(lx, L, lz) !== 0) continue;
-    out.push({ x: lx, y: L, z: lz, t: leaf });
-  }
+  for (const [lx, ly, lz, t] of leaves) if (ly < H && get(lx, ly, lz) === 0) out.push({ x: lx, y: ly, z: lz, t });
   return out;
 }
 
-// Işın boyunca katı blok var mı (vuruşta duvar arkasını engeller)
 export function losBlocked(ex, ey, ez, dx, dy, dz, t) {
   for (let s = 0.3; s < t; s += 0.25) {
     if (solid(Math.floor(ex + dx * s), Math.floor(ey + dy * s), Math.floor(ez + dz * s))) return true;
@@ -179,198 +228,169 @@ export function losBlocked(ex, ey, ez, dx, dy, dz, t) {
   return false;
 }
 
-// Çimen üstüne çiçek öbekleri
-function scatterFlowers(rnd, topY) {
-  for (let p = 0; p < 16; p++) {
-    const cx = 2 + Math.floor(rnd() * (N - 4)), cz = 2 + Math.floor(rnd() * (N - 4));
-    const type = FLOWER_MIN + Math.floor(rnd() * 6), r = 2 + Math.floor(rnd() * 2);
-    for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) {
-      const skip = rnd() > 0.55;
-      if (skip || dx * dx + dz * dz > r * r) continue;
-      const x = cx + dx, z = cz + dz;
-      if (x < 0 || z < 0 || x >= N || z >= N) continue;
-      const y = topY(x, z);
-      if (get(x, y, z) === 1 && get(x, y + 1, z) === 0) set(x, y + 1, z, type);
-    }
-  }
+// ---- Chunk üretimi ----
+function newChunk(cx, cz) {
+  return { cx, cz, b: new Uint8Array(CW * H * CW), l: new Uint8Array(CW * H * CW), dirty: 1, mt: null, mw: null, ml: null };
 }
 
-function genFlat(seed) {
-  for (let x = 0; x < N; x++) for (let z = 0; z < N; z++) {
-    set(x, 0, z, BEDROCK);
-    set(x, 1, z, 2);
-    set(x, 2, z, 1);
-  }
-  scatterFlowers(mulberry((seed ^ 0x27d4eb2f) >>> 0), () => 2);
-}
-
-function genSky() {
-  const cube = (ox, oz) => {
-    for (let dx = 0; dx < 3; dx++) for (let dz = 0; dz < 3; dz++) for (let dy = 0; dy < 3; dy++) {
-      set(ox + dx, 10 + dy, oz + dz, dy === 2 ? 1 : 2);
-    }
+function genChunk(c) {
+  const b = c.b, x0 = c.cx * CW, z0 = c.cz * CW;
+  const put = (x, y, z, t) => {
+    const lx = x - x0, lz = z - z0;
+    if (y < 0 || y >= H || lx < 0 || lz < 0 || lx >= CW || lz >= CW) return;
+    b[(y * CW + lz) * CW + lx] = t;
   };
-  const o = N / 2 - 3;
-  cube(o, o);        // köşe küp
-  cube(o + 3, o);    // yanındaki küp (doğma noktası)
-  cube(o, o + 3);    // altındaki küp (L şekli)
-  const plan = planTree(o + 1, 13, o + 1, false);   // köşe küpün üst ortası
-  if (plan) for (const b of plan) set(b.x, b.y, b.z, b.t);
+  const at = (x, y, z) => {
+    const lx = x - x0, lz = z - z0;
+    if (y < 0 || y >= H || lx < 0 || lz < 0 || lx >= CW || lz >= CW) return -1;
+    return b[(y * CW + lz) * CW + lx];
+  };
+  const trees = list => {   // önce yapraklar (sadece boşluğa), sonra gövdeler
+    for (const tr of list) for (const l of tr.leaves) if (at(l[0], l[1], l[2]) === 0) put(l[0], l[1], l[2], l[3]);
+    for (const tr of list) for (const t of tr.trunk) put(t[0], t[1], t[2], t[3]);
+  };
+
+  if (_kind === 'sky') {
+    for (const [ox, oz] of SKY_CUBES) for (let dx = 0; dx < 3; dx++) for (let dz = 0; dz < 3; dz++) for (let dy = 0; dy < 3; dy++) {
+      put(ox + dx, 10 + dy, oz + dz, dy === 2 ? 1 : 2);
+    }
+    trees([treeCells(-2, 13, -2, false)]);
+  } else if (_kind === 'flat') {
+    for (let lz = 0; lz < CW; lz++) for (let lx = 0; lx < CW; lx++) {
+      const x = x0 + lx, z = z0 + lz;
+      put(x, 0, z, BEDROCK); put(x, 1, z, 2); put(x, 2, z, 1);
+      const f = flowerAt(x, z);
+      if (f) put(x, 3, z, f);
+    }
+  } else {
+    const hs = new Int16Array(CW * CW);
+    for (let lz = 0; lz < CW; lz++) for (let lx = 0; lx < CW; lx++) {
+      const x = x0 + lx, z = z0 + lz, h = heightAt(x, z);
+      hs[lz * CW + lx] = h;
+      for (let y = 0; y <= h; y++) {
+        let t;
+        if (y === 0) t = BEDROCK;
+        else if (y === 1 && hash(x, z, _seed + 17) < 0.5) t = BEDROCK;
+        else if (y === h) t = h <= SEA ? 6 : h >= SNOW_H ? 8 : 1;
+        else if (y >= h - 2) t = h <= SEA ? 6 : 2;
+        else {
+          t = 3;
+          if (y >= 2 && y <= h - 3) {
+            if (hash(x * 31 + y * 7, z * 17 + y * 13, _seed + 3) < 0.007) t = 10;
+            else if (y <= 3 && hash(x * 5 + y, z * 3, _seed + 6) < 0.004) t = OBSIDIAN;
+            else if (y === 2 && hash(x, z, _seed + 18) < 0.0008) t = NETHERITE;
+            else if (y === 3 && h >= 9 && hash(x >> 1, z >> 1, _seed + 5) < 0.012) t = LAVA;
+          }
+        }
+        b[(y * CW + lz) * CW + lx] = t;
+      }
+      for (let y = h + 1; y <= SEA; y++) b[(y * CW + lz) * CW + lx] = WATER;
+    }
+    for (let rx = Math.floor((x0 - 4) / 48); rx <= Math.floor((x0 + CW + 4) / 48); rx++) {
+      for (let rz = Math.floor((z0 - 4) / 48); rz <= Math.floor((z0 + CW + 4) / 48); rz++) {
+        const r = ruinAt(rx, rz);
+        if (r) ruinCells(r, put);
+      }
+    }
+    const list = [];
+    for (let x = x0 - 2; x <= x0 + CW + 1; x++) for (let z = z0 - 2; z <= z0 + CW + 1; z++) {
+      const tr = treeAt(x, z);
+      if (tr) list.push(treeCells(x, heightAt(x, z) + 1, z, tr === 2));
+    }
+    trees(list);
+    for (let lz = 0; lz < CW; lz++) for (let lx = 0; lx < CW; lx++) {
+      const h = hs[lz * CW + lx];
+      if (h <= SEA || h >= SNOW_H || h + 1 >= H) continue;
+      const f = flowerAt(x0 + lx, z0 + lz);
+      if (f && b[((h + 1) * CW + lz) * CW + lx] === 0) b[((h + 1) * CW + lz) * CW + lx] = f;
+    }
+  }
+
+  // Oyuncu değişiklikleri (kalıcı kayıt) en üstte
+  const flows = [];
+  const m = mods.get(ck(c.cx, c.cz));
+  if (m) {
+    m.forEach((raw, i) => {
+      let tt = raw, lv = 0;
+      if (tt > WATER && tt <= WATER_MAX) { lv = tt - WATER; tt = WATER; }
+      else if (tt >= LAVA && tt <= LAVA_MAX) { lv = tt - LAVA; tt = LAVA; }
+      b[i] = tt; c.l[i] = lv;
+      if (lv > 0) flows.push(i);
+    });
+  }
+  return flows;
 }
 
-function genNormal(seed) {
-  const rnd = mulberry(seed);
-  const sp = spawnPos();
-
-  // Arazi: alt katman kayası, alçakta kum + deniz, tepede kar
-  for (let x = 0; x < N; x++) for (let z = 0; z < N; z++) {
-    const h = heightAt(x, z);
-    for (let y = 0; y <= h; y++) {
-      let t;
-      if (y === 0) t = BEDROCK;
-      else if (y === 1 && hash(x, z, 17) < 0.5) t = BEDROCK;
-      else if (y === h) t = h <= 7 ? 6 : h >= 16 ? 8 : 1;
-      else if (y >= h - 2) t = h <= 7 ? 6 : 2;
-      else t = 3;
-      set(x, y, z, t);
-    }
-    for (let y = h + 1; y <= SEA; y++) set(x, y, z, WATER);
+function disposeChunk(c) {
+  for (const f of ['mt', 'mw', 'ml']) {
+    if (c[f]) { if (group) group.remove(c[f]); c[f].geometry.dispose(); c[f] = null; }
   }
+}
 
-  // Rastgele kum yamaları
-  for (let i = 0; i < 4; i++) {
-    const cx = 4 + Math.floor(rnd() * (N - 8)), cz = 4 + Math.floor(rnd() * (N - 8));
-    const r = 3 + Math.floor(rnd() * 3);
-    if (Math.abs(cx - sp.x) < r + 3 && Math.abs(cz - sp.z) < r + 3) continue;
-    for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) {
-      if (dx * dx + dz * dz > r * r) continue;
-      const x = cx + dx, z = cz + dz;
-      if (x < 0 || z < 0 || x >= N || z >= N) continue;
-      const h = heightAt(x, z);
-      if (get(x, h, z) === 1) set(x, h, z, 6);
-      if (get(x, h - 1, z) === 2) set(x, h - 1, z, 6);
-    }
-  }
+// Yeni dünya: eski chunk'ları ve kayıtları temizler (araziyi chunk'lar sırayla üretir)
+export function generate(seed = 1, kind = 'normal') {
+  for (const c of chunks.values()) disposeChunk(c);
+  chunks.clear(); mods.clear(); urgent.clear();
+  lcK = -1; lc = null;
+  _seed = (seed | 0) || 1;
+  _kind = (kind === 'flat' || kind === 'sky') ? kind : 'normal';
+  _sp = null;
+}
 
-  // Meşe ağaçları (sadece çimde)
-  for (let i = 0; i < 40; i++) {
-    const x = 3 + Math.floor(rnd() * (N - 6)), z = 3 + Math.floor(rnd() * (N - 6));
-    if (Math.abs(x - sp.x) < 3 && Math.abs(z - sp.z) < 3) continue;
-    const h = heightAt(x, z);
-    if (get(x, h, z) !== 1) continue;
-    for (let y = 1; y <= 4; y++) set(x, h + y, z, 4);
-    for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) for (let dy = 3; dy <= 5; dy++) {
-      if (Math.abs(dx) + Math.abs(dz) > 3 || (dy === 5 && Math.abs(dx) + Math.abs(dz) > 1)) continue;
-      if (!get(x + dx, h + dy, z + dz)) set(x + dx, h + dy, z + dz, 5);
-    }
-  }
-
-  // Yer altı altın damarları
-  for (let i = 0; i < 20; i++) {
-    let x = 2 + Math.floor(rnd() * (N - 4)), z = 2 + Math.floor(rnd() * (N - 4));
-    const h = heightAt(x, z);
-    let y = 2 + Math.floor(rnd() * Math.max(1, h - 4));
-    const len = 2 + Math.floor(rnd() * 3);
-    for (let k = 0; k < len; k++) {
-      if (get(x, y, z) === 3) set(x, y, z, 10);
-      const a = Math.floor(rnd() * 6);
-      if (a === 0) x++; else if (a === 1) x--; else if (a === 2) z++;
-      else if (a === 3) z--; else if (a === 4) y++; else y--;
-    }
-  }
-
-  // Tuğla harabeler (cam pencereli), sadece karada
-  let placed = 0;
-  for (let tries = 0; tries < 80 && placed < 4; tries++) {
-    const cx = 6 + Math.floor(rnd() * (N - 12)), cz = 6 + Math.floor(rnd() * (N - 12));
-    if (Math.abs(cx - sp.x) < 7 && Math.abs(cz - sp.z) < 7) continue;
-    const hc = heightAt(cx, cz);
-    if (hc < SEA + 2) continue;
-    placed++;
-    for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) set(cx + dx, hc, cz + dz, 7);
-    for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
-      if (Math.max(Math.abs(dx), Math.abs(dz)) !== 2) continue;
-      if (dx === 0 && dz === 2) continue; // kapı
-      const x = cx + dx, z = cz + dz;
-      const hs = heightAt(x, z);
-      const top = hc + 2 + (rnd() < 0.5 ? 1 : 0);
-      for (let y = hs + 1; y <= top; y++) {
-        if (rnd() < 0.12) continue; // yıkık boşluk
-        const win = y === hc + 2 && (dx === 0 || dz === 0) && rnd() < 0.6;
-        set(x, y, z, win ? 9 : 7);
+export function eachFlow(fn) {
+  for (const c of chunks.values()) {
+    for (let i = 0; i < c.b.length; i++) {
+      if ((c.b[i] === WATER || c.b[i] === LAVA) && c.l[i] > 0) {
+        fn(c.cx * CW + (i % CW), Math.floor(i / (CW * CW)), c.cz * CW + (Math.floor(i / CW) % CW));
       }
     }
   }
-
-  // Huş ağaçları (ayrı rastgele akış)
-  const rnd2 = mulberry((seed ^ 0x5bd1e995) >>> 0);
-  let birches = 0;
-  for (let tries = 0; tries < 90 && birches < 12; tries++) {
-    const x = 3 + Math.floor(rnd2() * (N - 6)), z = 3 + Math.floor(rnd2() * (N - 6));
-    if (Math.abs(x - sp.x) < 3 && Math.abs(z - sp.z) < 3) continue;
-    const h = heightAt(x, z);
-    if (get(x, h, z) !== 1 || get(x, h + 1, z) !== 0) continue;
-    const plan = planTree(x, h + 1, z, true);
-    if (!plan) continue;
-    for (const b of plan) set(b.x, b.y, b.z, b.t);
-    birches++;
-  }
-
-  // Çiçek öbekleri
-  scatterFlowers(mulberry((seed ^ 0x27d4eb2f) >>> 0), heightAt);
-
-  // Yer altı lav cepleri (taşın içinde kapalı, kazınca akar)
-  const rnd4 = mulberry((seed ^ 0x165667b1) >>> 0);
-  for (let i = 0; i < 8; i++) {
-    const x = 3 + Math.floor(rnd4() * (N - 6)), z = 3 + Math.floor(rnd4() * (N - 6));
-    const y = 2 + Math.floor(rnd4() * 2);
-    if (heightAt(x, z) < 9 || heightAt(x + 1, z) < 9 || heightAt(x, z + 1) < 9 || heightAt(x + 1, z + 1) < 9) continue;
-    for (let dx = 0; dx < 2; dx++) for (let dz = 0; dz < 2; dz++) {
-      if (get(x + dx, y, z + dz) === 3) set(x + dx, y, z + dz, LAVA);
-    }
-  }
-
-  // Derin yer altı: obsidiyen kümeleri ve nadir netherit bloklar
-  const rnd5 = mulberry((seed ^ 0x9e3779b1) >>> 0);
-  for (let i = 0; i < 4; i++) {
-    const x = 3 + Math.floor(rnd5() * (N - 6)), z = 3 + Math.floor(rnd5() * (N - 6));
-    const y = 2 + Math.floor(rnd5() * 2);
-    for (let k = 0; k < 3; k++) {
-      const xx = x + Math.floor(rnd5() * 3) - 1, zz = z + Math.floor(rnd5() * 3) - 1;
-      if (get(xx, y, zz) === 3) set(xx, y, zz, OBSIDIAN);
-    }
-  }
-  for (let i = 0; i < 3; i++) {
-    const x = 3 + Math.floor(rnd5() * (N - 6)), z = 3 + Math.floor(rnd5() * (N - 6));
-    if (get(x, 2, z) === 3) set(x, 2, z, NETHERITE);
-  }
 }
 
-// kind: 'normal' | 'flat' | 'sky'
-export function generate(seed = 1, kind = 'normal') {
-  _gen = true;
-  _kind = (kind === 'flat' || kind === 'sky') ? kind : 'normal';
-  _sp = null;
-  world.fill(0); wl.fill(0);
-  for (let cx = 0; cx < NC; cx++) for (let cz = 0; cz < NC; cz++) addDirty(cx, cz);
-  if (_kind === 'flat') genFlat(seed);
-  else if (_kind === 'sky') genSky();
-  else genNormal(seed);
-  _gen = false;
+// Karakterin chunk'ı merkez 7x7 yüklenir, uzaktakiler atılır. Dönüş: yapılan iş sayısı.
+export function updateChunks(px, pz, budgetMs = 6) {
+  if (!group) return 0;
+  const cx0 = Math.floor(px / CW), cz0 = Math.floor(pz / CW), t0 = performance.now();
+  const want = [];
+  for (let dx = -RD; dx <= RD; dx++) for (let dz = -RD; dz <= RD; dz++) want.push([cx0 + dx, cz0 + dz, dx * dx + dz * dz]);
+  want.sort((a, b) => a[2] - b[2]);
+  let did = 0;
+  for (const [cx, cz] of want) {
+    if (did >= 1 && performance.now() - t0 > budgetMs) break;
+    const k = ck(cx, cz);
+    let c = chunks.get(k);
+    if (!c) {
+      c = newChunk(cx, cz);
+      const flows = genChunk(c);
+      chunks.set(k, c); lcK = -1;
+      if (wh.fn) for (const i of flows) wh.fn(cx * CW + (i % CW), Math.floor(i / (CW * CW)), cz * CW + (Math.floor(i / CW) % CW));
+      did++;
+    } else if (c.dirty === 1) { buildChunk(c); did++; }
+  }
+  for (const [k, c] of chunks) {
+    if (Math.abs(c.cx - cx0) > RD + 1 || Math.abs(c.cz - cz0) > RD + 1) {
+      disposeChunk(c); chunks.delete(k); urgent.delete(k); lcK = -1;
+    }
+  }
+  return did;
 }
 
-// ---- Chunk çizimi ----
-let group, material, waterMat, lavaMat, hl;
-const chunkMeshes = new Map();
-const waterMeshes = new Map();
-const lavaMeshes = new Map();
+export function chunksReady(px, pz) {
+  const cx0 = Math.floor(px / CW), cz0 = Math.floor(pz / CW);
+  for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
+    const c = chunks.get(ck(cx0 + dx, cz0 + dz));
+    if (!c || c.dirty === 1) return false;
+  }
+  return true;
+}
+
+// ---- Çizim ----
 const AOV = [0.5, 0.68, 0.84, 1.0];
 const ORD_P = [[0, 0], [1, 0], [1, 1], [0, 1]];
 const ORD_N = [[0, 0], [0, 1], [1, 1], [1, 0]];
 const D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const occ = (x, y, z) => opaque(get(x, y, z)) ? 1 : 0;
 
-// Gündüz/gece parlaklığı (sky.js çağırır). Lav parlak kalır.
 export function setWorldLight(v) {
   if (material) material.color.setScalar(v);
   if (waterMat) waterMat.color.setScalar(v);
@@ -392,13 +412,11 @@ export function initRender(scene) {
   );
   hl.visible = false;
   scene.add(hl);
-  rebuild();
 }
 
-function putMesh(map, key, pos, uv, col, ind, mat, order) {
-  let mesh = map.get(key);
+function putMesh(c, f, pos, uv, col, ind, mat, order) {
   if (!ind.length) {
-    if (mesh) { group.remove(mesh); mesh.geometry.dispose(); map.delete(key); }
+    if (c[f]) { group.remove(c[f]); c[f].geometry.dispose(); c[f] = null; }
     return;
   }
   const g = new THREE.BufferGeometry();
@@ -407,19 +425,18 @@ function putMesh(map, key, pos, uv, col, ind, mat, order) {
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
   g.setIndex(ind);
   g.computeBoundingSphere();
-  if (mesh) { mesh.geometry.dispose(); mesh.geometry = g; }
+  if (c[f]) { c[f].geometry.dispose(); c[f].geometry = g; }
   else {
-    mesh = new THREE.Mesh(g, mat);
+    const mesh = new THREE.Mesh(g, mat);
     if (order) mesh.renderOrder = order;
     group.add(mesh);
-    map.set(key, mesh);
+    c[f] = mesh;
   }
 }
 
-// Sıvı yüksekliği: üstünde aynı sıvı varsa tam, kaynak 0.88, akan seviyeye göre alçalır
 function fluidH(x, y, z, t) {
   if (get(x, y + 1, z) === t) return 1;
-  const l = wl[idx(x, y, z)];
+  const l = waterLvl(x, y, z);
   if (l === 0) return 0.88;
   return t === WATER ? Math.max(0.16, 0.86 - l * 0.13) : Math.max(0.25, 0.84 - l * 0.2);
 }
@@ -435,15 +452,16 @@ function pushQ(s, tile, p, sh) {
   s.n += 4;
 }
 
-function buildChunk(cx, cz) {
+function buildChunk(c) {
   const pos = [], uv = [], col = [], ind = [];
   const wS = sink(), lS = sink();
   let vc = 0;
   const WT = FACE_TILES[WATER][0], LT = FACE_TILES[LAVA][0];
-  const x0 = cx * CS, z0 = cz * CS;
-  for (let y = 0; y < H; y++) for (let lz = 0; lz < CS; lz++) for (let lx = 0; lx < CS; lx++) {
-    const x = x0 + lx, z = z0 + lz, t = get(x, y, z);
+  const x0 = c.cx * CW, z0 = c.cz * CW;
+  for (let y = 0; y < H; y++) for (let lz = 0; lz < CW; lz++) for (let lx = 0; lx < CW; lx++) {
+    const t = c.b[(y * CW + lz) * CW + lx];
     if (!t) continue;
+    const x = x0 + lx, z = z0 + lz;
 
     if (t === WATER || t === LAVA) {
       const S = t === WATER ? wS : lS, tile = t === WATER ? WT : LT;
@@ -451,9 +469,7 @@ function buildChunk(cx, cz) {
       const up = get(x, y + 1, z);
       if (up !== t && !opaque(up)) pushQ(S, tile, [[x, y + h, z], [x + 1, y + h, z], [x + 1, y + h, z + 1], [x, y + h, z + 1]], 1);
       for (const [dx, dz] of D4) {
-        const nx = x + dx, nz = z + dz;
-        if (!inb(nx, y, nz)) continue;
-        const nt = get(nx, y, nz);
+        const nx = x + dx, nz = z + dz, nt = get(nx, y, nz);
         if (opaque(nt)) continue;
         let y0 = y;
         if (nt === t) {
@@ -515,17 +531,21 @@ function buildChunk(cx, cz) {
       vc += 4;
     }
   }
-  const key = cz * NC + cx;
-  putMesh(chunkMeshes, key, pos, uv, col, ind, material, 0);
-  putMesh(lavaMeshes, key, lS.pos, lS.uv, lS.col, lS.ind, lavaMat, 1);
-  putMesh(waterMeshes, key, wS.pos, wS.uv, wS.col, wS.ind, waterMat, 2);
+  c.dirty = 0;
+  putMesh(c, 'mt', pos, uv, col, ind, material, 0);
+  putMesh(c, 'ml', lS.pos, lS.uv, lS.col, lS.ind, lavaMat, 1);
+  putMesh(c, 'mw', wS.pos, wS.uv, wS.col, wS.ind, waterMat, 2);
 }
 
-// Değişen chunk'ları yeniden çizer (boşsa hiçbir şey yapmaz)
-export function rebuild() {
-  if (!group || !dirty.size) return;
-  for (const k of dirty) buildChunk(k % NC, Math.floor(k / NC));
-  dirty.clear();
+// Oyuncu değişikliklerini hemen çizer (kare başına en çok 2 chunk)
+export function rebuild(max = 2) {
+  if (!group || !urgent.size) return;
+  let n = 0;
+  for (const k of urgent) {
+    urgent.delete(k);
+    const c = chunks.get(k);
+    if (c && c.dirty === 2) { buildChunk(c); if (++n >= max) break; }
+  }
 }
 
 // ---- Hedef bulma: target/prev sıvı olmayan blok, wtarget bakılan ilk su ya da lav ----
@@ -534,7 +554,7 @@ export let target = null, prev = null, wtarget = null;
 export function updateTarget(camera) {
   const d = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
   const o = camera.position;
-  let lx = -1, ly = -1, lz = -1;
+  let lx = -1e9, ly = -1e9, lz = -1e9;
   target = prev = wtarget = null;
   for (let s = 0; s < 6; s += 0.04) {
     const x = Math.floor(o.x + d.x * s), y = Math.floor(o.y + d.y * s), z = Math.floor(o.z + d.z * s);
@@ -543,11 +563,12 @@ export function updateTarget(camera) {
     if (t === WATER || t === LAVA) { if (!wtarget) wtarget = [x, y, z]; }
     else if (t) {
       target = [x, y, z];
-      prev = (lx === -1 && ly === -1 && lz === -1) ? null : [lx, ly, lz];
+      prev = lx === -1e9 ? null : [lx, ly, lz];
       break;
     }
     lx = x; ly = y; lz = z;
   }
+  if (!hl) return;
   hl.visible = !!target;
   if (target) hl.position.set(target[0] + 0.5, target[1] + 0.5, target[2] + 0.5);
-  }
+      }
