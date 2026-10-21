@@ -1,4 +1,5 @@
-import { login, db, ref, set, get, update, remove, push, uid } from '../core/firebase.js';
+import { db, ref, set, get, update, remove, push } from '../core/firebase.js';
+import { login, uid, userName } from '../core/auth.js';
 
 export const MAX_WORLDS = 6;
 
@@ -11,13 +12,14 @@ export async function diag() {
     const id = await ready();
     try { await get(ref(db, 'publicRooms')); }
     catch (e) { return '⚠️ Giriş tamam (' + id.slice(0, 6) + ') ama Firebase kuralları izin vermiyor: Rules → Publish'; }
-    return '☁️ Bağlı · ' + id.slice(0, 6);
+    return '☁️ Bağlı · ' + userName;
   } catch (e) { return '❌ Giriş yapılamadı: ' + (e.code || e.message); }
 }
 
+// Profil: kullanıcı adı ve oyuncu adı hesabın UID'sine bağlı
 export async function setProfile(name) {
   await ready();
-  update(ref(db, base() + '/profile'), { name, seen: Date.now() }).catch(() => {});
+  update(ref(db, base() + '/profile'), { name, username: userName, seen: Date.now() }).catch(() => {});
 }
 
 // ---- Kayıtlı dünyalar ----
@@ -138,4 +140,4 @@ export async function stopSaver() {
 export function dropSaver() {
   if (timer) clearInterval(timer);
   timer = null; wid = null; pc = {}; pp = {};
-}
+      }
