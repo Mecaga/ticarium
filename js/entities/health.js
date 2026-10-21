@@ -1,5 +1,5 @@
 export const hp = { cur: 20, max: 20, dead: false, protectUntil: 0, regen: 0, god: false };
-export const hhooks = { onChange: null, onHurt: null, onDeath: null };
+export const hhooks = { onChange: null, onHurt: null, onDeath: null, reduce: null };
 
 const changed = () => { if (hhooks.onChange) hhooks.onChange(hp.cur, hp.max); };
 export const isDead = () => hp.dead;
@@ -13,9 +13,11 @@ export function resetHealth() {
 export function healFull() { hp.cur = hp.max; changed(); }
 
 // src: { name, id } | { fall } | { void } | { starve } | { lava } | { drown }
+// Zırh hasarı azaltır (reduce: game/armor.js)
 export function hurt(d, src = {}) {
   if (hp.dead || hp.god || d <= 0) return false;
   if (Date.now() < hp.protectUntil) return false;
+  if (hhooks.reduce) d = Math.max(1, Math.round(hhooks.reduce(d, src)));
   hp.cur = Math.max(0, hp.cur - d);
   hp.regen = 0;
   changed();
