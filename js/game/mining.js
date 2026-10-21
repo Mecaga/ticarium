@@ -8,7 +8,10 @@ import { sfx } from '../core/sound.js';
 // Aletler: [tür, seviye, hız]  (seviye: 1 ahşap, 2 taş, 3 demir, 4 elmas, 5 netherit)
 export const TOOLS = {
   50: ['pick', 1, 2], 51: ['pick', 2, 4], 52: ['pick', 3, 6], 53: ['pick', 4, 8], 54: ['pick', 5, 9],
-  55: ['axe', 3, 6], 56: ['shovel', 3, 6]
+  57: ['axe', 1, 2], 58: ['axe', 2, 4], 55: ['axe', 3, 6],
+  59: ['shovel', 1, 2], 60: ['shovel', 2, 4], 56: ['shovel', 3, 6],
+  61: ['hoe', 1, 1], 62: ['hoe', 2, 1], 63: ['hoe', 3, 1], 64: ['hoe', 4, 1],
+  65: ['sword', 1, 1], 66: ['sword', 2, 1], 67: ['sword', 3, 1], 68: ['sword', 4, 1]
 };
 export const isTool = t => !!TOOLS[t];
 
@@ -18,8 +21,13 @@ const HARD = {
   6: [0.8, 'shovel', 0], 7: [4.5, 'pick', 0], 8: [0.4, 'shovel', 0], 9: [0.5, null, 0], 10: [6, 'pick', 3],
   12: [0.05, null, 0], 13: [3, 'axe', 0], 14: [0.3, null, 0], 16: [1.2, null, 0], 32: [1, null, 0],
   34: [60, 'pick', 4], 35: [65, 'pick', 4],
-  40: [0.05, null, 0], 41: [0.05, null, 0], 42: [0.05, null, 0], 43: [0.05, null, 0], 44: [0.05, null, 0], 45: [0.05, null, 0]
+  40: [0.05, null, 0], 41: [0.05, null, 0], 42: [0.05, null, 0], 43: [0.05, null, 0], 44: [0.05, null, 0], 45: [0.05, null, 0],
+  70: [2, 'axe', 0], 72: [2.5, 'axe', 0], 76: [0.6, 'shovel', 0],
+  77: [0.05, null, 0], 78: [0.05, null, 0], 79: [0.05, null, 0], 80: [0.05, null, 0]
 };
+
+// Blok sertliği (aletin aşınıp aşınmayacağına karar vermek için)
+export const hardTime = t => (HARD[t] || [1])[0];
 
 export function breakInfo(t) {
   if (isCreative()) return { time: 0.15, drop: true };
