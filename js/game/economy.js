@@ -6,6 +6,7 @@ export const eco = {
   hsel: 0,         // seçili hızlı slot sırası
   hotbar: [1, 2, 3, 4, 5],
   layout: null,    // çanta yerleşimi (inventory.js)
+  dur: {},         // alet dayanıklılıkları (gear.js)
   inv: {}, raw: {}, trend: {}
 };
 
@@ -16,6 +17,7 @@ export function resetEco() {
   eco.coins = 50; eco.sel = 1; eco.hsel = 0;
   eco.hotbar = [1, 2, 3, 4, 5];
   eco.layout = null;
+  eco.dur = {};
   for (const t in TYPES) { eco.inv[t] = 0; eco.raw[t] = TYPES[t].base; eco.trend[t] = 0; }
 }
 resetEco();
