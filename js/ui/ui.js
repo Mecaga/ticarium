@@ -1,5 +1,7 @@
 import { TYPES } from '../world/world.js';
+import { iconURL } from '../world/textures.js';
 import { eco, sell, buy, priceOf, buyCost } from '../game/economy.js';
+import { isCreative } from '../game/creative.js';
 
 // Pazarı geri açmak için true yap
 export const MARKET_ON = false;
@@ -8,6 +10,12 @@ const css = c => '#' + c.toString(16).padStart(6, '0');
 let marketOpen = false;
 export const isMarketOpen = () => marketOpen;
 export const hooks = { bag: null };
+
+// Eşya ikonu (dokudan üretilir; yoksa renkli kare)
+export function iconHTML(t) {
+  const u = iconURL(t);
+  return u ? '<img src="' + u + '" draggable="false" alt="">' : '<i style="background:' + css(TYPES[t].color) + '"></i>';
+}
 
 export function toast(s) {
   const m = document.getElementById('msg');
@@ -21,11 +29,14 @@ export function drawHud() {
   document.getElementById('coins').textContent = '🪙 ' + eco.coins;
   const hb = document.getElementById('hotbar');
   hb.innerHTML = '';
+  const cre = isCreative();
   eco.hotbar.forEach((t, i) => {
     const d = document.createElement('div');
     d.className = 'slot' + (i === eco.hsel ? ' sel' : '');
-    d.innerHTML = `<i style="background:${css(TYPES[t].color)}"></i><span>${TYPES[t].name}</span><b>${eco.inv[t]}</b>`;
-    const pick = e => { e.preventDefault(); e.stopPropagation(); eco.hsel = i; eco.sel = t; drawHud(); };
+    const have = cre || (eco.inv[t] || 0) > 0;
+    d.innerHTML = iconHTML(t) + '<b>' + (cre ? '∞' : (eco.inv[t] || 0)) + '</b>';
+    if (!have) d.style.opacity = 0.5;
+    const pick = e => { e.preventDefault(); e.stopPropagation(); eco.hsel = i; eco.sel = t; drawHud(); toast(TYPES[t].name); };
     d.addEventListener('touchstart', pick, { passive: false });
     d.addEventListener('mousedown', pick);
     hb.appendChild(d);
