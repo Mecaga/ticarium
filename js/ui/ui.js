@@ -2,6 +2,7 @@ import { TYPES } from '../world/world.js';
 import { iconURL } from '../world/textures.js';
 import { eco, sell, buy, priceOf, buyCost } from '../game/economy.js';
 import { isCreative } from '../game/creative.js';
+import { isGear, durFrac, barColor } from '../game/gear.js';
 
 // Pazarı geri açmak için true yap
 export const MARKET_ON = false;
@@ -15,6 +16,14 @@ export const hooks = { bag: null };
 export function iconHTML(t) {
   const u = iconURL(t);
   return u ? '<img src="' + u + '" draggable="false" alt="">' : '<i style="background:' + css(TYPES[t].color) + '"></i>';
+}
+
+// Dayanıklılık çubuğu: hasar yoksa görünmez, yeşil → sarı → kırmızı
+export function durBarHTML(t, i = 0) {
+  if (!isGear(t) || isCreative()) return '';
+  const f = durFrac(t, i);
+  if (f >= 1) return '';
+  return '<span class="db"><em style="width:' + Math.max(6, Math.round(f * 100)) + '%;background:' + barColor(f) + '"></em></span>';
 }
 
 export function toast(s) {
@@ -33,8 +42,10 @@ export function drawHud() {
   eco.hotbar.forEach((t, i) => {
     const d = document.createElement('div');
     d.className = 'slot' + (i === eco.hsel ? ' sel' : '');
-    const have = cre || (eco.inv[t] || 0) > 0;
-    d.innerHTML = iconHTML(t) + '<b>' + (cre ? '∞' : (eco.inv[t] || 0)) + '</b>';
+    const cnt = eco.inv[t] || 0;
+    const have = cre || cnt > 0;
+    const label = cre ? '∞' : (isGear(t) && cnt <= 1 ? '' : cnt);
+    d.innerHTML = iconHTML(t) + '<b>' + label + '</b>' + durBarHTML(t, 0);
     if (!have) d.style.opacity = 0.5;
     const pick = e => { e.preventDefault(); e.stopPropagation(); eco.hsel = i; eco.sel = t; drawHud(); toast(TYPES[t].name); };
     d.addEventListener('touchstart', pick, { passive: false });
