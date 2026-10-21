@@ -15,23 +15,23 @@ div{padding:3px 0;font-size:15px}
 <div id="out">Kontrol ediliyor...</div>
 <script>
 var files = {
-  'index.html': 'sAuth', 'css/style.css': '#chatBox', 'js/main.js': 'isCraftOpen',
+  'index.html': 'sAuth', 'css/style.css': '#chatBox', 'js/main.js': 'updateFurnace',
   'js/core/state.js': 'export const G', 'js/core/save.js': 'saveHooks', 'js/core/firebase.js': 'serverTimestamp',
   'js/core/sound.js': 'splash', 'js/core/auth.js': 'export async function doRegister',
-  'js/world/world.js': 'eachBlock', 'js/world/textures.js': 'hoeW', 'js/world/fluids.js': 'canSpread',
+  'js/world/world.js': 'oreAt', 'js/world/textures.js': 'diamondOre', 'js/world/fluids.js': 'canSpread',
   'js/world/gravity.js': 'WATER', 'js/world/sky.js': 'FOG_NEAR', 'js/world/paints.js': 'isLoaded',
   'js/entities/player.js': 'isLoaded', 'js/entities/mobs.js': 'lavaT', 'js/entities/avatars.js': 'export function animateAvatar',
-  'js/entities/items.js': '100000', 'js/entities/health.js': 'god', 'js/entities/hunger.js': 'export function tickHunger',
+  'js/entities/items.js': '100000', 'js/entities/health.js': 'reduce', 'js/entities/hunger.js': 'export function tickHunger',
   'js/entities/vitals.js': 'export function tickVitals',
-  'js/net/cloud.js': 'userName', 'js/net/rooms.js': 'hostWorld', 'js/net/online.js': 'recomputeSim',
+  'js/net/cloud.js': 'userName', 'js/net/rooms.js': 'hostWorld', 'js/net/online.js': 'Math.min(12',
   'js/ui/menu.js': 'doRegister', 'js/ui/menu-lists.js': 'worldRooms', 'js/ui/menu-worlds.js': 'playWorld',
   'js/ui/dialog.js': 'export function askDialog', 'js/ui/panels.js': 'setChatVisible', 'js/ui/chat.js': 'runCommand',
-  'js/ui/bag.js': 'data-craft', 'js/ui/draw.js': 'export function openDraw', 'js/ui/ui.js': 'durBarHTML',
-  'js/ui/input.js': 'breakDown', 'js/ui/craft.js': 'export function openCraft',
-  'js/game/actions.js': 'plantSeeds', 'js/game/mining.js': 'hardTime', 'js/game/session.js': 'requestLeave',
-  'js/game/progress.js': 'durSnapshot', 'js/game/death.js': 'returnCraft', 'js/game/creative.js': 'export function setCreative',
-  'js/game/commands.js': 'addItem', 'js/game/economy.js': 'dur: {}', 'js/game/inventory.js': 'stackOf',
-  'js/game/gear.js': 'export const MAXDUR', 'js/game/recipes.js': 'export function findRecipe'
+  'js/ui/bag.js': 'data-equip', 'js/ui/draw.js': 'export function openDraw', 'js/ui/ui.js': 'durBarHTML',
+  'js/ui/input.js': 'breakDown', 'js/ui/craft.js': 'export function openCraft', 'js/ui/furnace.js': 'export function updateFurnace',
+  'js/game/actions.js': 'openFurnace', 'js/game/mining.js': '39: [4', 'js/game/session.js': 'requestLeave',
+  'js/game/progress.js': 'armD', 'js/game/death.js': 'SLOTS4', 'js/game/creative.js': 'export function setCreative',
+  'js/game/commands.js': 'addItem', 'js/game/economy.js': 'armDur', 'js/game/inventory.js': 'stackOf',
+  'js/game/gear.js': '91: 165', 'js/game/recipes.js': 'ocak', 'js/game/armor.js': 'export function equip'
 };
 var names = Object.keys(files), out = document.getElementById('out');
 var rows = [], bad = 0, old = 0, done = 0;
