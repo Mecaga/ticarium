@@ -1,6 +1,7 @@
 import {
-  get, set, rebuild, target, prev, wtarget, waterLvl, TYPES, H, inBounds,
-  BEDROCK, SAPLING, WATER, LAVA, BUCKET, WBUCKET, LBUCKET, CANVAS, APPLE, OBSIDIAN, planTree, isPlant
+  get, set, rebuild, target, prev, wtarget, waterLvl, TYPES, H, inBounds, eachBlock,
+  BEDROCK, SAPLING, WATER, LAVA, BUCKET, WBUCKET, LBUCKET, CANVAS, APPLE, OBSIDIAN,
+  CRAFT, FARM, SEEDS, WHEAT, STICK, CROP_MIN, CROP_MAX, isCrop, planTree, isPlant
 } from '../world/world.js';
 import { P, collides } from '../entities/player.js';
 import { eco } from './economy.js';
@@ -16,15 +17,19 @@ import { getPaint, setPaint, removePaint, stack } from '../world/paints.js';
 import { openDraw, isDrawOpen } from '../ui/draw.js';
 import { dropItems } from '../entities/items.js';
 import { isCreative } from './creative.js';
-import { isTool } from './mining.js';
+import { isTool, TOOLS, hardTime } from './mining.js';
 import { addItem } from './inventory.js';
+import { isGear, wear } from './gear.js';
+import { openCraft, isCraftOpen } from '../ui/craft.js';
 
-const FOOD = { 15: 6, 46: 4 };   // Et +6, Elma +4
+const FOOD = { 15: 6, 46: 4, 75: 5 };   // Et +6, Elma +4, Ekmek +5
 const MOB_DMG = 3;
 const D6 = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
-const saplings = new Map();
 let lastAtk = 0;
-export const clearSaplings = () => saplings.clear();
+
+// Eski çağrılar için (fidan ve buğday artık tarama ile büyür)
+export const clearSaplings = () => {};
+export const trackSapling = () => {};
 
 // Yaratıcı modda eşya harcanmaz, toplanmaz. Çanta doluysa fazlası yere düşer.
 const give = (t, n = 1) => {
@@ -39,35 +44,74 @@ const take = (t, n = 1) => { if (!isCreative()) eco.inv[t] -= n; };
 const isLog = t => t === 4 || t === 13;
 const isLeaf = t => t === 5 || t === 14;
 
-export function trackSapling(x, y, z) {
-  const r = G.room;
-  if (r && !r.solo && !r.isOwner) return; // odada büyütmeyi oda sahibi yapar
-  saplings.set(x + '_' + y + '_' + z, { x, y, z, at: Date.now() + 45000 + Math.random() * 45000 });
-}
-
 function commit(x, y, z, t) {
   recordChange(x, y, z, t);
   if (G.online) G.online.sendBlock(x, y, z, t);
 }
 
-function growSaplings() {
-  if (!G.room) return;
-  const now = Date.now();
-  for (const [k, s] of saplings) {
-    if (get(s.x, s.y, s.z) !== SAPLING || !get(s.x, s.y - 1, s.z)) { saplings.delete(k); continue; }
-    if (now < s.at) continue;
-    const plan = planTree(s.x, s.y, s.z, Math.random() < 0.35);
-    if (!plan) { s.at = now + 20000; continue; }
-    saplings.delete(k);
-    for (const b of plan) { set(b.x, b.y, b.z, b.t); commit(b.x, b.y, b.z, b.t); }
-    rebuild();
+// Alet aşınır; kırılırsa haber verir
+function afterWear(t, amt) {
+  if (!isGear(t)) return;
+  if (wear(t, amt)) { toast('💥 ' + TYPES[t].name + ' kırıldı!'); sfx.hit(); }
+  drawHud();
+}
+
+// Blok kırılınca düşen eşyalar [[eşya, adet], ...]
+function dropsOf(t) {
+  if (t === FARM) return [[2, 1]];
+  if (isCrop(t)) {
+    if (t < CROP_MAX) return [[SEEDS, 1]];
+    return [[WHEAT, 1], [SEEDS, 1 + Math.floor(Math.random() * 2)]];
   }
+  if (t === 1 && Math.random() < 0.12) return [[1, 1], [SEEDS, 1]];
+  return [[t, 1]];
+}
+
+// Altındaki blok kırılınca üstteki bitki (çiçek, fidan, buğday) yere düşer
+function popPlant(x, y, z) {
+  const a = get(x, y, z);
+  if (!isPlant(a)) return;
+  set(x, y, z, 0);
+  commit(x, y, z, 0);
+  if (isCreative()) return;
+  dropItems(dropsOf(a).map(([it, n]) => ({
+    t: it, c: n, x: x + 0.5, y: y + 0.5, z: z + 0.5,
+    vx: (Math.random() - 0.5) * 2, vy: 2.5, vz: (Math.random() - 0.5) * 2
+  })));
+}
+
+// ---- Büyüme: fidanlar ve buğday (yüklü chunk'lar taranır, sadece oda yönetimi olan cihazda) ----
+const GROW = [SAPLING, 77, 78, 79];
+
+function wetNear(x, y, z) {   // 4 blok yarıçapında su var mı
+  for (let dx = -4; dx <= 4; dx++) for (let dz = -4; dz <= 4; dz++) {
+    if (get(x + dx, y - 1, z + dz) === WATER || get(x + dx, y, z + dz) === WATER) return true;
+  }
+  return false;
+}
+
+function growTick() {
+  const r = G.room;
+  if (!r || !r.sim) return;
+  eachBlock(GROW, (x, y, z, t) => {
+    if (t === SAPLING) {
+      if (Math.random() > 0.06) return;
+      if (![1, 2, 6, 8].includes(get(x, y - 1, z))) return;
+      const plan = planTree(x, y, z, Math.random() < 0.35);
+      if (!plan) return;
+      for (const b of plan) { set(b.x, b.y, b.z, b.t); commit(b.x, b.y, b.z, b.t); }
+      return;
+    }
+    if (get(x, y - 1, z) !== FARM) { popPlant(x, y, z); return; }   // toprak yoksa tohum düşer
+    if (Math.random() < (wetNear(x, y, z) ? 0.2 : 0.07)) { set(x, y, z, t + 1); commit(x, y, z, t + 1); }
+  });
+  rebuild();
 }
 
 export function initActions() {
   // Düşen kum/kar ve akan sıvılar da kaydedilsin, odadaki herkese gitsin
   ghooks.onChange = (x, y, z, t) => commit(x, y, z, t);
-  setInterval(growSaplings, 2000);
+  setInterval(growTick, 3000);
 }
 
 // ---- Yapraklar: gövde bitince zamanla çürür ----
@@ -122,7 +166,7 @@ function decayLeaves(cx, cy, cz) {
 // Bakılan bloğu kırar. mining.js süre dolunca çağırır.
 // canDrop=false: gereken alet yok, eşya düşmez. Bedrock'ta sadece uyarı verir.
 export function breakBlock(canDrop = true) {
-  if (isDead() || isDrawOpen() || !target) return;
+  if (isDead() || isDrawOpen() || isCraftOpen() || !target) return;
   const [x, y, z] = target;
   const t = get(x, y, z);
   if (t === BEDROCK) return toast('Katman kayası kırılamaz');
@@ -136,12 +180,15 @@ export function breakBlock(canDrop = true) {
     }
   }
   set(x, y, z, 0);
-  if (canDrop) give(t);
+  if (canDrop) for (const [it, n] of dropsOf(t)) give(it, n);
   else toast('⚠️ Bu blok için daha iyi kazma gerekir, eşya düşmedi');
   commit(x, y, z, 0);
+  popPlant(x, y + 1, z);   // üstündeki bitki desteksiz kalır
   if (isLeaf(t) && canDrop && !isCreative()) leafDrop(x, y, z, t);
   if (isLog(t)) decayLeaves(x, y, z);   // her odun tek tek kırılır, yapraklar son odundan sonra çürür
   queueFall(x, y + 1, z); // üstündeki kum/kar düşsün
+  const sel = eco.sel;
+  if (isGear(sel) && hardTime(t) >= 0.5) afterWear(sel, TOOLS[sel] && TOOLS[sel][0] === 'sword' ? 2 : 1);
   sfx.breakB();
   rebuild(); drawHud();
 }
@@ -210,11 +257,43 @@ function useCanvas() {
   else openDraw(null, place);
 }
 
-// Koy: blok yerleştirir, kova/tuval kullanır, yiyecekse yer
-export function placeBlock() {
-  if (isDead() || isDrawOpen()) return;
+// Çapa: bakılan çimen/toprak bloğunu işlenmiş toprak yapar
+function useHoe() {
   const t = eco.sel;
-  if (isTool(t)) return toast('Bu bir alet: bloğa basılı tutup kır');
+  if (eco.inv[t] < 1) return toast('Çapa yok.');
+  if (!target) return toast('Çapayla çimen ya da toprak bloğuna bak');
+  const [x, y, z] = target, b = get(x, y, z);
+  if ((b !== 1 && b !== 2) || get(x, y + 1, z) !== 0) return toast('Çapa, üstü boş çimen/toprak bloğunu işler');
+  set(x, y, z, FARM);
+  commit(x, y, z, FARM);
+  sfx.place();
+  afterWear(t, 1);
+  rebuild(); drawHud();
+}
+
+// Tohum: işlenmiş toprağa ekilir
+function plantSeeds() {
+  if (eco.inv[SEEDS] < 1) return toast('Tohum yok.');
+  if (!target || get(target[0], target[1], target[2]) !== FARM) return toast('Tohum işlenmiş toprağa ekilir. Önce çapayla toprağı işle.');
+  const [x, y, z] = target;
+  if (get(x, y + 1, z) !== 0) return;
+  set(x, y + 1, z, CROP_MIN);
+  commit(x, y + 1, z, CROP_MIN);
+  take(SEEDS);
+  sfx.place();
+  rebuild(); drawHud();
+}
+
+// Koy: çalışma masasını açar, çapa/tohum/kova/tuval kullanır, yiyecekse yer, değilse blok yerleştirir
+export function placeBlock() {
+  if (isDead() || isDrawOpen() || isCraftOpen()) return;
+  const t = eco.sel;
+  if (target && get(target[0], target[1], target[2]) === CRAFT) return openCraft(3);
+  const tl = TOOLS[t];
+  if (tl && tl[0] === 'hoe') return useHoe();
+  if (isTool(t)) return toast('Bu bir alet: bloğa basılı tutup kır, kılıçla vur');
+  if (t === SEEDS) return plantSeeds();
+  if (t === STICK || t === WHEAT) return toast('Bu eşya yerleştirilemez');
   if (FOOD[t]) {
     if (eco.inv[t] < 1) return toast(TYPES[t].name + ' yok.');
     if (food.cur >= food.max) return toast('Karnın tok');
@@ -240,17 +319,16 @@ export function placeBlock() {
   set(x, y, z, t);
   if (collides(P.x, P.y, P.z)) { set(x, y, z, 0); return; }
   commit(x, y, z, t);
-  if (t === SAPLING) trackSapling(x, y, z);
   if (isFalling(t)) queueFall(x, y, z); // altı boşsa düşer
   take(t);
   sfx.place();
   rebuild(); drawHud();
 }
 
-// Vur: hayvanlara her zaman, oyunculara sadece PVP açıkken
+// Vur: hayvanlara her zaman, oyunculara sadece PVP açıkken. Kılıç hayvanlara fazla hasar verir.
 export function attack() {
   const room = G.room;
-  if (isDead() || isDrawOpen() || !room) return;
+  if (isDead() || isDrawOpen() || isCraftOpen() || !room) return;
   const now = Date.now();
   if (now - lastAtk < 450) return;
   lastAtk = now;
@@ -261,6 +339,8 @@ export function attack() {
   const o = G.online;
   if (o) o.swing();
 
+  const sel = eco.sel, tl = TOOLS[sel], has = (eco.inv[sel] || 0) > 0;
+  const isSword = !!tl && tl[0] === 'sword' && has;
   const m = findMob(ex, ey, ez, dx, dy, dz, 4.5);
   const p = (o && room.pvp) ? o.findPlayer(ex, ey, ez, dx, dy, dz, 4.5) : null;
   if (p && (!m || p.t <= m.t)) {
@@ -270,7 +350,9 @@ export function attack() {
   }
   if (m) {
     sfx.hit();
-    if (room.solo || room.isOwner) hurtMob(m.id, MOB_DMG, P.x, P.z);
-    else if (o) o.sendMobHit(m.id, MOB_DMG, P.x, P.z);
+    const dmg = MOB_DMG + (isSword ? tl[1] : 0);
+    if (room.solo || room.sim) hurtMob(m.id, dmg, P.x, P.z);
+    else if (o) o.sendMobHit(m.id, dmg, P.x, P.z);
+    if (isGear(sel) && has) afterWear(sel, isSword ? 1 : 2);
   }
-}
+                                              }
