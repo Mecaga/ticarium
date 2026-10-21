@@ -1,0 +1,47 @@
+export const LOG = 'log';   // 4 (meşe odun) ya da 13 (huş odun)
+const P = 70, S = 71, C = 3, W = 74;
+
+// pat: şekilli tarif (0 = boş hücre), shapeless: şekilsiz. out: [eşya, adet]
+export const RECIPES = [
+  { out: [70, 4], shapeless: [LOG] },                              // 1 kütük → 4 tahta
+  { out: [71, 4], pat: [[P], [P]] },                               // 2 tahta → 4 çubuk
+  { out: [72, 1], pat: [[P, P], [P, P]] },                         // çalışma masası
+  { out: [75, 1], pat: [[W, W, W]] },                              // ekmek
+  { out: [30, 1], pat: [[C, 0, C], [0, C, 0]] },                   // kova (3 taş, V şekli)
+  { out: [32, 1], pat: [[S, S, S], [S, 16, S], [S, S, S]] }        // tuval (çubuk + yün)
+];
+
+// [malzeme, kazma, balta, kürek, çapa, kılıç]
+for (const [m, pick, axe, shovel, hoe, sword] of [[P, 50, 57, 59, 61, 65], [C, 51, 58, 60, 62, 66]]) {
+  RECIPES.push({ out: [pick, 1], pat: [[m, m, m], [0, S, 0], [0, S, 0]] });
+  RECIPES.push({ out: [axe, 1], pat: [[m, m], [m, S], [0, S]] });
+  RECIPES.push({ out: [shovel, 1], pat: [[m], [S], [S]] });
+  RECIPES.push({ out: [hoe, 1], pat: [[m, m], [0, S], [0, S]] });
+  RECIPES.push({ out: [sword, 1], pat: [[m], [m], [S]] });
+}
+
+const ok = (tok, t) => (tok === 0 ? t === 0 : tok === LOG ? (t === 4 || t === 13) : tok === t);
+
+// cells: size*size uzunluğunda tür dizisi (0 = boş). Dönüş: [eşya, adet] ya da null
+export function findRecipe(cells, size) {
+  let r0 = size, r1 = -1, c0 = size, c1 = -1;
+  for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) {
+    if (cells[r * size + c]) { r0 = Math.min(r0, r); r1 = Math.max(r1, r); c0 = Math.min(c0, c); c1 = Math.max(c1, c); }
+  }
+  if (r1 < 0) return null;
+  const h = r1 - r0 + 1, w = c1 - c0 + 1;
+  const sub = [];
+  for (let r = 0; r < h; r++) { const row = []; for (let c = 0; c < w; c++) row.push(cells[(r0 + r) * size + c0 + c]); sub.push(row); }
+  const items = cells.filter(t => t);
+  for (const rc of RECIPES) {
+    if (rc.shapeless) {
+      if (items.length === rc.shapeless.length && rc.shapeless.every((tok, i) => ok(tok, items[i]))) return rc.out;
+      continue;
+    }
+    const pat = rc.pat;
+    if (pat.length !== h || pat[0].length !== w) continue;
+    const test = mirror => pat.every((row, r) => row.every((tok, c) => ok(tok, sub[r][mirror ? w - 1 - c : c])));
+    if (test(false) || test(true)) return rc.out;
+  }
+  return null;
+}
