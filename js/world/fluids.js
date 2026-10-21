@@ -10,6 +10,8 @@ const key = (x, y, z) => ((x + OFF) * SPAN + (z + OFF)) * 32 + y;
 const maxLv = t => (t === WATER ? 5 : 3);   // su 5 blok, lav 3 blok yayılır
 // Yüklü olmayan chunk dolu sayılır (sıvı oraya akmaz)
 const free = (x, y, z) => { if (!isLoaded(x, z)) return false; const t = get(x, y, z); return t === 0 || isPlant(t); };
+// Sıvının geçebileceği hücre: boş, bitki ya da aynı sıvı
+const pass = (x, y, z, t) => { if (!isLoaded(x, z)) return false; const c = get(x, y, z); return c === 0 || isPlant(c) || c === t; };
 
 function queue(x, y, z) { if (inBounds(x, y, z)) q.add(key(x, y, z)); }
 
@@ -48,13 +50,27 @@ function contact(x, y, z, t) {
   return false;
 }
 
+// Bu hücreden başlayıp en yakın düşüşe (altı boş hücre) uzaklık. 99 = 4 blok içinde düşüş yok.
+function holeDist(x, y, z, depth, fdx, fdz, t) {
+  let best = 99;
+  for (const [dx, dz] of H4) {
+    if (dx === -fdx && dz === -fdz) continue;
+    const nx = x + dx, nz = z + dz;
+    if (!pass(nx, y, nz, t)) continue;
+    if (free(nx, y - 1, nz)) return depth;
+    if (depth < 4) { const d = holeDist(nx, y, nz, depth + 1, dx, dz, t); if (d < best) best = d; }
+  }
+  return best;
+}
+
 function step(x, y, z) {
   if (!isLoaded(x, z)) return;
   const t = get(x, y, z);
   if (t !== WATER && t !== LAVA) return;
   if (contact(x, y, z, t)) return;
   const l = waterLvl(x, y, z), ML = maxLv(t);
-  if (l > 0) {
+
+  if (l > 0) {   // akan sıvı beslenmiyorsa kurur, seviyesi uymuyorsa düzelir
     let need = get(x, y + 1, z) === t ? 1 : 99;
     let srcs = 0;
     for (const [dx, dz] of H4) {
@@ -68,19 +84,31 @@ function step(x, y, z) {
         change(x, y, z, WATER); return;
       }
     }
-    if (need > ML) { change(x, y, z, 0); return; }              // beslenmiyor: kurur
+    if (need > ML) { change(x, y, z, 0); return; }
     if (need !== l) { change(x, y, z, t + need); return; }
   }
-  const fall = y > 0 && free(x, y - 1, z);
-  if (fall) change(x, y - 1, z, t + 1);                          // altı boşsa aşağı akar
-  if (l >= ML || (l > 0 && fall)) return;
-  for (const [dx, dz] of H4) {                                   // altında blok varsa yana yayılır
+
+  // 1) Yerçekimi önceliği: altı boşsa sadece aşağı akar (1 blok)
+  if (y > 0 && free(x, y - 1, z)) { change(x, y - 1, z, t + 1); return; }
+  if (l >= ML) return;
+
+  // 2) Altı doluysa yana yayılır. 4 blok içinde bir düşüş varsa o yöne akar, yoksa her yöne.
+  const dirs = [];
+  let min = 99;
+  for (const [dx, dz] of H4) {
     const nx = x + dx, nz = z + dz;
-    if (!isLoaded(nx, nz)) continue;
+    if (!pass(nx, y, nz, t)) continue;
+    const d = free(nx, y - 1, nz) ? 0 : holeDist(nx, y, nz, 1, dx, dz, t);
+    dirs.push([nx, nz, d]);
+    if (d < min) min = d;
+  }
+  for (const [nx, nz, d] of dirs) {
+    if (min < 99 && d !== min) continue;
     const nt = get(nx, y, nz);
     if (nt === 0 || isPlant(nt)) change(nx, y, nz, t + l + 1);
     else if (nt === t && waterLvl(nx, y, nz) > l + 1) change(nx, y, nz, t + l + 1);
   }
+  // Yayılacak yer yoksa hiçbir şey olmaz: sıvı durgun kalır
 }
 
 export function updateFluids(dt) {
@@ -95,7 +123,7 @@ export function updateFluids(dt) {
   for (const k of cur) {
     const y = k % 32, r = (k - y) / 32;
     const z = r % SPAN - OFF, x = Math.floor(r / SPAN) - OFF;
-    if (get(x, y, z) === LAVA && tick % 4 !== 0) { q.add(k); continue; }   // lav 4 kat yavaş akar
+    if (get(x, y, z) === LAVA && tick % 4 !== 0) { q.add(k); continue; }   // lav 4 kat yavaş (su 0,25 sn, lav 1 sn)
     if (n++ > 700) { q.add(k); continue; }
     step(x, y, z);
   }
