@@ -7,9 +7,11 @@ export const WATER_MAX = 24;    // 17 kaynak su, 18..24 akan su
 export const LAVA = 25, LAVA_MAX = 28;   // 25 kaynak lav, 26..28 akan lav
 export const BUCKET = 30, WBUCKET = 31, CANVAS = 32, LBUCKET = 33;
 export const OBSIDIAN = 34, NETHERITE = 35;
+export const COAL_ORE = 36, IRON_ORE = 37, GOLD_ORE = 38, DIAMOND_ORE = 39;
 export const FLOWER_MIN = 40, FLOWER_MAX = 45, APPLE = 46;
 export const PLANKS = 70, STICK = 71, CRAFT = 72, SEEDS = 73, WHEAT = 74, BREAD = 75, FARM = 76;
 export const CROP_MIN = 77, CROP_MAX = 80;   // buğday 4 büyüme aşaması (sadece blok)
+export const FURNACE = 81, COAL = 82, INGOT_I = 83, INGOT_G = 84, GEM = 85, COOKED = 86;
 export const isCrop = t => t >= CROP_MIN && t <= CROP_MAX;
 export const isPlant = t => t === SAPLING || (t >= FLOWER_MIN && t <= FLOWER_MAX) || isCrop(t);
 
@@ -35,6 +37,10 @@ export const TYPES = {
   33: { name: 'Lav kovası', color: 0xe8661a, base: 60 },
   34: { name: 'Obsidiyen', color: 0x1b1030, base: 90 },
   35: { name: 'Netherit blok', color: 0x4a3f45, base: 200 },
+  36: { name: 'Kömür cevheri', color: 0x454548, base: 20 },
+  37: { name: 'Demir cevheri', color: 0xd4aa8c, base: 40 },
+  38: { name: 'Altın cevheri', color: 0xfad646, base: 70 },
+  39: { name: 'Elmas cevheri', color: 0x5ae6e6, base: 150 },
   40: { name: 'Lavanta', color: 0x9a5fd0, base: 6 },
   41: { name: 'Papatya', color: 0xf5f5f5, base: 6 },
   42: { name: 'Gelincik', color: 0xd02228, base: 6 },
@@ -61,19 +67,37 @@ export const TYPES = {
   66: { name: 'Taş kılıç', color: 0x9a9a9a, base: 35 },
   67: { name: 'Demir kılıç', color: 0xd8d8d8, base: 70 },
   68: { name: 'Elmas kılıç', color: 0x4de0d0, base: 160 },
+  69: { name: 'Elmas balta', color: 0x4de0d0, base: 150 },
   70: { name: 'Tahta', color: 0xbc9862, base: 8 },
   71: { name: 'Çubuk', color: 0x8c6434, base: 3 },
   72: { name: 'Çalışma masası', color: 0xa07c4c, base: 30 },
   73: { name: 'Buğday tohumu', color: 0x5a8a32, base: 4 },
   74: { name: 'Buğday', color: 0xc8aa3c, base: 8 },
-  75: { name: 'Ekmek', color: 0xc89650, base: 20 }
+  75: { name: 'Ekmek', color: 0xc89650, base: 20 },
+  81: { name: 'Ocak', color: 0x8a8a8e, base: 40 },
+  82: { name: 'Kömür', color: 0x2a2a2e, base: 12 },
+  83: { name: 'Demir külçe', color: 0xd0d0da, base: 50 },
+  84: { name: 'Altın külçe', color: 0xf5c940, base: 80 },
+  85: { name: 'Elmas', color: 0x50e1d7, base: 160 },
+  86: { name: 'Pişmiş et', color: 0x96552f, base: 30 },
+  89: { name: 'Elmas kürek', color: 0x4de0d0, base: 140 },
+  91: { name: 'Demir miğfer', color: 0xd0d0da, base: 100 },
+  92: { name: 'Demir zırh', color: 0xd0d0da, base: 160 },
+  93: { name: 'Demir pantolon', color: 0xd0d0da, base: 140 },
+  94: { name: 'Demir bot', color: 0xd0d0da, base: 90 },
+  95: { name: 'Elmas miğfer', color: 0x50e1d7, base: 250 },
+  96: { name: 'Elmas zırh', color: 0x50e1d7, base: 400 },
+  97: { name: 'Elmas pantolon', color: 0x50e1d7, base: 350 },
+  98: { name: 'Elmas bot', color: 0x50e1d7, base: 200 }
 };
 
 export const CATS = [
-  ['🧱 Bloklar', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 16, 34, 35, 70, 72]],
+  ['🧱 Bloklar', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 16, 34, 35, 36, 37, 38, 39, 70, 72, 81]],
   ['🌱 Fidan ve çiçekler', [12, 40, 41, 42, 43, 44, 45, 73]],
-  ['🍎 Yiyecek', [15, 46, 74, 75]],
-  ['🪣 Aletler', [30, 31, 33, 32, 71, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68]]
+  ['🍎 Yiyecek', [15, 46, 74, 75, 86]],
+  ['🪣 Aletler', [30, 31, 33, 32, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 89]],
+  ['💎 Malzemeler', [71, 82, 83, 84, 85]],
+  ['🛡 Zırh', [91, 92, 93, 94, 95, 96, 97, 98]]
 ];
 
 // ---- Chunk deposu: yüklü chunk'lar + kalıcı değişiklikler (mods) ----
@@ -166,6 +190,16 @@ export function heightAt(x, z) {
   const f = 0.6 * vn(x / 38, z / 38, _seed) + 0.3 * vn(x / 17, z / 17, _seed + 1) + 0.1 * vn(x / 7, z / 7, _seed + 2);
   const g = Math.max(0, Math.min(1, 0.5 + (f - 0.5) * 1.7));
   return Math.max(3, Math.min(H - 9, Math.floor(3 + g * 21)));
+}
+
+// Yer altı cevherleri: derinleştikçe değerli olanlar çıkar, küçük damarlar halinde
+function oreAt(x, y, z) {
+  const cx = x >> 1, cy = y >> 1, cz = z >> 1;
+  if (y <= 6 && hash(cx * 7 + cy, cz * 5 + 3, _seed + 31) < 0.0014 && hash(x * 3 + y, z * 11, _seed + 35) < 0.7) return DIAMOND_ORE;
+  if (y <= 11 && hash(cx * 5 + cy * 3, cz * 7 + 1, _seed + 32) < 0.004 && hash(x * 5 + y * 2, z * 7, _seed + 36) < 0.7) return GOLD_ORE;
+  if (y <= 15 && hash(cx * 3 + cy * 5, cz * 11 + 2, _seed + 33) < 0.008 && hash(x * 7 + y, z * 5, _seed + 37) < 0.7) return IRON_ORE;
+  if (hash(cx * 11 + cy, cz * 3 + 4, _seed + 34) < 0.014 && hash(x * 2 + y * 3, z * 13, _seed + 38) < 0.7) return COAL_ORE;
+  return 0;
 }
 
 export function treeCells(x, y, z, birch) {
@@ -309,7 +343,8 @@ function genChunk(c) {
         else {
           t = 3;
           if (y >= 2 && y <= h - 3) {
-            if (hash(x * 31 + y * 7, z * 17 + y * 13, _seed + 3) < 0.007) t = 10;
+            const o = oreAt(x, y, z);
+            if (o) t = o;
             else if (y <= 3 && hash(x * 5 + y, z * 3, _seed + 6) < 0.004) t = OBSIDIAN;
             else if (y === 2 && hash(x, z, _seed + 18) < 0.0008) t = NETHERITE;
             else if (y === 3 && h >= 9 && hash(x >> 1, z >> 1, _seed + 5) < 0.012) t = LAVA;
@@ -604,4 +639,4 @@ export function updateTarget(camera) {
   if (!hl) return;
   hl.visible = !!target;
   if (target) hl.position.set(target[0] + 0.5, target[1] + 0.5, target[2] + 0.5);
-}
+                       }
