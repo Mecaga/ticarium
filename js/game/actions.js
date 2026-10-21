@@ -17,6 +17,7 @@ import { openDraw, isDrawOpen } from '../ui/draw.js';
 import { dropItems } from '../entities/items.js';
 import { isCreative } from './creative.js';
 import { isTool } from './mining.js';
+import { addItem } from './inventory.js';
 
 const FOOD = { 15: 6, 46: 4 };   // Et +6, Elma +4
 const MOB_DMG = 3;
@@ -25,8 +26,15 @@ const saplings = new Map();
 let lastAtk = 0;
 export const clearSaplings = () => saplings.clear();
 
-// Yaratıcı modda eşya harcanmaz, toplanmaz
-const give = (t, n = 1) => { if (!isCreative()) eco.inv[t] += n; };
+// Yaratıcı modda eşya harcanmaz, toplanmaz. Çanta doluysa fazlası yere düşer.
+const give = (t, n = 1) => {
+  if (isCreative()) return;
+  const a = addItem(t, n);
+  if (a < n) {
+    toast('🎒 Çanta dolu');
+    dropItems([{ t, c: n - a, x: P.x, y: P.y + 1.3, z: P.z, vx: (Math.random() - 0.5) * 2, vy: 2, vz: (Math.random() - 0.5) * 2 }]);
+  }
+};
 const take = (t, n = 1) => { if (!isCreative()) eco.inv[t] -= n; };
 const isLog = t => t === 4 || t === 13;
 const isLeaf = t => t === 5 || t === 14;
@@ -62,7 +70,7 @@ export function initActions() {
   setInterval(growSaplings, 2000);
 }
 
-// ---- Ağaç kesme: gövde + bağlı yapraklar ----
+// ---- Yapraklar: gövde bitince zamanla çürür ----
 function leafDrop(x, y, z, t) {
   const r = Math.random(), arr = [];
   const mk = id => ({
@@ -74,14 +82,8 @@ function leafDrop(x, y, z, t) {
   if (arr.length) dropItems(arr);
 }
 
-function hasLeafNear(x, y, z) {
-  for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) for (let dy = -2; dy <= 2; dy++) {
-    if (isLeaf(get(x + dx, y + dy, z + dz))) return true;
-  }
-  return false;
-}
-
-// Gövdeye 4 blok içinde kütük bulunmayan yapraklar çürür
+// Hiçbir gövdeye 4 blok içinde bağlı olmayan yapraklar yavaş yavaş kaybolur.
+// Ağacın başka odunları duruyorsa yapraklar kalır, son odun kırılınca çürüme başlar.
 function decayLeaves(cx, cy, cz) {
   const R = 6, key = (x, y, z) => x + ',' + y + ',' + z;
   const dist = new Map(), queue = [];
@@ -112,19 +114,9 @@ function decayLeaves(cx, cy, cz) {
         commit(x, y, z, 0);
         if (!isCreative()) leafDrop(x, y, z, t);
         rebuild();
-      }, 150 + Math.random() * 1500);
+      }, 1500 + Math.random() * 10500);
     }
   }
-}
-
-// Kırılan gövdenin üstündeki gövdeyi keser (ağaç gibiyse), yaprakları çürütür
-function chopTree(x, y, z, L) {
-  const col = [];
-  for (let cy = y + 1; get(x, cy, z) === L; cy++) col.push(cy);
-  const top = col.length ? col[col.length - 1] : y;
-  if (!hasLeafNear(x, top, z)) return;
-  for (const yy of col) { set(x, yy, z, 0); commit(x, yy, z, 0); give(L); }
-  decayLeaves(x, top, z);
 }
 
 // Bakılan bloğu kırar. mining.js süre dolunca çağırır.
@@ -148,7 +140,7 @@ export function breakBlock(canDrop = true) {
   else toast('⚠️ Bu blok için daha iyi kazma gerekir, eşya düşmedi');
   commit(x, y, z, 0);
   if (isLeaf(t) && canDrop && !isCreative()) leafDrop(x, y, z, t);
-  if (isLog(t)) chopTree(x, y, z, t);
+  if (isLog(t)) decayLeaves(x, y, z);   // her odun tek tek kırılır, yapraklar son odundan sonra çürür
   queueFall(x, y + 1, z); // üstündeki kum/kar düşsün
   sfx.breakB();
   rebuild(); drawHud();
