@@ -11,89 +11,66 @@ const TILE_NAMES = ['grassTop', 'grassSide', 'dirt', 'stone', 'woodSide', 'woodT
   'obsidian', 'netherite', 'pickW', 'pickS', 'pickI', 'pickD', 'pickN', 'axe', 'shovel',
   'planks', 'craftTop', 'craftSide', 'farmTop', 'wheat0', 'wheat1', 'wheat2', 'wheat3',
   'seeds', 'wheatI', 'bread', 'stick',
-  'axeW', 'axeS', 'shovelW', 'shovelS', 'hoeW', 'hoeS', 'hoeI', 'hoeD', 'swordW', 'swordS', 'swordI', 'swordD'];
+  'axeW', 'axeS', 'shovelW', 'shovelS', 'hoeW', 'hoeS', 'hoeI', 'hoeD', 'swordW', 'swordS', 'swordI', 'swordD',
+  'coalOre', 'ironOre', 'goldOre', 'diamondOre', 'furnaceTop', 'furnaceSide', 'coal', 'ingotI', 'ingotG', 'gem', 'cooked',
+  'axeD', 'shovelD', 'helmI', 'chestI', 'legI', 'bootI', 'helmD', 'chestD', 'legD', 'bootD'];
 const FLOWERS = new Set(['lavender', 'daisy', 'poppy', 'bpoppy', 'tulipo', 'tulipp']);
+const ITEMS = new Set(['seeds', 'wheatI', 'bread', 'stick', 'coal', 'ingotI', 'ingotG', 'gem', 'cooked']);
 const WOOD = [176, 136, 72], STONE = [150, 150, 150], IRON = [222, 222, 228], DIAM = [80, 225, 215], NETH = [92, 76, 88];
 // Aletler: [tür, kafa rengi]
 const TOOL = {
   pickW: ['pick', WOOD], pickS: ['pick', STONE], pickI: ['pick', IRON], pickD: ['pick', DIAM], pickN: ['pick', NETH],
-  axeW: ['axe', WOOD], axeS: ['axe', STONE], axe: ['axe', IRON],
-  shovelW: ['shovel', WOOD], shovelS: ['shovel', STONE], shovel: ['shovel', IRON],
+  axeW: ['axe', WOOD], axeS: ['axe', STONE], axe: ['axe', IRON], axeD: ['axe', DIAM],
+  shovelW: ['shovel', WOOD], shovelS: ['shovel', STONE], shovel: ['shovel', IRON], shovelD: ['shovel', DIAM],
   hoeW: ['hoe', WOOD], hoeS: ['hoe', STONE], hoeI: ['hoe', IRON], hoeD: ['hoe', DIAM],
   swordW: ['sword', WOOD], swordS: ['sword', STONE], swordI: ['sword', IRON], swordD: ['sword', DIAM]
 };
+const ARM = {
+  helmI: ['helm', IRON], chestI: ['chest', IRON], legI: ['leg', IRON], bootI: ['boot', IRON],
+  helmD: ['helm', DIAM], chestD: ['chest', DIAM], legD: ['leg', DIAM], bootD: ['boot', DIAM]
+};
+const ORE_COL = { coalOre: [40, 40, 46], ironOre: [216, 172, 140], goldOre: [250, 214, 70], diamondOre: [90, 232, 232] };
 const TI = {};
 TILE_NAMES.forEach((n, i) => { TI[n] = i; });
 export const T = TILE_NAMES.length;
 
+const same = n => [TI[n], TI[n], TI[n]];
 // [üst, yan, alt]
 export const FACE_TILES = {
   1: [TI.grassTop, TI.grassSide, TI.dirt],
   2: [TI.dirt, TI.dirt, TI.dirt],
   3: [TI.stone, TI.stone, TI.stone],
   4: [TI.woodTop, TI.woodSide, TI.woodTop],
-  5: [TI.leaves, TI.leaves, TI.leaves],
-  6: [TI.sand, TI.sand, TI.sand],
-  7: [TI.brick, TI.brick, TI.brick],
-  8: [TI.snow, TI.snow, TI.snow],
-  9: [TI.glass, TI.glass, TI.glass],
-  10: [TI.gold, TI.gold, TI.gold],
-  11: [TI.bedrock, TI.bedrock, TI.bedrock],
-  12: [TI.sapling, TI.sapling, TI.sapling],
+  5: same('leaves'), 6: same('sand'), 7: same('brick'), 8: same('snow'), 9: same('glass'), 10: same('gold'),
+  11: same('bedrock'), 12: same('sapling'),
   13: [TI.birchTop, TI.birchSide, TI.birchTop],
-  14: [TI.birchLeaf, TI.birchLeaf, TI.birchLeaf],
-  15: [TI.meat, TI.meat, TI.meat],
-  16: [TI.wool, TI.wool, TI.wool],
-  17: [TI.water, TI.water, TI.water],
-  25: [TI.lava, TI.lava, TI.lava],
-  30: [TI.bucket, TI.bucket, TI.bucket],
-  31: [TI.wbucket, TI.wbucket, TI.wbucket],
-  32: [TI.paint, TI.paint, TI.paint],
-  33: [TI.lbucket, TI.lbucket, TI.lbucket],
-  34: [TI.obsidian, TI.obsidian, TI.obsidian],
-  35: [TI.netherite, TI.netherite, TI.netherite],
-  40: [TI.lavender, TI.lavender, TI.lavender],
-  41: [TI.daisy, TI.daisy, TI.daisy],
-  42: [TI.poppy, TI.poppy, TI.poppy],
-  43: [TI.bpoppy, TI.bpoppy, TI.bpoppy],
-  44: [TI.tulipo, TI.tulipo, TI.tulipo],
-  45: [TI.tulipp, TI.tulipp, TI.tulipp],
-  46: [TI.apple, TI.apple, TI.apple],
-  50: [TI.pickW, TI.pickW, TI.pickW],
-  51: [TI.pickS, TI.pickS, TI.pickS],
-  52: [TI.pickI, TI.pickI, TI.pickI],
-  53: [TI.pickD, TI.pickD, TI.pickD],
-  54: [TI.pickN, TI.pickN, TI.pickN],
-  55: [TI.axe, TI.axe, TI.axe],
-  56: [TI.shovel, TI.shovel, TI.shovel],
-  57: [TI.axeW, TI.axeW, TI.axeW],
-  58: [TI.axeS, TI.axeS, TI.axeS],
-  59: [TI.shovelW, TI.shovelW, TI.shovelW],
-  60: [TI.shovelS, TI.shovelS, TI.shovelS],
-  61: [TI.hoeW, TI.hoeW, TI.hoeW],
-  62: [TI.hoeS, TI.hoeS, TI.hoeS],
-  63: [TI.hoeI, TI.hoeI, TI.hoeI],
-  64: [TI.hoeD, TI.hoeD, TI.hoeD],
-  65: [TI.swordW, TI.swordW, TI.swordW],
-  66: [TI.swordS, TI.swordS, TI.swordS],
-  67: [TI.swordI, TI.swordI, TI.swordI],
-  68: [TI.swordD, TI.swordD, TI.swordD],
-  70: [TI.planks, TI.planks, TI.planks],
-  71: [TI.stick, TI.stick, TI.stick],
+  14: same('birchLeaf'), 15: same('meat'), 16: same('wool'), 17: same('water'), 25: same('lava'),
+  30: same('bucket'), 31: same('wbucket'), 32: same('paint'), 33: same('lbucket'),
+  34: same('obsidian'), 35: same('netherite'),
+  36: same('coalOre'), 37: same('ironOre'), 38: same('goldOre'), 39: same('diamondOre'),
+  40: same('lavender'), 41: same('daisy'), 42: same('poppy'), 43: same('bpoppy'), 44: same('tulipo'), 45: same('tulipp'),
+  46: same('apple'),
+  50: same('pickW'), 51: same('pickS'), 52: same('pickI'), 53: same('pickD'), 54: same('pickN'),
+  55: same('axe'), 56: same('shovel'), 57: same('axeW'), 58: same('axeS'), 59: same('shovelW'), 60: same('shovelS'),
+  61: same('hoeW'), 62: same('hoeS'), 63: same('hoeI'), 64: same('hoeD'),
+  65: same('swordW'), 66: same('swordS'), 67: same('swordI'), 68: same('swordD'),
+  69: same('axeD'),
+  70: same('planks'), 71: same('stick'),
   72: [TI.craftTop, TI.craftSide, TI.planks],
-  73: [TI.seeds, TI.seeds, TI.seeds],
-  74: [TI.wheatI, TI.wheatI, TI.wheatI],
-  75: [TI.bread, TI.bread, TI.bread],
+  73: same('seeds'), 74: same('wheatI'), 75: same('bread'),
   76: [TI.farmTop, TI.dirt, TI.dirt],
-  77: [TI.wheat0, TI.wheat0, TI.wheat0],
-  78: [TI.wheat1, TI.wheat1, TI.wheat1],
-  79: [TI.wheat2, TI.wheat2, TI.wheat2],
-  80: [TI.wheat3, TI.wheat3, TI.wheat3]
+  77: same('wheat0'), 78: same('wheat1'), 79: same('wheat2'), 80: same('wheat3'),
+  81: [TI.furnaceTop, TI.furnaceSide, TI.stone],
+  82: same('coal'), 83: same('ingotI'), 84: same('ingotG'), 85: same('gem'), 86: same('cooked'),
+  89: same('shovelD'),
+  91: same('helmI'), 92: same('chestI'), 93: same('legI'), 94: same('bootI'),
+  95: same('helmD'), 96: same('chestD'), 97: same('legD'), 98: same('bootD')
 };
 
 // Blok olmayan eşyalar: yerde ve ikonda düz sprite olarak görünür
 const FLAT = new Set([12, 15, 30, 31, 33, 40, 41, 42, 43, 44, 45, 46, 71, 73, 74, 75]);
 for (let i = 50; i <= 68; i++) FLAT.add(i);
+for (const i of [69, 82, 83, 84, 85, 86, 89, 91, 92, 93, 94, 95, 96, 97, 98]) FLAT.add(i);
 export const isFlat = t => FLAT.has(t);
 
 export const atlas = { tex: null, T, cv: null };
@@ -112,9 +89,13 @@ const BASE = {
   obsidian: [26, 16, 44], netherite: [74, 64, 70],
   planks: [188, 152, 98], craftTop: [160, 124, 76], craftSide: [170, 134, 84], farmTop: [92, 60, 34],
   wheat0: [96, 175, 70], wheat1: [84, 160, 60], wheat2: [150, 175, 60], wheat3: [196, 164, 66],
-  seeds: [90, 120, 50], wheatI: [200, 170, 60], bread: [200, 150, 80], stick: [140, 100, 52]
+  seeds: [90, 120, 50], wheatI: [200, 170, 60], bread: [200, 150, 80], stick: [140, 100, 52],
+  coalOre: [150, 148, 144], ironOre: [150, 148, 144], goldOre: [150, 148, 144], diamondOre: [150, 148, 144],
+  furnaceTop: [128, 128, 132], furnaceSide: [140, 140, 144],
+  coal: [40, 40, 44], ingotI: [205, 205, 214], ingotG: [248, 204, 60], gem: [80, 225, 215], cooked: [150, 85, 50]
 };
 for (const n in TOOL) BASE[n] = TOOL[n][1];
+for (const n in ARM) BASE[n] = ARM[n][1];
 
 // Kaldırım taşı için hücre noktaları (kenarlar birleşsin diye sarmalı)
 const SEEDS = Array.from({ length: 8 }, (_, i) => [hash(i, 1, 50) * 16, hash(i, 2, 50) * 16]);
@@ -172,7 +153,14 @@ function wheatPix(s, x, y) {
   return null;
 }
 
-// Çubuk, tohum, buğday, ekmek
+function ingotPix(col, x, y) {
+  if (y < 6 || y > 10) return null;
+  const s = 10 - y;
+  if (x < 3 + s || x > 10 + s) return null;
+  return y <= 7 ? col.map(v => Math.min(255, v + 30)) : col;
+}
+
+// Çubuk, tohum, buğday, ekmek, kömür, külçe, elmas, pişmiş et
 function itemPix(name, x, y) {
   if (name === 'stick') return ((x + y === 16 || x + y === 17) && x >= 4 && x <= 12) ? [140, 100, 52] : null;
   if (name === 'seeds') {
@@ -187,6 +175,23 @@ function itemPix(name, x, y) {
       if (y >= 2 && y <= 7 && Math.abs(x - (c + 2)) <= (y % 2 === 0 ? 1 : 0)) return [230, 195, 85];
     }
     return null;
+  }
+  if (name === 'coal') {
+    const e = Math.pow((x - 7.5) / 5.2, 2) + Math.pow((y - 8.5) / 4.2, 2);
+    if (e >= 1) return null;
+    return (hash(x, y, 120) < 0.18 || (x === 5 && y === 6)) ? [105, 105, 118] : [38, 38, 44];
+  }
+  if (name === 'ingotI') return ingotPix([205, 205, 214], x, y);
+  if (name === 'ingotG') return ingotPix([248, 204, 60], x, y);
+  if (name === 'gem') {
+    const e = Math.abs(x - 7.5) / 6 + Math.abs(y - 8) / 5.5;
+    if (e >= 1) return null;
+    return (x + y < 12 && x < 8) ? [170, 250, 245] : (x > 8 ? [48, 180, 175] : [80, 225, 215]);
+  }
+  if (name === 'cooked') {
+    const e = Math.pow((x - 7.5) / 6, 2) + Math.pow((y - 8.5) / 4.6, 2);
+    if (e >= 1) return null;
+    return (x + y) % 5 === 0 ? [215, 130, 75] : (y < 8 ? [168, 100, 56] : [128, 72, 40]);
   }
   const e = Math.pow((x - 7.5) / 6, 2) + Math.pow((y - 9) / 3.6, 2);   // ekmek
   return e < 1 ? (y < 8 ? [215, 165, 90] : [185, 125, 60]) : null;
@@ -216,6 +221,19 @@ function toolPix(kind, col, x, y) {
   return null;
 }
 
+// Zırh pikselleri: miğfer, göğüslük, pantolon, bot
+function armorPix(kind, col, x, y) {
+  const dx = Math.abs(x - 7.5);
+  let on;
+  if (kind === 'helm') on = y >= 3 && y <= 10 && dx <= (y < 5 ? 3.5 : 5) && !(y >= 8 && dx <= 2);
+  else if (kind === 'chest') on = (y >= 3 && y <= 5 && dx >= 2 && dx <= 6.5) || (y >= 6 && y <= 13 && dx <= 4.5) || (y >= 6 && y <= 9 && dx > 4.5 && dx <= 6.5);
+  else if (kind === 'leg') on = (y >= 3 && y <= 5 && dx <= 4.5) || (y >= 6 && y <= 13 && dx >= 0.9 && dx <= 4.5);
+  else on = (y >= 8 && y <= 12 && dx >= 0.9 && dx <= 5.5) || (y === 13 && dx >= 0.9 && dx <= 6.5);
+  if (!on) return null;
+  const rim = (y === 3 || y === 13) ? 0.78 : 1;
+  return col.map(v => Math.round(v * rim));
+}
+
 function buildAtlas() {
   const cv = document.createElement('canvas');
   cv.width = 16 * T; cv.height = 16;
@@ -240,13 +258,18 @@ function buildAtlas() {
         if (!c) continue;
         [r, g, b] = c;
         k = 0.92 + hash(x, y, i) * 0.16;
-      } else if (name === 'seeds' || name === 'wheatI' || name === 'bread' || name === 'stick') {
+      } else if (ITEMS.has(name)) {
         const c = itemPix(name, x, y);
         if (!c) continue;
         [r, g, b] = c;
         k = 0.93 + hash(x, y, i) * 0.14;
       } else if (TOOL[name]) {
         const c = toolPix(TOOL[name][0], TOOL[name][1], x, y);
+        if (!c) continue;
+        [r, g, b] = c;
+        k = 0.94 + hash(x, y, i) * 0.12;
+      } else if (ARM[name]) {
+        const c = armorPix(ARM[name][0], ARM[name][1], x, y);
         if (!c) continue;
         [r, g, b] = c;
         k = 0.94 + hash(x, y, i) * 0.12;
@@ -269,6 +292,31 @@ function buildAtlas() {
             const c = cobble(x, y);
             k = 0.78 + hash(c.id, 3, 51) * 0.42 + (hash(x, y, 8) - 0.5) * 0.08;
             if (c.edge < 0.9) k *= 0.55;
+            break;
+          }
+          case 'coalOre': case 'ironOre': case 'goldOre': case 'diamondOre': {
+            const c = cobble(x, y);
+            k = 0.78 + hash(c.id, 3, 51) * 0.42 + (hash(x, y, 8) - 0.5) * 0.08;
+            if (c.edge < 0.9) k *= 0.55;
+            if (hash(x >> 1, y >> 1, i + 200) < 0.5 && hash(x, y, i + 201) < 0.85) {
+              [r, g, b] = ORE_COL[name];
+              k = 0.85 + hash(x, y, i + 202) * 0.3;
+            }
+            break;
+          }
+          case 'furnaceTop':
+            k = 0.9 + hash(x, y, 121) * 0.2;
+            if (x < 1 || y < 1 || x > 14 || y > 14) { r = 80; g = 80; b = 84; k = 1; }
+            else if (x > 3 && x < 12 && y > 3 && y < 12) { r = 55; g = 55; b = 60; k = 1; }
+            break;
+          case 'furnaceSide': {
+            const c = cobble(x, y);
+            k = 0.8 + hash(c.id, 3, 52) * 0.35;
+            if (c.edge < 0.9) k *= 0.6;
+            if (x >= 4 && x <= 11 && y >= 6 && y <= 12) {
+              r = 28; g = 28; b = 32; k = 1;
+              if (y >= 10 && hash(x, y, 122) < 0.8) { r = 235; g = 125; b = 30; }
+            }
             break;
           }
           case 'bedrock': {
@@ -407,4 +455,4 @@ export function iconURL(t) {
   const u = c.toDataURL();
   icons.set(t, u);
   return u;
-  }
+    }
