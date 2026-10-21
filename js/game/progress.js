@@ -8,6 +8,7 @@ import { food, setFood } from '../entities/hunger.js';
 import { G } from '../core/state.js';
 import { stack } from '../world/paints.js';
 import { survivalInv } from './creative.js';
+import { layout, SLOTS } from './inventory.js';
 
 // Odadaki herkesin envanteri kendi hesabına kaydedilir
 const SAVE_GUEST = true;
@@ -54,7 +55,7 @@ function snapshotState() {
   for (const t in TYPES) inv['t' + t] = real[t] || 0;
   const r = n => +n.toFixed(2);
   return {
-    inv, hotbar: eco.hotbar.slice(), hsel: eco.hsel, food: food.cur, stack: stack.slice(),
+    inv, layout: layout().slice(), hotbar: eco.hotbar.slice(), hsel: eco.hsel, food: food.cur, stack: stack.slice(),
     x: r(P.x), y: r(P.y), z: r(P.z), yaw: r(P.yaw), pitch: r(P.pitch), t: Date.now()
   };
 }
@@ -67,6 +68,7 @@ export function applyState(s) {
       if (k in s.inv) eco.inv[t] = Math.max(0, Math.floor(+s.inv[k] || 0));
     }
   }
+  if (Array.isArray(s.layout) && s.layout.length === SLOTS) eco.layout = s.layout.map(t => (TYPES[t] ? +t : 0));
   if (Array.isArray(s.hotbar) && s.hotbar.length === eco.hotbar.length && s.hotbar.every(t => TYPES[t])) {
     eco.hotbar = s.hotbar.map(Number);
   }
