@@ -1,12 +1,14 @@
 import { eco } from './economy.js';
 import { isCreative } from './creative.js';
 
-// Dayanıklılık (kaç kullanım). Alet, kılıç ve ileride zırh buraya eklenir.
+// Dayanıklılık (kaç kullanım). Aletler, kılıçlar ve zırhlar.
 export const MAXDUR = {
   50: 59, 51: 131, 52: 250, 53: 1561, 54: 2031,
-  55: 250, 56: 250, 57: 59, 58: 131, 59: 59, 60: 131,
+  55: 250, 56: 250, 57: 59, 58: 131, 59: 59, 60: 131, 69: 1561, 89: 1561,
   61: 59, 62: 131, 63: 250, 64: 1561,
-  65: 59, 66: 131, 67: 250, 68: 1561
+  65: 59, 66: 131, 67: 250, 68: 1561,
+  91: 165, 92: 240, 93: 225, 94: 195,
+  95: 363, 96: 528, 97: 495, 98: 429
 };
 export const isGear = t => !!MAXDUR[t];
 export const stackOf = t => (MAXDUR[t] ? 1 : 64);   // aletler üst üste dizilmez
@@ -41,7 +43,7 @@ export function wear(t, amt = 1) {
   return true;
 }
 
-// Çantadan bir aleti çıkarır (yere atmak için), dayanıklılığını döndürür
+// Çantadan bir aleti çıkarır (yere atmak ya da giymek için), dayanıklılığını döndürür
 export function takeInstance(t, idx = 0) {
   const a = durList(t);
   const d = a.splice(idx, 1)[0];
