@@ -9,6 +9,8 @@ import { G } from '../core/state.js';
 import { autosave } from './progress.js';
 import { sfx } from '../core/sound.js';
 import { drawHearts, flash } from '../ui/panels.js';
+import { isGear, durList } from './gear.js';
+import { returnCraft } from '../ui/craft.js';
 
 const deathEl = document.createElement('div');
 deathEl.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:#200;opacity:0;pointer-events:none;transition:opacity .4s;z-index:7;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;font-weight:700';
@@ -32,19 +34,32 @@ export function clearDeath() {
   deathEl.style.opacity = 0;
 }
 
+// Ölünce eşyalar saçılır. Aletler tek tek, kendi dayanıklılığıyla düşer.
 function scatter(px, py, pz) {
+  returnCraft();   // üretim masasındaki malzemeler çantaya döner
   let total = 0;
   for (const t in eco.inv) total += eco.inv[t];
   if (!total) return 0;
   const stack = Math.max(16, Math.ceil(total / 24));
   const arr = [];
+  const vel = () => {
+    const a = Math.random() * Math.PI * 2, sp = 2 + Math.random() * 3;
+    return { vx: Math.cos(a) * sp, vy: 4 + Math.random() * 3, vz: Math.sin(a) * sp };
+  };
   for (const t in eco.inv) {
+    const tt = +t;
+    if (isGear(tt)) {
+      const list = durList(tt).slice();
+      eco.inv[t] = 0;
+      eco.dur[tt] = [];
+      list.forEach(d => arr.push({ t: tt, c: 1, d, x: px, y: py + 1, z: pz, ...vel() }));
+      continue;
+    }
     let n = eco.inv[t];
     eco.inv[t] = 0;
     while (n > 0) {
       const c = Math.min(stack, n); n -= c;
-      const a = Math.random() * Math.PI * 2, sp = 2 + Math.random() * 3;
-      arr.push({ t: +t, c, x: px, y: py + 1, z: pz, vx: Math.cos(a) * sp, vy: 4 + Math.random() * 3, vz: Math.sin(a) * sp });
+      arr.push({ t: tt, c, x: px, y: py + 1, z: pz, ...vel() });
     }
   }
   dropItems(arr);
