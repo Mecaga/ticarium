@@ -10,6 +10,9 @@ import { stack } from '../world/paints.js';
 import { survivalInv } from './creative.js';
 import { layout, SLOTS } from './inventory.js';
 import { MAXDUR, durSnapshot } from './gear.js';
+import { ARMOR, SLOTS4 } from './armor.js';
+import { returnCraft, isCraftOpen } from '../ui/craft.js';
+import { returnFurnace, isFurnaceOpen } from '../ui/furnace.js';
 
 // Odadaki herkesin envanteri kendi hesabına kaydedilir
 const SAVE_GUEST = true;
@@ -54,9 +57,11 @@ function snapshotState() {
   const real = survivalInv();
   const inv = {};
   for (const t in TYPES) inv['t' + t] = real[t] || 0;
+  const armor = {}, armD = {};
+  for (const s of SLOTS4) { armor[s] = eco.armor[s] || 0; armD[s] = Math.round(eco.armDur[s] || 0); }
   const r = n => +n.toFixed(2);
   return {
-    inv, dur: durSnapshot(real), layout: layout().slice(), hotbar: eco.hotbar.slice(), hsel: eco.hsel,
+    inv, dur: durSnapshot(real), armor, armD, layout: layout().slice(), hotbar: eco.hotbar.slice(), hsel: eco.hsel,
     food: food.cur, stack: stack.slice(),
     x: r(P.x), y: r(P.y), z: r(P.z), yaw: r(P.yaw), pitch: r(P.pitch), t: Date.now()
   };
@@ -74,6 +79,15 @@ export function applyState(s) {
     for (const k in s.dur) {
       const t = +k.slice(1);
       if (MAXDUR[t] && s.dur[k]) eco.dur[t] = Object.values(s.dur[k]).map(Number);
+    }
+  }
+  if (s.armor) {
+    for (const sl of SLOTS4) {
+      const t = +s.armor[sl] || 0;
+      if (t && ARMOR[t] && ARMOR[t][0] === sl) {
+        eco.armor[sl] = t;
+        eco.armDur[sl] = Math.max(1, +(s.armD && s.armD[sl]) || MAXDUR[t]);
+      }
     }
   }
   if (Array.isArray(s.layout) && s.layout.length === SLOTS) eco.layout = s.layout.map(t => (TYPES[t] ? +t : 0));
@@ -98,6 +112,11 @@ export function autosave(manual, force) {
   if (!room) return;
   if (!canSave()) { if (manual) toast('Bu dünyada kayıt kapalı'); return; }
   if (isDead() && !force) return;
+  // Üretim ya da ocak paneli açıkken malzemeler çantadan çıkmıştır: zorunlu kayıtta geri verilir
+  if (isCraftOpen() || isFurnaceOpen()) {
+    if (!force) return;
+    returnCraft(); returnFurnace();
+  }
   flushGravity();
   const st = snapshotState();
   // Tek oyunculu dünya ve oda sahibi: dünyanın kendi kaydı. Diğer oyuncular: kendi hesabındaki oda kaydı.
@@ -117,6 +136,6 @@ export function autosave(manual, force) {
 
 export function initAutosave() {
   setInterval(() => autosave(false), 15000);
-  addEventListener('pagehide', () => autosave(false));
-  document.addEventListener('visibilitychange', () => { if (document.hidden) autosave(false); });
-          }
+  addEventListener('pagehide', () => autosave(false, true));
+  document.addEventListener('visibilitychange', () => { if (document.hidden) autosave(false, true); });
+}
