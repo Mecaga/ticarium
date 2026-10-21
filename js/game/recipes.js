@@ -1,5 +1,5 @@
 export const LOG = 'log';   // 4 (meşe odun) ya da 13 (huş odun)
-const P = 70, S = 71, C = 3, W = 74;
+const P = 70, S = 71, C = 3, W = 74, IRON = 83, GOLD = 84, GEM = 85;
 
 // pat: şekilli tarif (0 = boş hücre), shapeless: şekilsiz. out: [eşya, adet]
 export const RECIPES = [
@@ -8,16 +8,29 @@ export const RECIPES = [
   { out: [72, 1], pat: [[P, P], [P, P]] },                         // çalışma masası
   { out: [75, 1], pat: [[W, W, W]] },                              // ekmek
   { out: [30, 1], pat: [[C, 0, C], [0, C, 0]] },                   // kova (3 taş, V şekli)
-  { out: [32, 1], pat: [[S, S, S], [S, 16, S], [S, S, S]] }        // tuval (çubuk + yün)
+  { out: [32, 1], pat: [[S, S, S], [S, 16, S], [S, S, S]] },       // tuval (çubuk + yün)
+  { out: [81, 1], pat: [[C, C, C], [C, 0, C], [C, C, C]] },        // ocak (8 taş)
+  { out: [10, 1], pat: [[GOLD, GOLD, GOLD], [GOLD, GOLD, GOLD], [GOLD, GOLD, GOLD]] },   // altın blok (9 külçe)
+  { out: [84, 9], shapeless: [10] }                                // altın blok → 9 külçe
 ];
 
 // [malzeme, kazma, balta, kürek, çapa, kılıç]
-for (const [m, pick, axe, shovel, hoe, sword] of [[P, 50, 57, 59, 61, 65], [C, 51, 58, 60, 62, 66]]) {
+for (const [m, pick, axe, shovel, hoe, sword] of [
+  [P, 50, 57, 59, 61, 65], [C, 51, 58, 60, 62, 66], [IRON, 52, 55, 56, 63, 67], [GEM, 53, 69, 89, 64, 68]
+]) {
   RECIPES.push({ out: [pick, 1], pat: [[m, m, m], [0, S, 0], [0, S, 0]] });
   RECIPES.push({ out: [axe, 1], pat: [[m, m], [m, S], [0, S]] });
   RECIPES.push({ out: [shovel, 1], pat: [[m], [S], [S]] });
   RECIPES.push({ out: [hoe, 1], pat: [[m, m], [0, S], [0, S]] });
   RECIPES.push({ out: [sword, 1], pat: [[m], [m], [S]] });
+}
+
+// [malzeme, miğfer, zırh, pantolon, bot]
+for (const [m, helm, chest, legs, boots] of [[IRON, 91, 92, 93, 94], [GEM, 95, 96, 97, 98]]) {
+  RECIPES.push({ out: [helm, 1], pat: [[m, m, m], [m, 0, m]] });
+  RECIPES.push({ out: [chest, 1], pat: [[m, 0, m], [m, m, m], [m, m, m]] });
+  RECIPES.push({ out: [legs, 1], pat: [[m, m, m], [m, 0, m], [m, 0, m]] });
+  RECIPES.push({ out: [boots, 1], pat: [[m, 0, m], [m, 0, m]] });
 }
 
 const ok = (tok, t) => (tok === 0 ? t === 0 : tok === LOG ? (t === 4 || t === 13) : tok === t);
