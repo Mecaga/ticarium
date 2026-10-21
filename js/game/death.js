@@ -11,6 +11,8 @@ import { sfx } from '../core/sound.js';
 import { drawHearts, flash } from '../ui/panels.js';
 import { isGear, durList } from './gear.js';
 import { returnCraft } from '../ui/craft.js';
+import { returnFurnace } from '../ui/furnace.js';
+import { SLOTS4, reduce } from './armor.js';
 
 const deathEl = document.createElement('div');
 deathEl.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:#200;opacity:0;pointer-events:none;transition:opacity .4s;z-index:7;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;font-weight:700';
@@ -30,15 +32,17 @@ export function toSpawn() {
 }
 
 export function clearDeath() {
+  returnCraft(); returnFurnace();   // açık üretim ya da ocak paneli varsa içindekiler çantaya döner
   if (deathTimer) { clearTimeout(deathTimer); deathTimer = null; }
   deathEl.style.opacity = 0;
 }
 
-// Ölünce eşyalar saçılır. Aletler tek tek, kendi dayanıklılığıyla düşer.
+// Ölünce eşyalar saçılır. Aletler ve zırhlar tek tek, kendi dayanıklılığıyla düşer.
 function scatter(px, py, pz) {
-  returnCraft();   // üretim masasındaki malzemeler çantaya döner
+  returnCraft(); returnFurnace();
   let total = 0;
   for (const t in eco.inv) total += eco.inv[t];
+  for (const s of SLOTS4) if (eco.armor[s]) total++;
   if (!total) return 0;
   const stack = Math.max(16, Math.ceil(total / 24));
   const arr = [];
@@ -62,6 +66,12 @@ function scatter(px, py, pz) {
       arr.push({ t: tt, c, x: px, y: py + 1, z: pz, ...vel() });
     }
   }
+  for (const s of SLOTS4) {
+    const t = eco.armor[s];
+    if (!t) continue;
+    arr.push({ t, c: 1, d: eco.armDur[s], x: px, y: py + 1, z: pz, ...vel() });
+    eco.armor[s] = 0; eco.armDur[s] = 0;
+  }
   dropItems(arr);
   drawHud();
   return total;
@@ -75,6 +85,7 @@ function loseOnDeath(px, py, pz) {
 
 export function initDeath() {
   hhooks.onChange = drawHearts;
+  hhooks.reduce = reduce;   // zırh hasarı azaltır
   hhooks.onHurt = () => { flash(); sfx.hurt(); };
   hhooks.onDeath = src => {
     const pos = src.void ? [P.sx, P.sy, P.sz] : [P.x, P.y, P.z];
