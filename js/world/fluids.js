@@ -13,6 +13,17 @@ const free = (x, y, z) => { if (!isLoaded(x, z)) return false; const t = get(x, 
 // Sıvının geçebileceği hücre: boş, bitki ya da aynı sıvı
 const pass = (x, y, z, t) => { if (!isLoaded(x, z)) return false; const c = get(x, y, z); return c === 0 || isPlant(c) || c === t; };
 
+// Bu hücre yana yayılabilir mi?
+//  - altı boşsa: sadece aşağı akar, yatay hareket tamamen kesilir
+//  - akan sıvı, aynı sıvının üstündeyse (düşen sütun) yayılmaz
+//  - altı blokluysa yayılır; kaynak, aynı sıvının üstündeyse yayılır (deniz çukurları doldurur)
+function canSpread(x, y, z, t) {
+  if (y <= 0) return true;
+  if (free(x, y - 1, z)) return false;
+  if (get(x, y - 1, z) === t) return waterLvl(x, y, z) === 0;
+  return true;
+}
+
 function queue(x, y, z) { if (inBounds(x, y, z)) q.add(key(x, y, z)); }
 
 wh.fn = (x, y, z) => {
@@ -34,10 +45,10 @@ function change(x, y, z, raw) {
   if (ghooks.onChange) ghooks.onChange(x, y, z, raw);
 }
 
+// Komşu bu hücreyi yatay besliyor mu: veriyorsa seviye, yoksa 99
 function feed(x, y, z, t) {
   if (get(x, y, z) !== t) return 99;
-  const l = waterLvl(x, y, z);
-  return (l === 0 || !free(x, y - 1, z)) ? l + 1 : 99;
+  return canSpread(x, y, z, t) ? waterLvl(x, y, z) + 1 : 99;
 }
 
 // Su lava değerse: lav kaynağı obsidiyen, akan lav taş olur
@@ -88,11 +99,13 @@ function step(x, y, z) {
     if (need !== l) { change(x, y, z, t + need); return; }
   }
 
-  // 1) Yerçekimi önceliği: altı boşsa sadece aşağı akar (1 blok)
+  // 1) Yerçekimi önceliği: altı boşsa sadece aşağı akar, yatay momentum kesilir
   if (y > 0 && free(x, y - 1, z)) { change(x, y - 1, z, t + 1); return; }
-  if (l >= ML) return;
 
-  // 2) Altı doluysa yana yayılır. 4 blok içinde bir düşüş varsa o yöne akar, yoksa her yöne.
+  // 2) Yatay yayılım sadece altı kapalıysa (blok ya da kaynağın altındaki deniz)
+  if (!canSpread(x, y, z, t) || l >= ML) return;
+
+  // Altı doluysa yana yayılır. 4 blok içinde bir düşüş varsa o yöne akar, yoksa her yöne.
   const dirs = [];
   let min = 99;
   for (const [dx, dz] of H4) {
