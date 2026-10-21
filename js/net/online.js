@@ -1,4 +1,5 @@
-import { db, uid, ref, set, update, remove, push, get as dbGet, onValue } from '../core/firebase.js';
+import { db, ref, set, update, remove, push, get as dbGet, onValue } from '../core/firebase.js';
+import { uid } from '../core/auth.js';
 import { onChildAdded, onChildChanged, onChildRemoved, runTransaction, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import { set as setBlock, rebuild, TYPES, losBlocked } from '../world/world.js';
 import { P, knock } from '../entities/player.js';
