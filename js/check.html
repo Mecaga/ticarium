@@ -15,20 +15,21 @@ div{padding:3px 0;font-size:15px}
 <div id="out">Kontrol ediliyor...</div>
 <script>
 var files = {
-  'index.html': 'Kaydet ve Çık', 'css/style.css': '#chatBox', 'js/main.js': 'chunksReady',
-  'js/core/state.js': 'export const G', 'js/core/save.js': 'saveHooks', 'js/core/firebase.js': 'serverTimestamp', 'js/core/sound.js': 'splash',
-  'js/world/world.js': 'export function chunksReady', 'js/world/textures.js': 'pickW', 'js/world/fluids.js': 'eachFlow',
-  'js/world/gravity.js': 'WATER', 'js/world/sky.js': 'FOG_NEAR', 'js/world/paints.js': 'isLoaded',
+  'index.html': 'sAuth', 'css/style.css': '#chatBox', 'js/main.js': 'chunksReady',
+  'js/core/state.js': 'export const G', 'js/core/save.js': 'saveHooks', 'js/core/firebase.js': 'serverTimestamp',
+  'js/core/sound.js': 'splash', 'js/core/auth.js': 'export async function doRegister',
+  'js/world/world.js': 'export function chunksReady', 'js/world/textures.js': 'export function iconURL',
+  'js/world/fluids.js': 'holeDist', 'js/world/gravity.js': 'WATER', 'js/world/sky.js': 'FOG_NEAR', 'js/world/paints.js': 'isLoaded',
   'js/entities/player.js': 'isLoaded', 'js/entities/mobs.js': 'lavaT', 'js/entities/avatars.js': 'export function animateAvatar',
-  'js/entities/items.js': 'isLoaded', 'js/entities/health.js': 'god', 'js/entities/hunger.js': 'export function tickHunger',
+  'js/entities/items.js': 'spriteGeometry', 'js/entities/health.js': 'god', 'js/entities/hunger.js': 'export function tickHunger',
   'js/entities/vitals.js': 'export function tickVitals',
-  'js/net/cloud.js': 'replaceWorldData', 'js/net/rooms.js': 'hostWorld', 'js/net/online.js': 'recomputeSim',
-  'js/ui/menu.js': 'leaveRoom(opts)', 'js/ui/menu-lists.js': 'worldRooms', 'js/ui/menu-worlds.js': 'playWorld',
+  'js/net/cloud.js': 'userName', 'js/net/rooms.js': 'core/auth.js', 'js/net/online.js': 'core/auth.js',
+  'js/ui/menu.js': 'doRegister', 'js/ui/menu-lists.js': 'worldRooms', 'js/ui/menu-worlds.js': 'playWorld',
   'js/ui/dialog.js': 'export function askDialog', 'js/ui/panels.js': 'setChatVisible', 'js/ui/chat.js': 'runCommand',
-  'js/ui/bag.js': 'CATS', 'js/ui/draw.js': 'export function openDraw', 'js/ui/ui.js': 'MARKET_ON', 'js/ui/input.js': 'breakDown',
-  'js/game/actions.js': 'isTool', 'js/game/mining.js': 'makeCrack', 'js/game/session.js': 'requestLeave',
-  'js/game/progress.js': 'SAVE_GUEST = true', 'js/game/death.js': 'drown', 'js/game/creative.js': 'export function setCreative',
-  'js/game/commands.js': 'cmdVer', 'js/game/economy.js': 'export function startPriceTicker'
+  'js/ui/bag.js': 'bagTabs', 'js/ui/draw.js': 'export function openDraw', 'js/ui/ui.js': 'iconHTML', 'js/ui/input.js': 'breakDown',
+  'js/game/actions.js': 'decayLeaves', 'js/game/mining.js': 'makeCrack', 'js/game/session.js': 'requestLeave',
+  'js/game/progress.js': 'layout', 'js/game/death.js': 'drown', 'js/game/creative.js': 'export function setCreative',
+  'js/game/commands.js': 'addItem', 'js/game/economy.js': 'layout', 'js/game/inventory.js': 'export function syncLayout'
 };
 var names = Object.keys(files), out = document.getElementById('out');
 var rows = [], bad = 0, old = 0, done = 0;
