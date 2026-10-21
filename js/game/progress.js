@@ -9,6 +9,7 @@ import { G } from '../core/state.js';
 import { stack } from '../world/paints.js';
 import { survivalInv } from './creative.js';
 import { layout, SLOTS } from './inventory.js';
+import { MAXDUR, durSnapshot } from './gear.js';
 
 // Odadaki herkesin envanteri kendi hesabına kaydedilir
 const SAVE_GUEST = true;
@@ -55,7 +56,8 @@ function snapshotState() {
   for (const t in TYPES) inv['t' + t] = real[t] || 0;
   const r = n => +n.toFixed(2);
   return {
-    inv, layout: layout().slice(), hotbar: eco.hotbar.slice(), hsel: eco.hsel, food: food.cur, stack: stack.slice(),
+    inv, dur: durSnapshot(real), layout: layout().slice(), hotbar: eco.hotbar.slice(), hsel: eco.hsel,
+    food: food.cur, stack: stack.slice(),
     x: r(P.x), y: r(P.y), z: r(P.z), yaw: r(P.yaw), pitch: r(P.pitch), t: Date.now()
   };
 }
@@ -66,6 +68,12 @@ export function applyState(s) {
     for (const t in TYPES) {
       const k = 't' + t;
       if (k in s.inv) eco.inv[t] = Math.max(0, Math.floor(+s.inv[k] || 0));
+    }
+  }
+  if (s.dur) {
+    for (const k in s.dur) {
+      const t = +k.slice(1);
+      if (MAXDUR[t] && s.dur[k]) eco.dur[t] = Object.values(s.dur[k]).map(Number);
     }
   }
   if (Array.isArray(s.layout) && s.layout.length === SLOTS) eco.layout = s.layout.map(t => (TYPES[t] ? +t : 0));
@@ -111,4 +119,4 @@ export function initAutosave() {
   setInterval(() => autosave(false), 15000);
   addEventListener('pagehide', () => autosave(false));
   document.addEventListener('visibilitychange', () => { if (document.hidden) autosave(false); });
-}
+          }
