@@ -140,4 +140,4 @@ export function updateFluids(dt) {
     if (n++ > 700) { q.add(k); continue; }
     step(x, y, z);
   }
-  }
+}
