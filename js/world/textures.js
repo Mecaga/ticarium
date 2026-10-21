@@ -60,7 +60,11 @@ export const FACE_TILES = {
   56: [TI.shovel, TI.shovel, TI.shovel]
 };
 
-export const atlas = { tex: null, T };
+// Blok olmayan eşyalar: yerde ve ikonda düz sprite olarak görünür
+const FLAT = new Set([12, 15, 30, 31, 33, 40, 41, 42, 43, 44, 45, 46, 50, 51, 52, 53, 54, 55, 56]);
+export const isFlat = t => FLAT.has(t);
+
+export const atlas = { tex: null, T, cv: null };
 export const sideTile = t => FACE_TILES[t][1];
 
 const BASE = {
@@ -257,6 +261,7 @@ function buildAtlas() {
       ctx.fillRect(i * 16 + x, y, 1, 1);
     }
   });
+  atlas.cv = cv;
   const tex = new THREE.CanvasTexture(cv);
   tex.magFilter = THREE.NearestFilter;
   tex.minFilter = THREE.NearestFilter;
@@ -267,4 +272,33 @@ function buildAtlas() {
 export function initAtlas() {
   atlas.tex = buildAtlas();
   return atlas.tex;
+}
+
+// Envanter ikonu (data URL): bloklar küçük 3D küp, diğer eşyalar düz piksel sprite
+const icons = new Map();
+export function iconURL(t) {
+  if (icons.has(t)) return icons.get(t);
+  if (!atlas.cv || !FACE_TILES[t]) return '';
+  const c = document.createElement('canvas');
+  c.width = c.height = 32;
+  const g = c.getContext('2d');
+  g.imageSmoothingEnabled = false;
+  const ft = FACE_TILES[t];
+  if (FLAT.has(t)) {
+    g.drawImage(atlas.cv, ft[1] * 16, 0, 16, 16, 0, 0, 32, 32);
+  } else {
+    const face = (tile, m, shade) => {
+      g.save();
+      g.setTransform(m[0], m[1], m[2], m[3], m[4], m[5]);
+      g.drawImage(atlas.cv, tile * 16, 0, 16, 16, 0, 0, 16, 16);
+      if (shade) { g.fillStyle = 'rgba(0,0,0,' + shade + ')'; g.fillRect(0, 0, 16, 16); }
+      g.restore();
+    };
+    face(ft[0], [0.875, 0.4375, -0.875, 0.4375, 16, 2], 0);       // üst
+    face(ft[1], [0.875, 0.4375, 0, 0.875, 2, 9], 0.22);           // sol yüz
+    face(ft[1], [0.875, -0.4375, 0, 0.875, 16, 16], 0.42);        // sağ yüz
   }
+  const u = c.toDataURL();
+  icons.set(t, u);
+  return u;
+       }
