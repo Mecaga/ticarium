@@ -8,7 +8,10 @@ export const LAVA = 25, LAVA_MAX = 28;   // 25 kaynak lav, 26..28 akan lav
 export const BUCKET = 30, WBUCKET = 31, CANVAS = 32, LBUCKET = 33;
 export const OBSIDIAN = 34, NETHERITE = 35;
 export const FLOWER_MIN = 40, FLOWER_MAX = 45, APPLE = 46;
-export const isPlant = t => t === SAPLING || (t >= FLOWER_MIN && t <= FLOWER_MAX);
+export const PLANKS = 70, STICK = 71, CRAFT = 72, SEEDS = 73, WHEAT = 74, BREAD = 75, FARM = 76;
+export const CROP_MIN = 77, CROP_MAX = 80;   // buğday 4 büyüme aşaması (sadece blok)
+export const isCrop = t => t >= CROP_MIN && t <= CROP_MAX;
+export const isPlant = t => t === SAPLING || (t >= FLOWER_MIN && t <= FLOWER_MAX) || isCrop(t);
 
 export const TYPES = {
   1:  { name: 'Çim',    color: 0x5fae45, base: 10 },
@@ -45,14 +48,32 @@ export const TYPES = {
   53: { name: 'Elmas kazma', color: 0x4de0d0, base: 150 },
   54: { name: 'Netherit kazma', color: 0x5a4a52, base: 250 },
   55: { name: 'Demir balta', color: 0xd0d0d0, base: 60 },
-  56: { name: 'Demir kürek', color: 0xc8c8c8, base: 50 }
+  56: { name: 'Demir kürek', color: 0xc8c8c8, base: 50 },
+  57: { name: 'Ahşap balta', color: 0xb08850, base: 20 },
+  58: { name: 'Taş balta', color: 0x9a9a9a, base: 30 },
+  59: { name: 'Ahşap kürek', color: 0xb08850, base: 18 },
+  60: { name: 'Taş kürek', color: 0x9a9a9a, base: 28 },
+  61: { name: 'Ahşap çapa', color: 0xb08850, base: 20 },
+  62: { name: 'Taş çapa', color: 0x9a9a9a, base: 30 },
+  63: { name: 'Demir çapa', color: 0xd8d8d8, base: 60 },
+  64: { name: 'Elmas çapa', color: 0x4de0d0, base: 150 },
+  65: { name: 'Ahşap kılıç', color: 0xb08850, base: 25 },
+  66: { name: 'Taş kılıç', color: 0x9a9a9a, base: 35 },
+  67: { name: 'Demir kılıç', color: 0xd8d8d8, base: 70 },
+  68: { name: 'Elmas kılıç', color: 0x4de0d0, base: 160 },
+  70: { name: 'Tahta', color: 0xbc9862, base: 8 },
+  71: { name: 'Çubuk', color: 0x8c6434, base: 3 },
+  72: { name: 'Çalışma masası', color: 0xa07c4c, base: 30 },
+  73: { name: 'Buğday tohumu', color: 0x5a8a32, base: 4 },
+  74: { name: 'Buğday', color: 0xc8aa3c, base: 8 },
+  75: { name: 'Ekmek', color: 0xc89650, base: 20 }
 };
 
 export const CATS = [
-  ['🧱 Bloklar', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 16, 34, 35]],
-  ['🌱 Fidan ve çiçekler', [12, 40, 41, 42, 43, 44, 45]],
-  ['🍎 Yiyecek', [15, 46]],
-  ['🪣 Aletler', [30, 31, 33, 32, 50, 51, 52, 53, 54, 55, 56]]
+  ['🧱 Bloklar', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 16, 34, 35, 70, 72]],
+  ['🌱 Fidan ve çiçekler', [12, 40, 41, 42, 43, 44, 45, 73]],
+  ['🍎 Yiyecek', [15, 46, 74, 75]],
+  ['🪣 Aletler', [30, 31, 33, 32, 71, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68]]
 ];
 
 // ---- Chunk deposu: yüklü chunk'lar + kalıcı değişiklikler (mods) ----
@@ -121,6 +142,18 @@ export const set = (x, y, z, t) => {
   markDirty(c, lx, lz);
   if (wh.fn) wh.fn(x, y, z);
 };
+
+// Yüklü chunk'lardaki belirli blokları tarar (fidan ve buğday büyütme için)
+export function eachBlock(ids, fn) {
+  const m = new Uint8Array(256);
+  for (const i of ids) m[i] = 1;
+  for (const c of chunks.values()) {
+    const b = c.b;
+    for (let i = 0; i < b.length; i++) {
+      if (m[b[i]]) fn(c.cx * CW + (i % CW), Math.floor(i / (CW * CW)), c.cz * CW + (Math.floor(i / CW) % CW), b[i]);
+    }
+  }
+}
 
 // ---- Arazi (sonsuz, tohuma bağlı, saf fonksiyonlar) ----
 function vn(x, z, s) {
@@ -571,4 +604,4 @@ export function updateTarget(camera) {
   if (!hl) return;
   hl.visible = !!target;
   if (target) hl.position.set(target[0] + 0.5, target[1] + 0.5, target[2] + 0.5);
-      }
+}
