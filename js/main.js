@@ -24,6 +24,7 @@ import { updateFluids } from './world/fluids.js';
 import { initPaints, updatePaints } from './world/paints.js';
 import { isDrawOpen } from './ui/draw.js';
 import { isCraftOpen } from './ui/craft.js';
+import { updateFurnace, isFurnaceOpen } from './ui/furnace.js';
 import { tickVitals } from './entities/vitals.js';
 
 const $ = id => document.getElementById(id);
@@ -76,10 +77,12 @@ function bindBtn(id, fn) {
   el.addEventListener('mousedown', e => { e.stopPropagation(); fn(); });
 }
 
+const panelsOpen = () => isDrawOpen() || isCraftOpen() || isFurnaceOpen();
+
 hooks.bag = toggleBag;
 phooks.leave = leave;
 addEventListener('keydown', e => {
-  if (e.target.tagName === 'INPUT' || isMenuOpen() || isDrawOpen() || isCraftOpen()) return;
+  if (e.target.tagName === 'INPUT' || isMenuOpen() || panelsOpen()) return;
   if (e.code === 'KeyB') toggleBag();
   if (e.code === 'KeyF') attack();
   if (e.code === 'KeyP') togglePlayers();
@@ -142,7 +145,7 @@ function loop(now) {
   }
   loadEl.style.display = room && !ready ? 'flex' : 'none';
 
-  const frozen = isMarketOpen() || isMenuOpen() || isBagOpen() || panelOpen() || isChatOpen() || isDrawOpen() || isCraftOpen() || isDead() || (!!room && !ready);
+  const frozen = isMarketOpen() || isMenuOpen() || isBagOpen() || panelOpen() || isChatOpen() || panelsOpen() || isDead() || (!!room && !ready);
   updatePlayer(dt, frozen);
   if (!frozen && P.y < -15) { if (hp.god) toSpawn(); else killNow({ void: true }); }
   if (room) {
@@ -154,6 +157,7 @@ function loop(now) {
     updateGravity(dt);
     updateFluids(dt);
     updatePaints(dt);
+    updateFurnace(dt);
     if (P.inWater && !wasWater) sfx.splash();
     const c = 'X ' + Math.floor(P.x) + '  Y ' + Math.floor(P.y) + '  Z ' + Math.floor(P.z) + '  ' + gameClock() + '  ' + fps + ' FPS';
     if (c !== lastCoord) { $('coord').textContent = c; lastCoord = c; }
