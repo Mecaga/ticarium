@@ -1,14 +1,14 @@
 import { G } from '../core/state.js';
 import { setCreative, isCreative } from './creative.js';
 import { TYPES, CATS } from '../world/world.js';
-import { eco } from './economy.js';
 import { drawHud } from '../ui/ui.js';
+import { addItem } from './inventory.js';
 
 const norm = s => String(s).toLowerCase().replace(/\u0307/g, '')
   .replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ş/g, 's').replace(/ü/g, 'u')
   .replace(/[^a-z0-9]/g, '');
 
-// /ver <eşya adı> [adet]: survival çantasına eşya ekler
+// /ver <eşya adı> [adet]: survival çantasına eşya ekler (çanta doluysa sığan kadarı)
 function cmdVer(args) {
   if (isCreative()) return ['Yaratıcı modda her eşya zaten çantanda. Normale dönmek için /gm0'];
   if (!args.length || args[0].toLowerCase() === 'liste') {
@@ -26,9 +26,10 @@ function cmdVer(args) {
   if (!hit) for (const t in TYPES) if (norm(TYPES[t].name).startsWith(q)) { hit = +t; break; }
   if (!hit) for (const t in TYPES) if (norm(TYPES[t].name).includes(q)) { hit = +t; break; }
   if (!hit) return ['Böyle bir eşya yok. /ver liste yaz.'];
-  eco.inv[hit] += n;
+  const a = addItem(hit, n);
   drawHud();
-  return ['✅ ' + n + ' ' + TYPES[hit].name + ' verildi'];
+  if (a < 1) return ['🎒 Çanta dolu'];
+  return [a < n ? '🎒 Çanta doldu: ' + a + ' ' + TYPES[hit].name + ' verildi' : '✅ ' + a + ' ' + TYPES[hit].name + ' verildi'];
 }
 
 // Sohbet komutları. Sadece oda kurucusu (tek oyunculuda sen) kullanır.
@@ -61,4 +62,4 @@ export function runCommand(text) {
     return ['Komutlar:', '/gm1  yaratıcı mod', '/gm0  normal mod', '/ver <eşya> [adet]  çantaya eşya ekle (/ver liste)'];
   }
   return ['Bilinmeyen komut. /yardim yaz.'];
-      }
+}
