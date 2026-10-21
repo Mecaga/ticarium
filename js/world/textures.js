@@ -8,11 +8,19 @@ const TILE_NAMES = ['grassTop', 'grassSide', 'dirt', 'stone', 'woodSide', 'woodT
   'glass', 'gold', 'bedrock', 'sapling', 'birchSide', 'birchTop', 'birchLeaf', 'meat', 'wool', 'water',
   'bucket', 'wbucket', 'paint', 'lava', 'lbucket', 'apple',
   'lavender', 'daisy', 'poppy', 'bpoppy', 'tulipo', 'tulipp',
-  'obsidian', 'netherite', 'pickW', 'pickS', 'pickI', 'pickD', 'pickN', 'axe', 'shovel'];
+  'obsidian', 'netherite', 'pickW', 'pickS', 'pickI', 'pickD', 'pickN', 'axe', 'shovel',
+  'planks', 'craftTop', 'craftSide', 'farmTop', 'wheat0', 'wheat1', 'wheat2', 'wheat3',
+  'seeds', 'wheatI', 'bread', 'stick',
+  'axeW', 'axeS', 'shovelW', 'shovelS', 'hoeW', 'hoeS', 'hoeI', 'hoeD', 'swordW', 'swordS', 'swordI', 'swordD'];
 const FLOWERS = new Set(['lavender', 'daisy', 'poppy', 'bpoppy', 'tulipo', 'tulipp']);
-const HEAD = {
-  pickW: [176, 136, 72], pickS: [150, 150, 150], pickI: [222, 222, 228], pickD: [80, 225, 215],
-  pickN: [92, 76, 88], axe: [222, 222, 228], shovel: [222, 222, 228]
+const WOOD = [176, 136, 72], STONE = [150, 150, 150], IRON = [222, 222, 228], DIAM = [80, 225, 215], NETH = [92, 76, 88];
+// Aletler: [tür, kafa rengi]
+const TOOL = {
+  pickW: ['pick', WOOD], pickS: ['pick', STONE], pickI: ['pick', IRON], pickD: ['pick', DIAM], pickN: ['pick', NETH],
+  axeW: ['axe', WOOD], axeS: ['axe', STONE], axe: ['axe', IRON],
+  shovelW: ['shovel', WOOD], shovelS: ['shovel', STONE], shovel: ['shovel', IRON],
+  hoeW: ['hoe', WOOD], hoeS: ['hoe', STONE], hoeI: ['hoe', IRON], hoeD: ['hoe', DIAM],
+  swordW: ['sword', WOOD], swordS: ['sword', STONE], swordI: ['sword', IRON], swordD: ['sword', DIAM]
 };
 const TI = {};
 TILE_NAMES.forEach((n, i) => { TI[n] = i; });
@@ -57,11 +65,35 @@ export const FACE_TILES = {
   53: [TI.pickD, TI.pickD, TI.pickD],
   54: [TI.pickN, TI.pickN, TI.pickN],
   55: [TI.axe, TI.axe, TI.axe],
-  56: [TI.shovel, TI.shovel, TI.shovel]
+  56: [TI.shovel, TI.shovel, TI.shovel],
+  57: [TI.axeW, TI.axeW, TI.axeW],
+  58: [TI.axeS, TI.axeS, TI.axeS],
+  59: [TI.shovelW, TI.shovelW, TI.shovelW],
+  60: [TI.shovelS, TI.shovelS, TI.shovelS],
+  61: [TI.hoeW, TI.hoeW, TI.hoeW],
+  62: [TI.hoeS, TI.hoeS, TI.hoeS],
+  63: [TI.hoeI, TI.hoeI, TI.hoeI],
+  64: [TI.hoeD, TI.hoeD, TI.hoeD],
+  65: [TI.swordW, TI.swordW, TI.swordW],
+  66: [TI.swordS, TI.swordS, TI.swordS],
+  67: [TI.swordI, TI.swordI, TI.swordI],
+  68: [TI.swordD, TI.swordD, TI.swordD],
+  70: [TI.planks, TI.planks, TI.planks],
+  71: [TI.stick, TI.stick, TI.stick],
+  72: [TI.craftTop, TI.craftSide, TI.planks],
+  73: [TI.seeds, TI.seeds, TI.seeds],
+  74: [TI.wheatI, TI.wheatI, TI.wheatI],
+  75: [TI.bread, TI.bread, TI.bread],
+  76: [TI.farmTop, TI.dirt, TI.dirt],
+  77: [TI.wheat0, TI.wheat0, TI.wheat0],
+  78: [TI.wheat1, TI.wheat1, TI.wheat1],
+  79: [TI.wheat2, TI.wheat2, TI.wheat2],
+  80: [TI.wheat3, TI.wheat3, TI.wheat3]
 };
 
 // Blok olmayan eşyalar: yerde ve ikonda düz sprite olarak görünür
-const FLAT = new Set([12, 15, 30, 31, 33, 40, 41, 42, 43, 44, 45, 46, 50, 51, 52, 53, 54, 55, 56]);
+const FLAT = new Set([12, 15, 30, 31, 33, 40, 41, 42, 43, 44, 45, 46, 71, 73, 74, 75]);
+for (let i = 50; i <= 68; i++) FLAT.add(i);
 export const isFlat = t => FLAT.has(t);
 
 export const atlas = { tex: null, T, cv: null };
@@ -78,9 +110,11 @@ const BASE = {
   lavender: [150, 90, 205], daisy: [248, 248, 248], poppy: [208, 34, 40],
   bpoppy: [48, 82, 205], tulipo: [243, 134, 32], tulipp: [240, 120, 172],
   obsidian: [26, 16, 44], netherite: [74, 64, 70],
-  pickW: [176, 136, 72], pickS: [150, 150, 150], pickI: [222, 222, 228], pickD: [80, 225, 215],
-  pickN: [92, 76, 88], axe: [222, 222, 228], shovel: [222, 222, 228]
+  planks: [188, 152, 98], craftTop: [160, 124, 76], craftSide: [170, 134, 84], farmTop: [92, 60, 34],
+  wheat0: [96, 175, 70], wheat1: [84, 160, 60], wheat2: [150, 175, 60], wheat3: [196, 164, 66],
+  seeds: [90, 120, 50], wheatI: [200, 170, 60], bread: [200, 150, 80], stick: [140, 100, 52]
 };
+for (const n in TOOL) BASE[n] = TOOL[n][1];
 
 // Kaldırım taşı için hücre noktaları (kenarlar birleşsin diye sarmalı)
 const SEEDS = Array.from({ length: 8 }, (_, i) => [hash(i, 1, 50) * 16, hash(i, 2, 50) * 16]);
@@ -124,17 +158,59 @@ function plantPix(name, x, y) {
   return null;
 }
 
-// Kazma, balta, kürek pikselleri (null = şeffaf)
-function toolPix(name, x, y) {
-  if (name === 'axe') {
+// Buğday büyüme aşamaları (0..3)
+function wheatPix(s, x, y) {
+  const h = [4, 7, 11, 14][s];
+  for (const c of [2, 5, 8, 11, 14]) {
+    if (x === c && y >= 16 - h) {
+      if (s === 3 && y < 16 - h + 4) return [226, 192, 72];
+      return s === 0 ? [96, 175, 70] : s === 1 ? [84, 160, 60] : s === 2 ? [150, 175, 60] : [196, 164, 66];
+    }
+    if (s === 3 && Math.abs(x - c) === 1 && y >= 16 - h + 1 && y < 16 - h + 4 && (x + y) % 2 === 0) return [235, 205, 90];
+    if (s === 2 && Math.abs(x - c) === 1 && y >= 16 - h + 3 && y < 16 - h + 6 && y % 2 === 0) return [120, 170, 55];
+  }
+  return null;
+}
+
+// Çubuk, tohum, buğday, ekmek
+function itemPix(name, x, y) {
+  if (name === 'stick') return ((x + y === 16 || x + y === 17) && x >= 4 && x <= 12) ? [140, 100, 52] : null;
+  if (name === 'seeds') {
+    const dots = [[5, 10], [8, 8], [10, 11], [7, 12], [11, 7], [9, 5]];
+    for (const d of dots) if (y === d[1] && x >= d[0] && x <= d[0] + 1) return d[0] % 2 ? [60, 130, 50] : [105, 150, 62];
+    return null;
+  }
+  if (name === 'wheatI') {
+    for (const c of [4, 8, 11]) {
+      const sx = c + Math.floor((14 - y) / 5);
+      if (y >= 7 && y <= 14 && x === sx) return [190, 150, 60];
+      if (y >= 2 && y <= 7 && Math.abs(x - (c + 2)) <= (y % 2 === 0 ? 1 : 0)) return [230, 195, 85];
+    }
+    return null;
+  }
+  const e = Math.pow((x - 7.5) / 6, 2) + Math.pow((y - 9) / 3.6, 2);   // ekmek
+  return e < 1 ? (y < 8 ? [215, 165, 90] : [185, 125, 60]) : null;
+}
+
+// Kazma, balta, kürek, çapa, kılıç pikselleri (null = şeffaf)
+function toolPix(kind, col, x, y) {
+  if (kind === 'axe') {
     const e = Math.pow((x - 10.5) / 3.2, 2) + Math.pow((y - 5) / 3.4, 2);
-    if (e < 1) return HEAD[name];
-  } else if (name === 'shovel') {
+    if (e < 1) return col;
+  } else if (kind === 'shovel') {
     const e = Math.pow((x - 11.5) / 2.6, 2) + Math.pow((y - 4.5) / 3.6, 2);
-    if (e < 1) return HEAD[name];
+    if (e < 1) return col;
+  } else if (kind === 'hoe') {
+    if ((y === 3 || y === 4) && x >= 6 && x <= 12) return col;
+    if ((x === 11 || x === 12) && (y === 5 || y === 6)) return col;
+  } else if (kind === 'sword') {
+    if ((x + y === 16 || x + y === 17) && x >= 7 && x <= 13) return col;
+    if (x - y === -3 && x >= 5 && x <= 8) return [90, 90, 98];
+    if ((x + y === 16 || x + y === 17) && x >= 3 && x <= 5) return [122, 86, 42];
+    return null;
   } else {
     const dx = x - 5.5, dy = y - 10.5, r = Math.hypot(dx, dy);
-    if (r >= 5.2 && r <= 7.2 && dx >= -1 && dy <= 1) return HEAD[name];
+    if (r >= 5.2 && r <= 7.2 && dx >= -1 && dy <= 1) return col;
   }
   if ((x + y === 16 || x + y === 17) && x >= 3 && x <= 11) return [122, 86, 42];
   return null;
@@ -159,8 +235,18 @@ function buildAtlas() {
         if (!c) continue;
         [r, g, b] = c;
         k = 0.93 + hash(x, y, i) * 0.14;
-      } else if (HEAD[name]) {
-        const c = toolPix(name, x, y);
+      } else if (/^wheat[0-3]$/.test(name)) {
+        const c = wheatPix(+name.slice(5), x, y);
+        if (!c) continue;
+        [r, g, b] = c;
+        k = 0.92 + hash(x, y, i) * 0.16;
+      } else if (name === 'seeds' || name === 'wheatI' || name === 'bread' || name === 'stick') {
+        const c = itemPix(name, x, y);
+        if (!c) continue;
+        [r, g, b] = c;
+        k = 0.93 + hash(x, y, i) * 0.14;
+      } else if (TOOL[name]) {
+        const c = toolPix(TOOL[name][0], TOOL[name][1], x, y);
         if (!c) continue;
         [r, g, b] = c;
         k = 0.94 + hash(x, y, i) * 0.12;
@@ -255,6 +341,26 @@ function buildAtlas() {
               else if ((x * 5 + y * 2) % 17 === 0) { r = 60; g = 110; b = 210; k = 1; }
             }
             break;
+          case 'planks':
+            k = 0.9 + hash(x, y, 111) * 0.2;
+            if (y % 4 === 3) k *= 0.72;
+            if (x % 4 === 0 && hash(y >> 2, x >> 2, 112) < 0.2) k *= 0.82;
+            break;
+          case 'craftTop':
+            k = 0.9 + hash(x, y, 113) * 0.2;
+            if (x < 1 || y < 1 || x > 14 || y > 14) { r = 100; g = 70; b = 40; k = 1; }
+            else if (x === 5 || x === 10 || y === 5 || y === 10) { r = 95; g = 66; b = 38; k = 1; }
+            break;
+          case 'craftSide':
+            k = 0.9 + hash(x, y, 114) * 0.2;
+            if (y < 3) { r = 110; g = 78; b = 44; k = 1; }
+            else if (x % 5 === 0) k *= 0.78;
+            if (y >= 5 && y <= 9 && x >= 3 && x <= 12 && hash(x, y, 115) < 0.35) { r = 160; g = 160; b = 170; k = 1; }
+            break;
+          case 'farmTop':
+            k = 0.85 + hash(x, y, 116) * 0.25;
+            if (y % 4 === 1) k *= 0.62;
+            break;
         }
       }
       ctx.fillStyle = `rgb(${Math.min(255, r * k) | 0},${Math.min(255, g * k) | 0},${Math.min(255, b * k) | 0})`;
@@ -301,4 +407,4 @@ export function iconURL(t) {
   const u = c.toDataURL();
   icons.set(t, u);
   return u;
-       }
+  }
