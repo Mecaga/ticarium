@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>BlokDiyar</title>
-<link rel="stylesheet" href="css/style.css?v=20">
+<link rel="stylesheet" href="css/style.css?v=21">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
@@ -34,13 +34,22 @@
 <div id="menu">
   <div class="mbox">
     <h1>BlokDiyar</h1>
-    <div id="sMain">
-      <input id="nameIn" maxlength="14" placeholder="Oyuncu adın">
+    <div id="sAuth" style="display:none">
+      <p id="auHint"></p>
+      <input id="auUser" maxlength="16" placeholder="Kullanıcı adı (a-z, 0-9, _)" autocapitalize="off" autocomplete="username" spellcheck="false">
+      <input id="auPass" type="password" maxlength="40" placeholder="Şifre (en az 6 karakter)" autocomplete="current-password">
+      <button id="auLogin">Giriş Yap</button>
+      <button id="auReg" class="alt">Kayıt Ol</button>
+    </div>
+    <div id="sMain" style="display:none">
+      <div id="mUser"></div>
+      <input id="nameIn" maxlength="14" placeholder="Oyuncu adın" style="display:none">
       <button id="mWorlds">🌍 Dünyalarım</button>
       <button id="mCreate">🏠 Oda Kur</button>
       <button id="mList">🌐 Açık Odalar</button>
       <button id="mJoin">🔑 Kodla Katıl</button>
       <button id="mMine">⭐ Odalarım (Herkese Açık)</button>
+      <button id="mLogout" class="alt">🚪 Hesaptan çık</button>
     </div>
     <div id="sWorlds" style="display:none">
       <div id="wInfo"></div>
@@ -109,6 +118,7 @@ window.addEventListener('unhandledrejection', function (e) {
 
 var ids = ['flash','coord','coins','roomInfo','msg','hearts','hotbar','look','joy','joyBase','joyKnob','bJump','bBreak','bPlace',
   'bAttack','bMarket','bPlayers','bLeave','bSettings','market','panel','settings','setBox','players','plBox','menu','nameIn',
+  'sAuth','auHint','auUser','auPass','auLogin','auReg','mUser','mLogout',
   'mWorlds','mCreate','mList','mJoin','mMine','sWorlds','sNew','wInfo','worldList','wNew','nwName','nwKind','nwDo','nwBack',
   'cName','cWorld','cPublic','cPvp','cKeep','cMax','cDo','sMain','sCreate','sList','sJoin','sMine','roomList','mineList',
   'jCode','jDo','mErr','mAuth'];
@@ -116,7 +126,7 @@ var missing = ids.filter(function (i) { return !document.getElementById(i); });
 if (missing.length) {
   showErr('index.html eski, eksik elemanlar: ' + missing.join(', '));
 } else {
-  import('./js/main.js?v=20').catch(function (e) {
+  import('./js/main.js?v=21').catch(function (e) {
     showErr('Yükleme hatası (bir js dosyası eski ya da eksik olabilir): ' + (e.message || e));
   });
 }
