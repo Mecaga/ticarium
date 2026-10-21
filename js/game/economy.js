@@ -2,9 +2,10 @@ import { TYPES } from '../world/world.js';
 
 export const eco = {
   coins: 50,
-  sel: 1,          // seçili blok türü
+  sel: 1,          // seçili eşya türü
   hsel: 0,         // seçili hızlı slot sırası
   hotbar: [1, 2, 3, 4, 5],
+  layout: null,    // çanta yerleşimi (inventory.js)
   inv: {}, raw: {}, trend: {}
 };
 
@@ -14,6 +15,7 @@ export const net = { active: false, owner: false, trade: null, setPrice: null };
 export function resetEco() {
   eco.coins = 50; eco.sel = 1; eco.hsel = 0;
   eco.hotbar = [1, 2, 3, 4, 5];
+  eco.layout = null;
   for (const t in TYPES) { eco.inv[t] = 0; eco.raw[t] = TYPES[t].base; eco.trend[t] = 0; }
 }
 resetEco();
@@ -43,7 +45,7 @@ export function buy(t) {
 
 export function startPriceTicker(onTick) {
   setInterval(() => {
-    if (net.active && !net.owner) return; // odada sadece oda sahibi dalgalandırır
+    if (net.active && !net.owner) return;
     for (const t in TYPES) {
       const b = TYPES[t].base, old = priceOf(t);
       const next = eco.raw[t] + (Math.random() - 0.5) * b * 0.5 + (b - eco.raw[t]) * 0.1;
