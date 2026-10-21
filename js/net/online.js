@@ -329,12 +329,11 @@ export function findPlayer(ex, ey, ez, dx, dy, dz, range) {
   return best ? { id: best, t: bt } : null;
 }
 
-export function hitPlayer(id) {
+export function hitPlayer(id, dmg) {
   if (!code) return;
-  update(ref(db, `rooms/${code}/players/${uid}`), { hit: { to: id, n: Date.now(), d: DMG } }).catch(() => {});
+  update(ref(db, `rooms/${code}/players/${uid}`), { hit: { to: id, n: Date.now(), d: Math.min(12, dmg || DMG) } }).catch(() => {});
   tint(others[id]);
 }
-
 export function sendMobHit(id, d, fx, fz) {
   if (!code) return;
   set(push(ref(db, `rooms/${code}/mobhits`)), { id, d, fx: Math.round(fx * 10) / 10, fz: Math.round(fz * 10) / 10, n: Date.now() }).catch(() => {});
