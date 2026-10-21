@@ -1,6 +1,7 @@
 import { eco } from './economy.js';
 import { TYPES } from '../world/world.js';
 import { isCreative } from './creative.js';
+import { stackOf, isGear, durList, MAXDUR } from './gear.js';
 
 export const SLOTS = 27, STACK = 64;
 
@@ -10,7 +11,8 @@ export function layout() {
   return eco.layout;
 }
 
-const need = t => Math.ceil((eco.inv[t] || 0) / STACK);
+// Aletlerin üst üste dizilme sınırı 1, diğerleri 64
+const need = t => Math.ceil((eco.inv[t] || 0) / stackOf(t));
 
 export function usedSlots() {
   let n = 0;
@@ -20,14 +22,18 @@ export function usedSlots() {
 
 export function canAdd(t, n = 1) {
   const cur = eco.inv[t] || 0;
-  return usedSlots() - need(t) + Math.ceil((cur + n) / STACK) <= SLOTS;
+  return usedSlots() - need(t) + Math.ceil((cur + n) / stackOf(t)) <= SLOTS;
 }
 
-// Sığan kadarını ekler, eklenen sayıyı döndürür
-export function addItem(t, n = 1) {
-  const cur = eco.inv[t] || 0;
-  const room = (SLOTS - usedSlots() + need(t)) * STACK - cur;
+// Sığan kadarını ekler, eklenen sayıyı döndürür. d: aletin kalan dayanıklılığı (yoksa tam)
+export function addItem(t, n = 1, d) {
+  const cur = eco.inv[t] || 0, st = stackOf(t);
+  const room = (SLOTS - usedSlots() + need(t)) * st - cur;
   const a = Math.max(0, Math.min(n, room));
+  if (isGear(t) && !isCreative()) {
+    const l = durList(t);
+    for (let k = 0; k < a; k++) l.push(d != null ? d : MAXDUR[t]);
+  }
   eco.inv[t] = cur + a;
   return a;
 }
@@ -53,16 +59,16 @@ export function syncLayout() {
   }
 }
 
-// 27 elemanlı dizi: { t, n } ya da null (boş slot)
+// 27 elemanlı dizi: { t, n, p } ya da null (boş slot). p: aynı türün kaçıncı slotu (alet dayanıklılığı için)
 export function slotInfo() {
   syncLayout();
   const L = layout(), seen = {}, out = [];
   for (let i = 0; i < SLOTS; i++) {
     const t = L[i];
     if (!t) { out.push(null); continue; }
-    const p = seen[t] = (seen[t] || 0) + 1;
+    const st = stackOf(t), p = seen[t] = (seen[t] || 0) + 1;
     const total = eco.inv[t] || 0, nn = need(t);
-    out.push({ t, n: p < nn ? STACK : total - STACK * (nn - 1) });
+    out.push({ t, n: p < nn ? st : total - st * (nn - 1), p: p - 1 });
   }
   return out;
 }
