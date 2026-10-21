@@ -5,6 +5,7 @@ import { P } from './player.js';
 import { drawHud, toast } from '../ui/ui.js';
 import { canAdd, addItem } from '../game/inventory.js';
 import { isCreative } from '../game/creative.js';
+import { isGear, MAXDUR, takeInstance } from '../game/gear.js';
 
 // online.js bunları doldurur; boşsa eşyalar sadece bu cihazda yaşar
 export const hooks = { push: null, take: null, expire: null, myId: '' };
@@ -68,15 +69,20 @@ function spriteGeometry(t) {
   return (sprGeo[t] = geo);
 }
 
+// Aletin dayanıklılığı, ağ üzerinden giden "c" sayısına gömülür (c >= 100000 → alet, kalan dayanıklılık = c - 100000)
+const encC = a => ((a.d != null && isGear(a.t)) ? 100000 + Math.max(1, Math.round(a.d)) : a.c);
+
 export function spawnItem(id, d) {
   if (!group || list.has(id) || !TYPES[d.t]) return;
+  let c = d.c, dur = null;
+  if (c >= 100000) { dur = c - 100000; c = 1; }
   const flat = isFlat(+d.t);
   const mesh = new THREE.Mesh(flat ? spriteGeometry(+d.t) : cubeGeometry(+d.t), flat ? sprMat : cubeMat);
-  if (d.c > 1) mesh.scale.setScalar(1.3);
+  if (c > 1) mesh.scale.setScalar(1.3);
   mesh.position.set(d.x, d.y, d.z);
   group.add(mesh);
   list.set(id, {
-    id, mesh, flat, t: d.t, c: d.c, by: d.by || '',
+    id, mesh, flat, t: d.t, c, dur, by: d.by || '',
     x: d.x, y: d.y, z: d.z, vx: d.vx || 0, vy: d.vy || 0, vz: d.vz || 0,
     born: Date.now(), n: d.n || Date.now(), ground: false, taking: false, cool: 0, ph: Math.random() * 6.28
   });
@@ -93,30 +99,34 @@ export function clearItems() {
   for (const id of [...list.keys()]) removeItem(id);
 }
 
-// arr: [{t, c, x, y, z, vx, vy, vz}]
+// arr: [{t, c, x, y, z, vx, vy, vz, d?}]  (d: aletin dayanıklılığı)
 export function dropItems(arr) {
   const by = hooks.myId;
-  if (hooks.push) hooks.push(arr.map(a => ({ ...a, by })));
-  else arr.forEach(a => spawnItem('l' + (++seq), { ...a, by, n: Date.now() }));
+  if (hooks.push) hooks.push(arr.map(a => ({ ...a, by, c: encC(a) })));
+  else arr.forEach(a => spawnItem('l' + (++seq), { ...a, by, c: encC(a), n: Date.now() }));
 }
 
-// Envanterden eşyayı önüne atar (yaratıcı modda eşya harcanmaz)
-export function dropFromInventory(t, n) {
+// Envanterden eşyayı önüne atar (yaratıcı modda eşya harcanmaz). p: aletin çantadaki sırası.
+export function dropFromInventory(t, n, p = 0) {
   const cre = isCreative();
   n = Math.min(n, cre ? 64 : (eco.inv[t] || 0));
   if (n < 1) { toast('Bırakacak eşya yok'); return 0; }
-  if (!cre) eco.inv[t] -= n;
   const fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw);
-  const stack = Math.max(16, Math.ceil(n / 12));
+  const base = () => ({
+    x: P.x + fx * 0.5, y: P.y + 1.3, z: P.z + fz * 0.5,
+    vx: fx * 4 + (Math.random() - 0.5), vy: 2.5 + Math.random(), vz: fz * 4 + (Math.random() - 0.5)
+  });
   const arr = [];
-  let left = n;
-  while (left > 0) {
-    const c = Math.min(stack, left); left -= c;
-    arr.push({
-      t: +t, c,
-      x: P.x + fx * 0.5, y: P.y + 1.3, z: P.z + fz * 0.5,
-      vx: fx * 4 + (Math.random() - 0.5), vy: 2.5 + Math.random(), vz: fz * 4 + (Math.random() - 0.5)
-    });
+  if (isGear(t)) {
+    for (let k = 0; k < n; k++) arr.push({ t: +t, c: 1, d: cre ? MAXDUR[t] : takeInstance(t, k === 0 ? p : 0), ...base() });
+  } else {
+    if (!cre) eco.inv[t] -= n;
+    const stack = Math.max(16, Math.ceil(n / 12));
+    let left = n;
+    while (left > 0) {
+      const c = Math.min(stack, left); left -= c;
+      arr.push({ t: +t, c, ...base() });
+    }
   }
   dropItems(arr);
   drawHud();
@@ -137,7 +147,7 @@ async function tryTake(it) {
     catch (e) { it.taking = false; return; }
   }
   if (ok && !cre) {
-    const a = addItem(it.t, it.c);
+    const a = addItem(it.t, it.c, it.dur);
     drawHud();
     toast('+' + a + ' ' + TYPES[it.t].name);
   }
@@ -179,4 +189,4 @@ export function updateItems(dt, canPick) {
       if (dx * dx + dy * dy + dz * dz < 2.25) tryTake(it);
     }
   }
-        }
+                                               }
