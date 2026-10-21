@@ -7,6 +7,8 @@ export const eco = {
   hotbar: [1, 2, 3, 4, 5],
   layout: null,    // çanta yerleşimi (inventory.js)
   dur: {},         // alet dayanıklılıkları (gear.js)
+  armor: { head: 0, chest: 0, legs: 0, feet: 0 },     // giyilen zırh türleri (armor.js)
+  armDur: { head: 0, chest: 0, legs: 0, feet: 0 },    // giyilen zırh dayanıklılıkları
   inv: {}, raw: {}, trend: {}
 };
 
@@ -18,6 +20,8 @@ export function resetEco() {
   eco.hotbar = [1, 2, 3, 4, 5];
   eco.layout = null;
   eco.dur = {};
+  eco.armor = { head: 0, chest: 0, legs: 0, feet: 0 };
+  eco.armDur = { head: 0, chest: 0, legs: 0, feet: 0 };
   for (const t in TYPES) { eco.inv[t] = 0; eco.raw[t] = TYPES[t].base; eco.trend[t] = 0; }
 }
 resetEco();
