@@ -3,6 +3,7 @@ export { atlas, sideTile } from './textures.js';
 
 export const CW = 25, H = 32, RD = 3, SEA = 7, SNOW_H = 19;   // chunk genişliği 25, 7x7 = 49 chunk görünür
 export const BEDROCK = 11, SAPLING = 12, BIRCH_LOG = 13, BIRCH_LEAF = 14, MEAT = 15, WOOL = 16, WATER = 17;
+export const GLASS = 9;
 export const WATER_MAX = 24;    // 17 kaynak su, 18..24 akan su
 export const LAVA = 25, LAVA_MAX = 28;   // 25 kaynak lav, 26..28 akan lav
 export const BUCKET = 30, WBUCKET = 31, CANVAS = 32, LBUCKET = 33;
@@ -106,7 +107,7 @@ const mods = new Map();      // chunk anahtarı -> Map(hücre indeksi -> ham blo
 const urgent = new Set();    // hemen yeniden çizilecek chunk'lar
 const ck = (cx, cz) => (cx + 4096) * 8192 + (cz + 4096);
 let _seed = 1, _kind = 'normal', _sp = null, lcK = -1, lc = null;
-let group = null, material, waterMat, lavaMat, hl;
+let group = null, material, waterMat, lavaMat, glassMat, hl;
 
 function chunkAt(x, z) {
   const cx = Math.floor(x / CW), cz = Math.floor(z / CW), k = ck(cx, cz);
@@ -133,8 +134,10 @@ export const getRaw = (x, y, z) => {
 };
 export const isWater = (x, y, z) => get(x, y, z) === WATER;
 export const isLava = (x, y, z) => get(x, y, z) === LAVA;
+// Katı: cam dahil (çarpışma). Bitki, su ve lavın içinden geçilir.
 export const solid = (x, y, z) => { const t = get(x, y, z); return t !== 0 && !isPlant(t) && t !== WATER && t !== LAVA; };
-const opaque = t => t !== 0 && !isPlant(t) && t !== WATER && t !== LAVA;
+// Opak: arkasını gizler. Cam saydam olduğu için opak sayılmaz, komşu yüzler cam arkasından görünür.
+const opaque = t => t !== 0 && !isPlant(t) && t !== WATER && t !== LAVA && t !== GLASS;
 
 export const wh = { fn: null };       // fluids.js: blok değişince haber alır
 export const wlHook = { fn: null };   // paints.js: gündüz/gece ışığı
@@ -297,7 +300,7 @@ export function losBlocked(ex, ey, ez, dx, dy, dz, t) {
 
 // ---- Chunk üretimi ----
 function newChunk(cx, cz) {
-  return { cx, cz, b: new Uint8Array(CW * H * CW), l: new Uint8Array(CW * H * CW), dirty: 1, mt: null, mw: null, ml: null };
+  return { cx, cz, b: new Uint8Array(CW * H * CW), l: new Uint8Array(CW * H * CW), dirty: 1, mt: null, mw: null, ml: null, mg: null };
 }
 
 function genChunk(c) {
@@ -390,7 +393,7 @@ function genChunk(c) {
 }
 
 function disposeChunk(c) {
-  for (const f of ['mt', 'mw', 'ml']) {
+  for (const f of ['mt', 'mw', 'ml', 'mg']) {
     if (c[f]) { if (group) group.remove(c[f]); c[f].geometry.dispose(); c[f] = null; }
   }
 }
@@ -462,6 +465,7 @@ const occ = (x, y, z) => opaque(get(x, y, z)) ? 1 : 0;
 export function setWorldLight(v) {
   if (material) material.color.setScalar(v);
   if (waterMat) waterMat.color.setScalar(v);
+  if (glassMat) glassMat.color.setScalar(v);
   if (wlHook.fn) wlHook.fn(v);
 }
 
@@ -472,6 +476,10 @@ export function initRender(scene) {
     map: atlas.tex, vertexColors: true, transparent: true, opacity: 0.62, depthWrite: false, side: THREE.DoubleSide
   });
   lavaMat = new THREE.MeshBasicMaterial({ map: atlas.tex, vertexColors: true, side: THREE.DoubleSide });
+  // Cam: yarı saydam, derinliğe yazmaz (arkasındaki bloklar ve su görünür)
+  glassMat = new THREE.MeshBasicMaterial({
+    map: atlas.tex, vertexColors: true, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide
+  });
   group = new THREE.Group();
   scene.add(group);
   hl = new THREE.LineSegments(
@@ -522,9 +530,9 @@ function pushQ(s, tile, p, sh) {
 
 function buildChunk(c) {
   const pos = [], uv = [], col = [], ind = [];
-  const wS = sink(), lS = sink();
+  const wS = sink(), lS = sink(), gS = sink();
   let vc = 0;
-  const WT = FACE_TILES[WATER][0], LT = FACE_TILES[LAVA][0];
+  const WT = FACE_TILES[WATER][0], LT = FACE_TILES[LAVA][0], GT = FACE_TILES[GLASS][1];
   const x0 = c.cx * CW, z0 = c.cz * CW;
   for (let y = 0; y < H; y++) for (let lz = 0; lz < CW; lz++) for (let lx = 0; lx < CW; lx++) {
     const t = c.b[(y * CW + lz) * CW + lx];
@@ -549,6 +557,18 @@ function buildChunk(c) {
         if (dx) { const xx = dx > 0 ? x + 1 : x; pushQ(S, tile, [[xx, y0, z], [xx, y0, z + 1], [xx, y1, z + 1], [xx, y1, z]], 0.86); }
         else { const zz = dz > 0 ? z + 1 : z; pushQ(S, tile, [[x, y0, zz], [x + 1, y0, zz], [x + 1, y1, zz], [x, y1, zz]], 0.74); }
       }
+      continue;
+    }
+
+    // Cam: sadece komşusu cam ya da opak değilse yüz çizilir (yan yana camların iç yüzleri gizlenir)
+    if (t === GLASS) {
+      const hide = (dx, dy, dz) => { const n = get(x + dx, y + dy, z + dz); return n === GLASS || opaque(n); };
+      if (!hide(0, 1, 0)) pushQ(gS, GT, [[x, y + 1, z], [x + 1, y + 1, z], [x + 1, y + 1, z + 1], [x, y + 1, z + 1]], 1);
+      if (!hide(0, -1, 0)) pushQ(gS, GT, [[x, y, z], [x + 1, y, z], [x + 1, y, z + 1], [x, y, z + 1]], 0.55);
+      if (!hide(1, 0, 0)) pushQ(gS, GT, [[x + 1, y, z], [x + 1, y, z + 1], [x + 1, y + 1, z + 1], [x + 1, y + 1, z]], 0.82);
+      if (!hide(-1, 0, 0)) pushQ(gS, GT, [[x, y, z], [x, y, z + 1], [x, y + 1, z + 1], [x, y + 1, z]], 0.82);
+      if (!hide(0, 0, 1)) pushQ(gS, GT, [[x, y, z + 1], [x + 1, y, z + 1], [x + 1, y + 1, z + 1], [x, y + 1, z + 1]], 0.68);
+      if (!hide(0, 0, -1)) pushQ(gS, GT, [[x, y, z], [x + 1, y, z], [x + 1, y + 1, z], [x, y + 1, z]], 0.68);
       continue;
     }
 
@@ -603,6 +623,7 @@ function buildChunk(c) {
   putMesh(c, 'mt', pos, uv, col, ind, material, 0);
   putMesh(c, 'ml', lS.pos, lS.uv, lS.col, lS.ind, lavaMat, 1);
   putMesh(c, 'mw', wS.pos, wS.uv, wS.col, wS.ind, waterMat, 2);
+  putMesh(c, 'mg', gS.pos, gS.uv, gS.col, gS.ind, glassMat, 3);
 }
 
 // Oyuncu değişikliklerini hemen çizer (kare başına en çok 2 chunk)
@@ -616,7 +637,9 @@ export function rebuild(max = 2) {
   }
 }
 
-// ---- Hedef bulma: target/prev sıvı olmayan blok, wtarget bakılan ilk su ya da lav ----
+// ---- Hedef bulma ----
+// target/prev: bakılan blok ve önündeki hücre. wtarget: bakış ışınındaki ilk su/lav KAYNAĞI (kova için).
+// Işın bitkilerin ve akan sıvının içinden geçer, katı blokta biter.
 export let target = null, prev = null, wtarget = null;
 
 export function updateTarget(camera) {
@@ -628,15 +651,15 @@ export function updateTarget(camera) {
     const x = Math.floor(o.x + d.x * s), y = Math.floor(o.y + d.y * s), z = Math.floor(o.z + d.z * s);
     if (x === lx && y === ly && z === lz) continue;
     const t = get(x, y, z);
-    if (t === WATER || t === LAVA) { if (!wtarget) wtarget = [x, y, z]; }
-    else if (t) {
-      target = [x, y, z];
-      prev = lx === -1e9 ? null : [lx, ly, lz];
-      break;
+    if (t === WATER || t === LAVA) {
+      if (!wtarget && waterLvl(x, y, z) === 0) wtarget = [x, y, z];   // akan sıvı atlanır, sadece kaynak
+    } else if (t) {
+      if (!target) { target = [x, y, z]; prev = lx === -1e9 ? null : [lx, ly, lz]; }
+      if (!isPlant(t)) break;
     }
     lx = x; ly = y; lz = z;
   }
   if (!hl) return;
   hl.visible = !!target;
   if (target) hl.position.set(target[0] + 0.5, target[1] + 0.5, target[2] + 0.5);
-                       }
+       }
