@@ -24,6 +24,21 @@ function canSpread(x, y, z, t) {
   return true;
 }
 
+// ---- Sonsuz su kaynağı ----
+// Bir hücrenin yanında (4 yön) yayılabilen en az 2 TAM su kaynağı varsa ve altı katı blok ya da su kaynağıysa
+// hücre kaynak olur. Aralarında 1 boşluk (S _ S), L köşesi ve çapraz iki kaynağın arası bu kuraldan çıkar.
+const srcOK = (x, y, z) => get(x, y, z) === WATER && waterLvl(x, y, z) === 0 && canSpread(x, y, z, WATER);
+function srcCount(x, y, z) {
+  let n = 0;
+  for (const [dx, dz] of H4) if (srcOK(x + dx, y, z + dz)) n++;
+  return n;
+}
+function baseOk(x, y, z) {
+  if (y <= 0) return false;
+  const b = get(x, y - 1, z);
+  return (b !== 0 && !isPlant(b) && b !== WATER && b !== LAVA) || (b === WATER && waterLvl(x, y - 1, z) === 0);
+}
+
 function queue(x, y, z) { if (inBounds(x, y, z)) q.add(key(x, y, z)); }
 
 wh.fn = (x, y, z) => {
@@ -45,7 +60,6 @@ function change(x, y, z, raw) {
   if (ghooks.onChange) ghooks.onChange(x, y, z, raw);
 }
 
-// Komşu bu hücreyi yatay besliyor mu: veriyorsa seviye, yoksa 99
 function feed(x, y, z, t) {
   if (get(x, y, z) !== t) return 99;
   return canSpread(x, y, z, t) ? waterLvl(x, y, z) + 1 : 99;
@@ -77,23 +91,22 @@ function holeDist(x, y, z, depth, fdx, fdz, t) {
 function step(x, y, z) {
   if (!isLoaded(x, z)) return;
   const t = get(x, y, z);
+
+  // Boş hücre: yanında 2+ su kaynağı varsa sonsuz kaynak olur (kovayla alınan kaynak da böyle yenilenir)
+  if (t === 0 || isPlant(t)) {
+    if (srcCount(x, y, z) >= 2 && baseOk(x, y, z)) change(x, y, z, WATER);
+    return;
+  }
   if (t !== WATER && t !== LAVA) return;
   if (contact(x, y, z, t)) return;
   const l = waterLvl(x, y, z), ML = maxLv(t);
 
-  if (l > 0) {   // akan sıvı beslenmiyorsa kurur, seviyesi uymuyorsa düzelir
+  if (l > 0) {   // akan sıvı: sonsuz kaynak olabilir, beslenmiyorsa kurur, seviyesi uymuyorsa düzelir
+    if (t === WATER && srcCount(x, y, z) >= 2 && baseOk(x, y, z)) { change(x, y, z, WATER); return; }
     let need = get(x, y + 1, z) === t ? 1 : 99;
-    let srcs = 0;
     for (const [dx, dz] of H4) {
-      const nx = x + dx, nz = z + dz;
-      if (need > 1) need = Math.min(need, feed(nx, y, nz, t));
-      if (get(nx, y, nz) === t && waterLvl(nx, y, nz) === 0) srcs++;
-    }
-    if (t === WATER && srcs >= 2) {   // yanında iki su kaynağı varsa yeni kaynak oluşur
-      const b = get(x, y - 1, z);
-      if ((b !== 0 && !isPlant(b) && b !== WATER && b !== LAVA) || (b === WATER && waterLvl(x, y - 1, z) === 0)) {
-        change(x, y, z, WATER); return;
-      }
+      if (need <= 1) break;
+      need = Math.min(need, feed(x + dx, y, z + dz, t));
     }
     if (need > ML) { change(x, y, z, 0); return; }
     if (need !== l) { change(x, y, z, t + need); return; }
@@ -140,4 +153,4 @@ export function updateFluids(dt) {
     if (n++ > 700) { q.add(k); continue; }
     step(x, y, z);
   }
-}
+  }
