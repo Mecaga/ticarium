@@ -199,18 +199,19 @@ export function breakBlock(canDrop = true) {
   rebuild(); drawHud();
 }
 
-// Boş kova: bakılan su ya da lav kaynağını alır
+// Boş kova: bakılan SU ya da LAV KAYNAĞINI alır (altında/çevresinde ne olduğu önemli değil).
+// Akan sıvı alınamaz: bakış ışını akan sıvıyı atlayıp ilk kaynak bloğu bulur.
 function useBucket() {
   if (eco.inv[BUCKET] < 1) return toast('Kova yok.');
-  if (!wtarget) return toast('Bir su ya da lav kaynağına bakıp Koy\'a bas');
+  if (!wtarget) return toast('Bir su ya da lav kaynağına bak (akan sıvı alınamaz)');
   const [x, y, z] = wtarget;
   const t = get(x, y, z);
-  if (waterLvl(x, y, z) !== 0) return toast('Sadece kaynak alınır (akan sıvı alınamaz)');
+  if ((t !== WATER && t !== LAVA) || waterLvl(x, y, z) !== 0) return toast('Sadece kaynak blok alınır');
   set(x, y, z, 0);
   commit(x, y, z, 0);
   take(BUCKET); give(t === LAVA ? LBUCKET : WBUCKET);
   sfx.splash();
-  toast(t === LAVA ? '🪣 Lav kovası doldu' : '🪣 Kova doldu');
+  toast(t === LAVA ? '🪣 Lav kovası doldu' : '🪣 Su kovası doldu');
   rebuild(); drawHud();
 }
 
