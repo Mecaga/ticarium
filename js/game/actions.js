@@ -1,5 +1,5 @@
 import {
-  get, set, rebuild, target, prev, wtarget, waterLvl, TYPES, H, inBounds, eachBlock,
+  get, set, rebuild, target, prev, wtarget, stgt, waterLvl, TYPES, H, inBounds, eachBlock,
   BEDROCK, SAPLING, WATER, LAVA, BUCKET, WBUCKET, LBUCKET, CANVAS, APPLE, OBSIDIAN,
   CRAFT, FARM, FURNACE, SEEDS, WHEAT, STICK, COAL, INGOT_I, INGOT_G, GEM, COAL_ORE, DIAMOND_ORE,
   CROP_MIN, CROP_MAX, isCrop, planTree, isPlant
@@ -278,16 +278,35 @@ function useHoe() {
   rebuild(); drawHud();
 }
 
-// Tohum: işlenmiş toprağa ekilir
+// Tohum: akıllı ekim
+//  1) Olgun buğdaya bakıyorsan: hasat edip yerine hemen yeni tohum eker (kır-ve-ek)
+//  2) Bakış ışını bitkilerin içinden geçer: arkadaki işlenmiş toprağa eker
+//     (üstünde çiçek/fidan varsa kırılıp yerine tohum konur, olgunlaşmamış buğdayın aşamasını söyler)
 function plantSeeds() {
   if (eco.inv[SEEDS] < 1) return toast('Tohum yok.');
-  if (!target || get(target[0], target[1], target[2]) !== FARM) return toast('Tohum işlenmiş toprağa ekilir. Önce çapayla toprağı işle.');
-  const [x, y, z] = target;
-  if (get(x, y + 1, z) !== 0) return;
+  if (target && get(target[0], target[1], target[2]) === CROP_MAX) {
+    const [x, y, z] = target;
+    if (get(x, y - 1, z) === FARM) {
+      for (const [it, n] of dropsOf(CROP_MAX)) give(it, n);
+      set(x, y, z, CROP_MIN);
+      commit(x, y, z, CROP_MIN);
+      take(SEEDS);
+      sfx.breakB();
+      toast('🌾 Hasat edildi, yeniden ekildi');
+      rebuild(); drawHud();
+      return;
+    }
+  }
+  const s = stgt;
+  if (!s || get(s[0], s[1], s[2]) !== FARM) return toast('Tohum işlenmiş toprağa ekilir. Önce çapayla toprağı işle.');
+  const [x, y, z] = s, a = get(x, y + 1, z);
+  if (isCrop(a)) return toast('🌱 Burada buğday var (' + (a - CROP_MIN + 1) + '/4). Olgunlaşınca hasat edip yeniden ekersin');
+  if (a !== 0 && !isPlant(a)) return toast('Üstü dolu');
   set(x, y + 1, z, CROP_MIN);
   commit(x, y + 1, z, CROP_MIN);
   take(SEEDS);
   sfx.place();
+  if (a !== 0) toast('Bitki kırıldı, tohum ekildi');
   rebuild(); drawHud();
 }
 
@@ -369,4 +388,4 @@ export function attack() {
     else if (o) o.sendMobHit(m.id, dmg, P.x, P.z);
     if (isGear(sel) && has) afterWear(sel, isSword ? 1 : 2);
   }
-                                                                 }
+    }
