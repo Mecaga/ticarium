@@ -1,7 +1,9 @@
-export const LOG = 'log';   // 4 (meşe odun) ya da 13 (huş odun)
+export const LOG = 'log';       // 4 (meşe odun) ya da 13 (huş odun)
+export const WOOLANY = 'wool';  // beyaz ya da renkli yün
 const P = 70, S = 71, C = 3, W = 74, IRON = 83, GOLD = 84, GEM = 85;
+const POTATO = 150, TOMATO = 152, PEPPER = 153, ONION = 154;
 
-// pat: şekilli tarif (0 = boş hücre), shapeless: şekilsiz. out: [eşya, adet]
+// pat: şekilli tarif (0 = boş hücre), shapeless: şekilsiz (sıra önemli değil). out: [eşya, adet]
 export const RECIPES = [
   { out: [70, 4], shapeless: [LOG] },                              // 1 kütük → 4 tahta
   { out: [71, 4], pat: [[P], [P]] },                               // 2 tahta → 4 çubuk
@@ -11,8 +13,15 @@ export const RECIPES = [
   { out: [32, 1], pat: [[S, S, S], [S, 16, S], [S, S, S]] },       // tuval (çubuk + yün)
   { out: [81, 1], pat: [[C, C, C], [C, 0, C], [C, C, C]] },        // ocak (8 taş)
   { out: [10, 1], pat: [[GOLD, GOLD, GOLD], [GOLD, GOLD, GOLD], [GOLD, GOLD, GOLD]] },   // altın blok (9 külçe)
-  { out: [84, 9], shapeless: [10] }                                // altın blok → 9 külçe
+  { out: [84, 9], shapeless: [10] },                               // altın blok → 9 külçe
+  { out: [155, 2], shapeless: [W, W, TOMATO, PEPPER, ONION] }      // çiğköfte: 2 buğday + domates + biber + soğan
 ];
+
+// Çiçek → 2 boya; boya + yün → renkli yün (lavanta, papatya, gelincik, mavi gelincik, turuncu lale, pembe lale)
+for (let i = 0; i < 6; i++) {
+  RECIPES.push({ out: [110 + i, 2], shapeless: [40 + i] });
+  RECIPES.push({ out: [120 + i, 1], shapeless: [110 + i, WOOLANY] });
+}
 
 // [malzeme, kazma, balta, kürek, çapa, kılıç]
 for (const [m, pick, axe, shovel, hoe, sword] of [
@@ -33,7 +42,12 @@ for (const [m, helm, chest, legs, boots] of [[IRON, 91, 92, 93, 94], [GEM, 95, 9
   RECIPES.push({ out: [boots, 1], pat: [[m, 0, m], [m, 0, m]] });
 }
 
-const ok = (tok, t) => (tok === 0 ? t === 0 : tok === LOG ? (t === 4 || t === 13) : tok === t);
+const ok = (tok, t) => {
+  if (tok === 0) return t === 0;
+  if (tok === LOG) return t === 4 || t === 13;
+  if (tok === WOOLANY) return t === 16 || (t >= 120 && t <= 125);
+  return tok === t;
+};
 
 // cells: size*size uzunluğunda tür dizisi (0 = boş). Dönüş: [eşya, adet] ya da null
 export function findRecipe(cells, size) {
@@ -48,7 +62,15 @@ export function findRecipe(cells, size) {
   const items = cells.filter(t => t);
   for (const rc of RECIPES) {
     if (rc.shapeless) {
-      if (items.length === rc.shapeless.length && rc.shapeless.every((tok, i) => ok(tok, items[i]))) return rc.out;
+      if (items.length !== rc.shapeless.length) continue;
+      const left = items.slice();
+      let good = true;
+      for (const tok of rc.shapeless) {
+        const i = left.findIndex(t => ok(tok, t));
+        if (i < 0) { good = false; break; }
+        left.splice(i, 1);
+      }
+      if (good) return rc.out;
       continue;
     }
     const pat = rc.pat;
