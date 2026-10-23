@@ -24,8 +24,11 @@ const HARD = {
   36: [3, 'pick', 1], 37: [3.5, 'pick', 2], 38: [3.5, 'pick', 3], 39: [4, 'pick', 3], 81: [3.5, 'pick', 1],
   40: [0.05, null, 0], 41: [0.05, null, 0], 42: [0.05, null, 0], 43: [0.05, null, 0], 44: [0.05, null, 0], 45: [0.05, null, 0],
   70: [2, 'axe', 0], 72: [2.5, 'axe', 0], 76: [0.6, 'shovel', 0],
-  77: [0.05, null, 0], 78: [0.05, null, 0], 79: [0.05, null, 0], 80: [0.05, null, 0]
+  77: [0.05, null, 0], 78: [0.05, null, 0], 79: [0.05, null, 0], 80: [0.05, null, 0],
+  106: [0.05, null, 0]   // uzun ot
 };
+for (let i = 130; i <= 149; i++) HARD[i] = [0.05, null, 0];   // sebze ekinleri
+for (let i = 120; i <= 125; i++) HARD[i] = [1.2, null, 0];    // renkli yün
 
 // Blok sertliği (aletin aşınıp aşınmayacağına karar vermek için)
 export const hardTime = t => (HARD[t] || [1])[0];
@@ -140,4 +143,4 @@ export function updateMining(dt, active) {
       if (mineHooks.onProgress) mineHooks.onProgress(x, y, z, stage);
     }
   }
-}
+                   }
