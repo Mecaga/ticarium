@@ -1,106 +1,13 @@
-import { hash, atlas, FACE_TILES, T, initAtlas } from './textures.js';
+import { hash, atlas, FACE_TILES, T, initAtlas, tileOf } from './textures.js';
+import {
+  BEDROCK, SAPLING, BIRCH_LOG, BIRCH_LEAF, WATER, GLASS, WATER_MAX, LAVA, LAVA_MAX, OBSIDIAN, NETHERITE,
+  COAL_ORE, IRON_ORE, GOLD_ORE, DIAMOND_ORE, FLOWER_MIN, TALL, isPlant
+} from './defs.js';
+export * from './defs.js';
 export { atlas, sideTile } from './textures.js';
 
-export const BUILD = 22;   // menünün altında görünen sürüm (eski dosya önbellekte mi diye kontrol için)
+export const BUILD = 23;   // menünün altında görünen sürüm (eski dosya önbellekte mi diye kontrol için)
 export const CW = 25, H = 32, RD = 3, SEA = 7, SNOW_H = 19;   // chunk genişliği 25, 7x7 = 49 chunk görünür
-export const BEDROCK = 11, SAPLING = 12, BIRCH_LOG = 13, BIRCH_LEAF = 14, MEAT = 15, WOOL = 16, WATER = 17;
-export const GLASS = 9;
-export const WATER_MAX = 24;    // 17 kaynak su, 18..24 akan su
-export const LAVA = 25, LAVA_MAX = 28;   // 25 kaynak lav, 26..28 akan lav
-export const BUCKET = 30, WBUCKET = 31, CANVAS = 32, LBUCKET = 33;
-export const OBSIDIAN = 34, NETHERITE = 35;
-export const COAL_ORE = 36, IRON_ORE = 37, GOLD_ORE = 38, DIAMOND_ORE = 39;
-export const FLOWER_MIN = 40, FLOWER_MAX = 45, APPLE = 46;
-export const PLANKS = 70, STICK = 71, CRAFT = 72, SEEDS = 73, WHEAT = 74, BREAD = 75, FARM = 76;
-export const CROP_MIN = 77, CROP_MAX = 80;   // buğday 4 büyüme aşaması (sadece blok)
-export const FURNACE = 81, COAL = 82, INGOT_I = 83, INGOT_G = 84, GEM = 85, COOKED = 86;
-export const isCrop = t => t >= CROP_MIN && t <= CROP_MAX;
-export const isPlant = t => t === SAPLING || (t >= FLOWER_MIN && t <= FLOWER_MAX) || isCrop(t);
-
-export const TYPES = {
-  1:  { name: 'Çim',    color: 0x5fae45, base: 10 },
-  2:  { name: 'Toprak', color: 0x8b5a2b, base: 6 },
-  3:  { name: 'Taş',    color: 0x969490, base: 15 },
-  4:  { name: 'Odun',   color: 0x6b4423, base: 25 },
-  5:  { name: 'Yaprak', color: 0x2f7d32, base: 5 },
-  6:  { name: 'Kum',    color: 0xe6d690, base: 8 },
-  7:  { name: 'Tuğla',  color: 0xb5493a, base: 30 },
-  8:  { name: 'Kar',    color: 0xf5f5f5, base: 12 },
-  9:  { name: 'Cam',    color: 0x9fd8e8, base: 20 },
-  10: { name: 'Altın blok', color: 0xffd700, base: 80 },
-  12: { name: 'Fidan',  color: 0x4caf50, base: 14 },
-  13: { name: 'Huş odun',   color: 0xe4e0d2, base: 25 },
-  14: { name: 'Huş yaprak', color: 0x8fc060, base: 5 },
-  15: { name: 'Et',     color: 0xc4464f, base: 18 },
-  16: { name: 'Yün',    color: 0xececec, base: 14 },
-  30: { name: 'Kova',   color: 0x9aa0a6, base: 40 },
-  31: { name: 'Su kovası', color: 0x4a90e2, base: 45 },
-  32: { name: 'Tuval',  color: 0xd9c9a0, base: 35 },
-  33: { name: 'Lav kovası', color: 0xe8661a, base: 60 },
-  34: { name: 'Obsidiyen', color: 0x1b1030, base: 90 },
-  35: { name: 'Netherit blok', color: 0x4a3f45, base: 200 },
-  36: { name: 'Kömür cevheri', color: 0x454548, base: 20 },
-  37: { name: 'Demir cevheri', color: 0xd4aa8c, base: 40 },
-  38: { name: 'Altın cevheri', color: 0xfad646, base: 70 },
-  39: { name: 'Elmas cevheri', color: 0x5ae6e6, base: 150 },
-  40: { name: 'Lavanta', color: 0x9a5fd0, base: 6 },
-  41: { name: 'Papatya', color: 0xf5f5f5, base: 6 },
-  42: { name: 'Gelincik', color: 0xd02228, base: 6 },
-  43: { name: 'Mavi gelincik', color: 0x3050cd, base: 8 },
-  44: { name: 'Turuncu lale', color: 0xf3861f, base: 8 },
-  45: { name: 'Pembe lale', color: 0xf078ac, base: 8 },
-  46: { name: 'Elma',   color: 0xc81e1e, base: 12 },
-  50: { name: 'Ahşap kazma', color: 0xb08850, base: 20 },
-  51: { name: 'Taş kazma', color: 0x9a9a9a, base: 30 },
-  52: { name: 'Demir kazma', color: 0xd8d8d8, base: 60 },
-  53: { name: 'Elmas kazma', color: 0x4de0d0, base: 150 },
-  54: { name: 'Netherit kazma', color: 0x5a4a52, base: 250 },
-  55: { name: 'Demir balta', color: 0xd0d0d0, base: 60 },
-  56: { name: 'Demir kürek', color: 0xc8c8c8, base: 50 },
-  57: { name: 'Ahşap balta', color: 0xb08850, base: 20 },
-  58: { name: 'Taş balta', color: 0x9a9a9a, base: 30 },
-  59: { name: 'Ahşap kürek', color: 0xb08850, base: 18 },
-  60: { name: 'Taş kürek', color: 0x9a9a9a, base: 28 },
-  61: { name: 'Ahşap çapa', color: 0xb08850, base: 20 },
-  62: { name: 'Taş çapa', color: 0x9a9a9a, base: 30 },
-  63: { name: 'Demir çapa', color: 0xd8d8d8, base: 60 },
-  64: { name: 'Elmas çapa', color: 0x4de0d0, base: 150 },
-  65: { name: 'Ahşap kılıç', color: 0xb08850, base: 25 },
-  66: { name: 'Taş kılıç', color: 0x9a9a9a, base: 35 },
-  67: { name: 'Demir kılıç', color: 0xd8d8d8, base: 70 },
-  68: { name: 'Elmas kılıç', color: 0x4de0d0, base: 160 },
-  69: { name: 'Elmas balta', color: 0x4de0d0, base: 150 },
-  70: { name: 'Tahta', color: 0xbc9862, base: 8 },
-  71: { name: 'Çubuk', color: 0x8c6434, base: 3 },
-  72: { name: 'Çalışma masası', color: 0xa07c4c, base: 30 },
-  73: { name: 'Buğday tohumu', color: 0x5a8a32, base: 4 },
-  74: { name: 'Buğday', color: 0xc8aa3c, base: 8 },
-  75: { name: 'Ekmek', color: 0xc89650, base: 20 },
-  81: { name: 'Ocak', color: 0x8a8a8e, base: 40 },
-  82: { name: 'Kömür', color: 0x2a2a2e, base: 12 },
-  83: { name: 'Demir külçe', color: 0xd0d0da, base: 50 },
-  84: { name: 'Altın külçe', color: 0xf5c940, base: 80 },
-  85: { name: 'Elmas', color: 0x50e1d7, base: 160 },
-  86: { name: 'Pişmiş et', color: 0x96552f, base: 30 },
-  89: { name: 'Elmas kürek', color: 0x4de0d0, base: 140 },
-  91: { name: 'Demir miğfer', color: 0xd0d0da, base: 100 },
-  92: { name: 'Demir zırh', color: 0xd0d0da, base: 160 },
-  93: { name: 'Demir pantolon', color: 0xd0d0da, base: 140 },
-  94: { name: 'Demir bot', color: 0xd0d0da, base: 90 },
-  95: { name: 'Elmas miğfer', color: 0x50e1d7, base: 250 },
-  96: { name: 'Elmas zırh', color: 0x50e1d7, base: 400 },
-  97: { name: 'Elmas pantolon', color: 0x50e1d7, base: 350 },
-  98: { name: 'Elmas bot', color: 0x50e1d7, base: 200 }
-};
-
-export const CATS = [
-  ['🧱 Bloklar', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 16, 34, 35, 36, 37, 38, 39, 70, 72, 81]],
-  ['🌱 Fidan ve çiçekler', [12, 40, 41, 42, 43, 44, 45, 73]],
-  ['🍎 Yiyecek', [15, 46, 74, 75, 86]],
-  ['🪣 Aletler', [30, 31, 33, 32, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 89]],
-  ['💎 Malzemeler', [71, 82, 83, 84, 85]],
-  ['🛡 Zırh', [91, 92, 93, 94, 95, 96, 97, 98]]
-];
 
 // ---- Chunk deposu: yüklü chunk'lar + kalıcı değişiklikler (mods) ----
 const chunks = new Map();
@@ -108,7 +15,7 @@ const mods = new Map();      // chunk anahtarı -> Map(hücre indeksi -> ham blo
 const urgent = new Set();    // hemen yeniden çizilecek chunk'lar
 const ck = (cx, cz) => (cx + 4096) * 8192 + (cz + 4096);
 let _seed = 1, _kind = 'normal', _sp = null, lcK = -1, lc = null;
-let group = null, material, waterMat, lavaMat, hl;
+let group = null, material, waterMat, lavaMat, glassMat, hl;
 
 function chunkAt(x, z) {
   const cx = Math.floor(x / CW), cz = Math.floor(z / CW), k = ck(cx, cz);
@@ -137,11 +44,12 @@ export const isWater = (x, y, z) => get(x, y, z) === WATER;
 export const isLava = (x, y, z) => get(x, y, z) === LAVA;
 // Katı: cam dahil (çarpışma). Bitki, su ve lavın içinden geçilir.
 export const solid = (x, y, z) => { const t = get(x, y, z); return t !== 0 && !isPlant(t) && t !== WATER && t !== LAVA; };
-// Opak: arkasını gizler. Cam saydam olduğu için opak sayılmaz, komşu yüzler cam arkasından görünür.
+// Opak: arkasını gizler. Cam saydam olduğu için opak sayılmaz.
 const opaque = t => t !== 0 && !isPlant(t) && t !== WATER && t !== LAVA && t !== GLASS;
 
 export const wh = { fn: null };       // fluids.js: blok değişince haber alır
 export const wlHook = { fn: null };   // paints.js: gündüz/gece ışığı
+export const ph = { fn: null };       // actions.js: su/lav bir bitkinin üstüne akınca (x, y, z, eski blok)
 
 function touch(c) { if (c.dirty === 0) { c.dirty = 2; urgent.add(ck(c.cx, c.cz)); } }
 function markDirty(c, lx, lz) {
@@ -166,12 +74,14 @@ export const set = (x, y, z, t) => {
   if (tt > WATER && tt <= WATER_MAX) { lv = tt - WATER; tt = WATER; }
   else if (tt >= LAVA && tt <= LAVA_MAX) { lv = tt - LAVA; tt = LAVA; }
   if (c.b[i] === tt && c.l[i] === lv) return;
+  const old = c.b[i];
   c.b[i] = tt; c.l[i] = lv;
   markDirty(c, lx, lz);
+  if (old && isPlant(old) && (tt === WATER || tt === LAVA) && ph.fn) ph.fn(x, y, z, old);   // akan sıvı bitkiyi kırar
   if (wh.fn) wh.fn(x, y, z);
 };
 
-// Yüklü chunk'lardaki belirli blokları tarar (fidan ve buğday büyütme için)
+// Yüklü chunk'lardaki belirli blokları tarar (fidan ve ekin büyütme için)
 export function eachBlock(ids, fn) {
   const m = new Uint8Array(256);
   for (const i of ids) m[i] = 1;
@@ -229,6 +139,10 @@ function flowerAt(x, z) {
   const px = Math.floor(x / 8), pz = Math.floor(z / 8);
   if (hash(px, pz, _seed + 9) > 0.22 || hash(x, z, _seed + 10) > 0.45) return 0;
   return FLOWER_MIN + Math.floor(hash(px, pz, _seed + 11) * 6);
+}
+// Uzun ot: öbekler halinde
+function grassAt(x, z) {
+  return hash(x >> 1, z >> 1, _seed + 21) < 0.3 && hash(x, z, _seed + 22) < 0.65;
 }
 function ruinAt(rx, rz) {   // 48x48'lik bölge başına en fazla bir harabe
   if (hash(rx, rz, _seed + 12) > 0.22) return null;
@@ -301,7 +215,7 @@ export function losBlocked(ex, ey, ez, dx, dy, dz, t) {
 
 // ---- Chunk üretimi ----
 function newChunk(cx, cz) {
-  return { cx, cz, b: new Uint8Array(CW * H * CW), l: new Uint8Array(CW * H * CW), dirty: 1, mt: null, mw: null, ml: null };
+  return { cx, cz, b: new Uint8Array(CW * H * CW), l: new Uint8Array(CW * H * CW), dirty: 1, mt: null, mw: null, ml: null, mg: null };
 }
 
 function genChunk(c) {
@@ -331,7 +245,7 @@ function genChunk(c) {
       const x = x0 + lx, z = z0 + lz;
       put(x, 0, z, BEDROCK); put(x, 1, z, 2); put(x, 2, z, 1);
       const f = flowerAt(x, z);
-      if (f) put(x, 3, z, f);
+      if (f) put(x, 3, z, f); else if (grassAt(x, z)) put(x, 3, z, TALL);
     }
   } else {
     const hs = new Int16Array(CW * CW);
@@ -373,8 +287,11 @@ function genChunk(c) {
     for (let lz = 0; lz < CW; lz++) for (let lx = 0; lx < CW; lx++) {
       const h = hs[lz * CW + lx];
       if (h <= SEA || h >= SNOW_H || h + 1 >= H) continue;
+      const ix = ((h + 1) * CW + lz) * CW + lx;
+      if (b[ix] !== 0 || b[(h * CW + lz) * CW + lx] !== 1) continue;   // sadece çimen bloğunun üstü
       const f = flowerAt(x0 + lx, z0 + lz);
-      if (f && b[((h + 1) * CW + lz) * CW + lx] === 0) b[((h + 1) * CW + lz) * CW + lx] = f;
+      if (f) b[ix] = f;
+      else if (grassAt(x0 + lx, z0 + lz)) b[ix] = TALL;
     }
   }
 
@@ -394,7 +311,7 @@ function genChunk(c) {
 }
 
 function disposeChunk(c) {
-  for (const f of ['mt', 'mw', 'ml']) {
+  for (const f of ['mt', 'mw', 'ml', 'mg']) {
     if (c[f]) { if (group) group.remove(c[f]); c[f].geometry.dispose(); c[f] = null; }
   }
 }
@@ -466,24 +383,21 @@ const occ = (x, y, z) => opaque(get(x, y, z)) ? 1 : 0;
 export function setWorldLight(v) {
   if (material) material.color.setScalar(v);
   if (waterMat) waterMat.color.setScalar(v);
+  if (glassMat) glassMat.color.setRGB(0.81 * v, 0.92 * v, 0.95 * v);
   if (wlHook.fn) wlHook.fn(v);
 }
 
 export function initRender(scene) {
   initAtlas();
-  // Cam: orta kısım tamamen şeffaf (alpha), çerçeve ve parlama çizgileri opak.
-  // Bitkilerle aynı "kesme" yöntemi: karışım (blending) gerektirmez, iPad/iOS dahil her cihazda arkası görünür.
-  const gt = FACE_TILES[GLASS][1] * 16, gctx = atlas.cv.getContext('2d');
-  gctx.clearRect(gt + 1, 1, 14, 14);
-  gctx.fillStyle = 'rgb(236,249,252)';
-  [[3, 6], [4, 5], [5, 4], [6, 3], [9, 12], [10, 11], [11, 10], [12, 9]].forEach(p => gctx.fillRect(gt + p[0], p[1], 1, 1));
-  atlas.tex.needsUpdate = true;
-
   material = new THREE.MeshBasicMaterial({ map: atlas.tex, vertexColors: true, alphaTest: 0.5, side: THREE.DoubleSide });
   waterMat = new THREE.MeshBasicMaterial({
     map: atlas.tex, vertexColors: true, transparent: true, opacity: 0.62, depthWrite: false, side: THREE.DoubleSide
   });
   lavaMat = new THREE.MeshBasicMaterial({ map: atlas.tex, vertexColors: true, side: THREE.DoubleSide });
+  // Cam yüzeyi: %95 saydam (opaklık 0,05). Camın varlığı opak çerçeve çubuklarıyla belli olur (buildChunk).
+  glassMat = new THREE.MeshBasicMaterial({
+    color: 0xcfeaf3, transparent: true, opacity: 0.05, depthWrite: false, side: THREE.DoubleSide
+  });
   group = new THREE.Group();
   scene.add(group);
   hl = new THREE.LineSegments(
@@ -534,10 +448,10 @@ function pushQ(s, tile, p, sh) {
 
 function buildChunk(c) {
   const pos = [], uv = [], col = [], ind = [];
-  const wS = sink(), lS = sink();
+  const wS = sink(), lS = sink(), gS = sink();
   let vc = 0;
-  const WT = FACE_TILES[WATER][0], LT = FACE_TILES[LAVA][0], GT = FACE_TILES[GLASS][1];
-  // Cam yüzleri ana mesh'e yazılır (kesme yöntemi)
+  const WT = FACE_TILES[WATER][0], LT = FACE_TILES[LAVA][0], GE = tileOf('glassEdge');
+  // Çerçeve çubukları ana (opak) mesh'e yazılır
   const mq = (tile, p, sh) => {
     for (let k = 0; k < 4; k++) {
       pos.push(p[k][0], p[k][1], p[k][2]);
@@ -546,6 +460,39 @@ function buildChunk(c) {
     }
     ind.push(vc, vc + 1, vc + 2, vc, vc + 2, vc + 3);
     vc += 4;
+  };
+  const GW = 0.07, EPS = 0.004;
+  // Cam: açıkta kalan her yüze %95 saydam yüzey + sadece GERÇEK kenarlara opak çerçeve çubuğu.
+  // Komşusu cam olan ve düz devam eden kenarda çubuk yoktur (camlar birleşir), başka blokla ya da havayla
+  // komşu kenarda köşe görünür.
+  const glass = (x, y, z) => {
+    for (let a = 0; a < 3; a++) for (let s = -1; s <= 1; s += 2) {
+      const n = [x, y, z]; n[a] += s;
+      const nt = get(n[0], n[1], n[2]);
+      if (nt === GLASS || opaque(nt)) continue;   // komşu cam ya da katı blok: iç yüz çizilmez
+      const u = (a + 1) % 3, v = (a + 2) % 3;
+      const sh = a === 1 ? (s > 0 ? 1 : 0.55) : a === 0 ? 0.82 : 0.68;
+      const pts = (u0, u1, v0, v1, off) => {
+        const out = [];
+        for (const [fu, fv] of [[u0, v0], [u1, v0], [u1, v1], [u0, v1]]) {
+          const p = [x, y, z];
+          p[a] += (s > 0 ? 1 : 0) + s * off;
+          p[u] += fu; p[v] += fv;
+          out.push(p);
+        }
+        return out;
+      };
+      pushQ(gS, GE, pts(0, 1, 0, 1, 0), 1);
+      for (const e of [u, v]) for (let d = -1; d <= 1; d += 2) {
+        const A = [x, y, z]; A[e] += d;
+        const B = [A[0], A[1], A[2]]; B[a] += s;
+        const at = get(A[0], A[1], A[2]), bt = get(B[0], B[1], B[2]);
+        if (at === GLASS && !(bt === GLASS || opaque(bt))) continue;   // cam düz devam ediyor: çizgi yok
+        const lo = d < 0 ? 0 : 1 - GW, hi = d < 0 ? GW : 1;
+        if (e === u) mq(GE, pts(lo, hi, 0, 1, EPS), sh);
+        else mq(GE, pts(0, 1, lo, hi, EPS), sh);
+      }
+    }
   };
   const x0 = c.cx * CW, z0 = c.cz * CW;
   for (let y = 0; y < H; y++) for (let lz = 0; lz < CW; lz++) for (let lx = 0; lx < CW; lx++) {
@@ -574,17 +521,7 @@ function buildChunk(c) {
       continue;
     }
 
-    // Cam: komşusu cam ya da opak olan yüz çizilmez (yan yana camların iç yüzleri gizlenir)
-    if (t === GLASS) {
-      const hide = (dx, dy, dz) => { const n = get(x + dx, y + dy, z + dz); return n === GLASS || opaque(n); };
-      if (!hide(0, 1, 0)) mq(GT, [[x, y + 1, z], [x + 1, y + 1, z], [x + 1, y + 1, z + 1], [x, y + 1, z + 1]], 1);
-      if (!hide(0, -1, 0)) mq(GT, [[x, y, z], [x + 1, y, z], [x + 1, y, z + 1], [x, y, z + 1]], 0.55);
-      if (!hide(1, 0, 0)) mq(GT, [[x + 1, y, z], [x + 1, y, z + 1], [x + 1, y + 1, z + 1], [x + 1, y + 1, z]], 0.82);
-      if (!hide(-1, 0, 0)) mq(GT, [[x, y, z], [x, y, z + 1], [x, y + 1, z + 1], [x, y + 1, z]], 0.82);
-      if (!hide(0, 0, 1)) mq(GT, [[x, y, z + 1], [x + 1, y, z + 1], [x + 1, y + 1, z + 1], [x, y + 1, z + 1]], 0.68);
-      if (!hide(0, 0, -1)) mq(GT, [[x, y, z], [x + 1, y, z], [x + 1, y + 1, z], [x, y + 1, z]], 0.68);
-      continue;
-    }
+    if (t === GLASS) { glass(x, y, z); continue; }
 
     const ft = FACE_TILES[t];
     if (!ft) continue;
@@ -637,6 +574,7 @@ function buildChunk(c) {
   putMesh(c, 'mt', pos, uv, col, ind, material, 0);
   putMesh(c, 'ml', lS.pos, lS.uv, lS.col, lS.ind, lavaMat, 1);
   putMesh(c, 'mw', wS.pos, wS.uv, wS.col, wS.ind, waterMat, 2);
+  putMesh(c, 'mg', gS.pos, gS.uv, gS.col, gS.ind, glassMat, 3);
 }
 
 // Oyuncu değişikliklerini hemen çizer (kare başına en çok 2 chunk)
@@ -676,4 +614,4 @@ export function updateTarget(camera) {
   if (!hl) return;
   hl.visible = !!target;
   if (target) hl.position.set(target[0] + 0.5, target[1] + 0.5, target[2] + 0.5);
-                                  }
+  }
