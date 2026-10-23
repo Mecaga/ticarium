@@ -1,4 +1,4 @@
-import { H, solid, get, WATER, LAVA, SEA, losBlocked, surfaceY, worldKind, isLoaded, skyTops } from '../world/world.js';
+import { H, solid, get, WATER, LAVA, SEA, losBlocked, surfaceY, worldKind, isLoaded, skyTops, WOOLC_MIN, DYE_COL } from '../world/world.js';
 import { dropItems } from './items.js';
 import { P } from './player.js';
 
@@ -8,6 +8,7 @@ export const mhooks = { send: null, remove: null };
 const KIND = { cow: { drop: 15, dmin: 1, dmax: 3 }, sheep: { drop: 16, dmin: 1, dmax: 2 } };
 const want = () => (worldKind() === 'sky' ? { cow: 1, sheep: 1 } : { cow: 3, sheep: 3 });
 const kindOf = id => (id.indexOf('sheep') === 0 ? 'sheep' : 'cow');
+const shadeHex = (c, k) => (((c >> 16 & 255) * k) << 16) | (((c >> 8 & 255) * k) << 8) | ((c & 255) * k);
 
 let group = null, sendT = 0, respT = 15;
 const mobs = new Map();
@@ -27,6 +28,7 @@ export function initMobs(scene) {
 
 function makeMob(kind) {
   const g = new THREE.Group(), mats = [];
+  let woolMats = null;
   const M = c => { const m = new THREE.MeshLambertMaterial({ color: c }); mats.push(m); return m; };
   const box = (w, h, d, m, x, y, z, parent = g) => {
     const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
@@ -47,6 +49,7 @@ function makeMob(kind) {
   };
   if (kind === 'sheep') {
     const wool = M(0xeeeeea), woolD = M(0xdcdcd6), face = M(0xb9a28f), leg = M(0x6f6258), dark = M(0x2a2a2a);
+    woolMats = [wool, woolD];
     box(1.0, 0.85, 1.25, wool, 0, 1.0, 0);
     box(1.04, 0.5, 0.8, woolD, 0, 1.12, 0.05);
     box(0.5, 0.5, 0.5, face, 0, 1.3, -0.85);
@@ -67,18 +70,28 @@ function makeMob(kind) {
     box(0.1, 0.16, 0.1, tan, 0.28, 1.58, -0.95);
     addLegs(white, dark, 0.28, 0.5, 0.6, 0.6);
   }
-  return { mesh: g, legs, mats };
+  return { mesh: g, legs, mats, wool: woolMats };
 }
 
-function createMob(id, x, y, z, f) {
+// Koyun rengi: idx -1 beyaz, 0..5 boya rengi
+function setColor(m, idx) {
+  m.col = idx;
+  if (!m.wool) return;
+  const c = idx >= 0 ? DYE_COL[idx] : 0xeeeeea;
+  m.wool[0].color.setHex(c);
+  m.wool[1].color.setHex(idx >= 0 ? shadeHex(c, 0.88) : 0xdcdcd6);
+}
+
+function createMob(id, x, y, z, f, col) {
   const kind = kindOf(id), mm = makeMob(kind);
   const m = {
-    id, kind, mesh: mm.mesh, legs: mm.legs, mats: mm.mats,
+    id, kind, mesh: mm.mesh, legs: mm.legs, mats: mm.mats, wool: mm.wool, col: -1,
     x, y, z, yaw: Math.random() * 6.28, vy: 0, grounded: false,
     tx: x, ty: y, tz: z, tyaw: 0,
     dir: Math.random() * 6.28, timer: Math.random() * 3, moving: false, speed: 0, phase: 0,
     hp: 6, kx: 0, kz: 0, panic: 0, f: f || 0, ft: 0, alive: true, lavaT: 0
   };
+  if (col >= 0) setColor(m, col);
   mm.mesh.position.set(x, y, z);
   group.add(mm.mesh);
   mobs.set(id, m);
@@ -101,6 +114,15 @@ function flashMob(m) {
   m.mats.forEach(x => x.emissive.setHex(0xff0000));
   clearTimeout(m.ft);
   m.ft = setTimeout(() => m.mats.forEach(x => x.emissive.setHex(0x000000)), 260);
+}
+
+export function mobKind(id) { const m = mobs.get(id); return m ? m.kind : null; }
+
+// Koyunu boyar (sadece oda yönetimi olan cihaz çağırır, renk durum güncellemesiyle herkese gider)
+export function dyeMob(id, idx) {
+  const m = mobs.get(id);
+  if (!m || m.kind !== 'sheep') return;
+  setColor(m, idx);
 }
 
 // Oyuncunun yakınında, yüklü chunk içinde, kuru ve boş bir yüzey
@@ -138,7 +160,7 @@ export function spawnAnimals() {
     const id = kind + i;
     if (mobs.has(id)) continue;
     const p = landSpot();
-    if (p) createMob(id, p.x, p.y, p.z);
+    if (p) createMob(id, p.x, p.y, p.z, 0, -1);
   }
 }
 
@@ -150,7 +172,7 @@ function topUp() {
     for (; n < w[kind]; n++) {
       const p = landSpot();
       if (!p) break;
-      createMob(kind + Date.now().toString(36) + n, p.x, p.y, p.z);
+      createMob(kind + Date.now().toString(36) + n, p.x, p.y, p.z, 0, -1);
     }
   }
   for (const m of [...mobs.values()]) if (Math.hypot(m.x - P.x, m.z - P.z) > 140) dropMob(m);
@@ -162,9 +184,10 @@ export function applyRemote(data, snap) {
     const d = data[id];
     if (!d || typeof d.x !== 'number') continue;
     let m = mobs.get(id);
-    if (!m) m = createMob(id, d.x, d.y, d.z, d.f || 0);
+    if (!m) m = createMob(id, d.x, d.y, d.z, d.f || 0, typeof d.c === 'number' ? d.c : -1);
     m.tx = d.x; m.ty = d.y; m.tz = d.z; m.tyaw = d.yaw || 0;
     if (snap) { m.x = d.x; m.y = d.y; m.z = d.z; m.yaw = d.yaw || 0; }
+    if (typeof d.c === 'number' && d.c !== m.col) setColor(m, d.c);
     const f = d.f || 0;
     if (f !== m.f) { m.f = f; flashMob(m); }
   }
@@ -193,15 +216,18 @@ function killMob(m) {
   m.alive = false;
   const k = KIND[m.kind];
   const n = k.dmin + Math.floor(Math.random() * (k.dmax - k.dmin + 1));
+  const dropT = (m.kind === 'sheep' && m.col >= 0) ? WOOLC_MIN + m.col : k.drop;   // boyalı koyun: o renkte yün
   const arr = [];
   for (let i = 0; i < n; i++) {
-    arr.push({ t: k.drop, c: 1, x: m.x, y: m.y + 0.8, z: m.z, vx: rnd(3), vy: 3 + Math.random() * 2, vz: rnd(3) });
+    arr.push({ t: dropT, c: 1, x: m.x, y: m.y + 0.8, z: m.z, vx: rnd(3), vy: 3 + Math.random() * 2, vz: rnd(3) });
   }
   dropItems(arr);
   dropMob(m);
 }
 
+// d < 0: boyama isteği (renk = -d - 1). Başka oyuncuların boyama ve vuruşları oda yönetimi olan cihaza bu yolla gelir.
 export function hurtMob(id, d, fx, fz) {
+  if (d < 0) return dyeMob(id, -d - 1);
   const m = mobs.get(id);
   if (!m || !m.alive) return;
   m.hp -= d; m.f++;
@@ -289,8 +315,8 @@ export function updateMobs(dt, simulate) {
     if (sendT >= 0.25) {
       sendT = 0;
       const o = {};
-      mobs.forEach((m, id) => { o[id] = { x: r2(m.x), y: r2(m.y), z: r2(m.z), yaw: r2(m.yaw), f: m.f }; });
+      mobs.forEach((m, id) => { o[id] = { x: r2(m.x), y: r2(m.y), z: r2(m.z), yaw: r2(m.yaw), f: m.f, c: m.col }; });
       mhooks.send(o);
     }
   }
-                                                }
+    }
