@@ -15,10 +15,14 @@ const TILE_NAMES = ['grassTop', 'grassSide', 'dirt', 'stone', 'woodSide', 'woodT
   'coalOre', 'ironOre', 'goldOre', 'diamondOre', 'furnaceTop', 'furnaceSide', 'coal', 'ingotI', 'ingotG', 'gem', 'cooked',
   'axeD', 'shovelD', 'helmI', 'chestI', 'legI', 'bootI', 'helmD', 'chestD', 'legD', 'bootD',
   'tomato0', 'tomato1', 'tomato2', 'tomato3', 'tomato',
-  'pepper0', 'pepper1', 'pepper2', 'pepper3', 'pepper'];
+  'pepper0', 'pepper1', 'pepper2', 'pepper3', 'pepper',
+  'potato0', 'potato1', 'potato2', 'potato3', 'potato',
+  'onion0', 'onion1', 'onion2', 'onion3', 'onion',
+  'carrot0', 'carrot1', 'carrot2', 'carrot3', 'carrot',
+  'cigkofte'];
 
 const FLOWERS = new Set(['lavender', 'daisy', 'poppy', 'bpoppy', 'tulipo', 'tulipp']);
-const ITEMS = new Set(['seeds', 'wheatI', 'bread', 'stick', 'coal', 'ingotI', 'ingotG', 'gem', 'cooked', 'tomato', 'pepper']);
+const ITEMS = new Set(['seeds', 'wheatI', 'bread', 'stick', 'coal', 'ingotI', 'ingotG', 'gem', 'cooked', 'tomato', 'pepper', 'potato', 'onion', 'carrot', 'cigkofte']);
 const WOOD = [176, 136, 72], STONE = [150, 150, 150], IRON = [222, 222, 228], DIAM = [80, 225, 215], NETH = [92, 76, 88];
 
 // Aletler: [tür, kafa rengi]
@@ -70,14 +74,18 @@ export const FACE_TILES = {
   91: same('helmI'), 92: same('chestI'), 93: same('legI'), 94: same('bootI'),
   95: same('helmD'), 96: same('chestD'), 97: same('legD'), 98: same('bootD'),
   99: same('tomato0'), 100: same('tomato1'), 101: same('tomato2'), 102: same('tomato3'), 103: same('tomato'),
-  104: same('pepper0'), 105: same('pepper1'), 106: same('pepper2'), 107: same('pepper3'), 108: same('pepper')
+  104: same('pepper0'), 105: same('pepper1'), 106: same('pepper2'), 107: same('pepper3'), 108: same('pepper'),
+  109: same('potato0'), 110: same('potato1'), 111: same('potato2'), 112: same('potato3'), 113: same('potato'),
+  114: same('onion0'), 115: same('onion1'), 116: same('onion2'), 117: same('onion3'), 118: same('onion'),
+  119: same('carrot0'), 120: same('carrot1'), 121: same('carrot2'), 122: same('carrot3'), 123: same('carrot'),
+  124: same('cigkofte')
 };
 
 // Blok olmayan eşyalar: yerde ve ikonda düz sprite olarak görünür
-const FLAT = new Set([12, 15, 30, 31, 33, 40, 41, 42, 43, 44, 45, 46, 71, 73, 74, 75, 103, 108]);
+const FLAT = new Set([12, 15, 30, 31, 33, 40, 41, 42, 43, 44, 45, 46, 71, 73, 74, 75, 103, 108, 113, 118, 123, 124]);
 for (let i = 50; i <= 68; i++) FLAT.add(i);
 for (const i of [69, 82, 83, 84, 85, 86, 89, 91, 92, 93, 94, 95, 96, 97, 98]) FLAT.add(i);
-for (let i = TI.tomato0; i <= TI.pepper3; i++) FLAT.add(i);
+for (let i = TI.tomato0; i <= TI.cigkofte; i++) FLAT.add(i);
 export const isFlat = t => FLAT.has(t);
 
 export const atlas = { tex: null, T, cv: null };
@@ -108,7 +116,11 @@ const BASE = {
   furnaceTop: [128, 128, 132], furnaceSide: [140, 140, 144],
   coal: [40, 40, 44], ingotI: [205, 205, 214], ingotG: [248, 204, 60], gem: [80, 225, 215], cooked: [150, 85, 50],
   tomato0: [100, 190, 65], tomato1: [90, 175, 55], tomato2: [150, 190, 55], tomato3: [220, 50, 40], tomato: [220, 40, 30],
-  pepper0: [90, 180, 50], pepper1: [80, 165, 45], pepper2: [140, 180, 45], pepper3: [50, 180, 50], pepper: [210, 40, 40]
+  pepper0: [90, 180, 50], pepper1: [80, 165, 45], pepper2: [140, 180, 45], pepper3: [50, 180, 50], pepper: [210, 40, 40],
+  potato0: [100, 190, 65], potato1: [95, 180, 60], potato2: [145, 170, 90], potato3: [185, 140, 90], potato: [185, 140, 90],
+  onion0: [90, 185, 60], onion1: [85, 170, 55], onion2: [170, 140, 170], onion3: [210, 160, 180], onion: [210, 160, 180],
+  carrot0: [85, 185, 50], carrot1: [90, 190, 45], carrot2: [180, 140, 40], carrot3: [240, 130, 40], carrot: [240, 130, 40],
+  cigkofte: [145, 65, 35]
 };
 for (const n in TOOL) BASE[n] = TOOL[n][1];
 for (const n in ARM) BASE[n] = ARM[n][1];
@@ -202,6 +214,40 @@ function pepperPix(s, x, y) {
   return null;
 }
 
+// Patates büyüme aşamaları (0..3)
+function potatoPix(s, x, y) {
+  const h = [4, 8, 12, 15][s];
+  for (const c of [4, 8, 12]) {
+    if (x === c && y >= 16 - h) return [95, 160, 50];
+  }
+  if (s >= 2 && y >= 12) {
+    if (x >= 5 && x <= 11) return [170, 130, 80];
+  }
+  return null;
+}
+
+// Soğan büyüme aşamaları (0..3)
+function onionPix(s, x, y) {
+  const h = [4, 8, 12, 15][s];
+  for (const c of [4, 8, 12]) {
+    if (x === c && y >= 16 - h) return [110, 180, 70];
+  }
+  if (s >= 2 && y >= 11) {
+    const dx = Math.abs(x - 7.5);
+    if (dx <= 3) return [200, 150, 170];
+  }
+  return null;
+}
+
+// Havuç büyüme aşamaları (0..3)
+function carrotPix(s, x, y) {
+  const h = [4, 8, 12, 15][s];
+  for (const c of [4, 8, 12]) {
+    if (x === c && y >= 16 - h) return [80, 170, 40];
+  }
+  return null;
+}
+
 function ingotPix(col, x, y) {
   if (y < 6 || y > 10) return null;
   const s = 10 - y;
@@ -242,6 +288,41 @@ function itemPix(name, x, y) {
     if (e >= 1) return null;
     if (y <= 4 && x >= 7 && x <= 9) return [70, 150, 50];
     return [210, 40, 40];
+  }
+  if (name === 'potato') {
+    const e = Math.pow((x - 7.5) / 4.5, 2) + Math.pow((y - 8.5) / 3.8, 2);
+    if (e >= 1) return null;
+    return (hash(x, y, 200) < 0.2) ? [130, 95, 60] : [185, 140, 90];
+  }
+  if (name === 'onion') {
+    const e = Math.pow((x - 7.5) / 4.2, 2) + Math.pow((y - 8.5) / 4.2, 2);
+    if (e >= 1) return null;
+    if (y <= 3 && x >= 7 && x <= 9) return [80, 160, 50];
+    return [210, 160, 180];
+  }
+  if (name === 'carrot') {
+    // Üçgen/konik turuncu havuç ve üstünde yeşil saplar
+    if (y <= 3 && x >= 6 && x <= 10) return [70, 170, 50];
+    const dx = Math.abs(x - 7.5);
+    if (y >= 4 && y <= 14 && dx <= (15 - y) * 0.45) {
+      return (y % 3 === 0) ? [220, 110, 30] : [240, 130, 40];
+    }
+    return null;
+  }
+  if (name === 'cigkofte') {
+    // Marul yaprağı üstünde parmak şekli verilmiş esmer/kırmızı çiğköfte parçaları
+    const lettuce = Math.pow((x - 7.5) / 6.5, 2) + Math.pow((y - 8.5) / 6.0, 2);
+    if (lettuce <= 1) {
+      const isEdge = (x <= 2 || x >= 13 || y <= 2 || y >= 13);
+      if (isEdge) return [90, 170, 50]; // Marul yeşili kenar
+      // Ortada çiğköfte tümseği
+      const kofte = Math.pow((x - 7.5) / 3.5, 2) + Math.pow((y - 8.5) / 3.0, 2);
+      if (kofte <= 1) {
+        return (hash(x, y, 300) < 0.25) ? [120, 50, 25] : [145, 65, 35];
+      }
+      return [110, 190, 60]; // İç marul rengi
+    }
+    return null;
   }
   if (name === 'coal') {
     const e = Math.pow((x - 7.5) / 5.2, 2) + Math.pow((y - 8.5) / 4.2, 2);
@@ -329,6 +410,21 @@ function buildAtlas() {
         k = 0.92 + hash(x, y, i) * 0.16;
       } else if (/^pepper[0-3]$/.test(name)) {
         const c = pepperPix(+name.slice(6), x, y);
+        if (!c) continue;
+        [r, g, b] = c;
+        k = 0.92 + hash(x, y, i) * 0.16;
+      } else if (/^potato[0-3]$/.test(name)) {
+        const c = potatoPix(+name.slice(6), x, y);
+        if (!c) continue;
+        [r, g, b] = c;
+        k = 0.92 + hash(x, y, i) * 0.16;
+      } else if (/^onion[0-3]$/.test(name)) {
+        const c = onionPix(+name.slice(5), x, y);
+        if (!c) continue;
+        [r, g, b] = c;
+        k = 0.92 + hash(x, y, i) * 0.16;
+      } else if (/^carrot[0-3]$/.test(name)) {
+        const c = carrotPix(+name.slice(6), x, y);
         if (!c) continue;
         [r, g, b] = c;
         k = 0.92 + hash(x, y, i) * 0.16;
@@ -456,9 +552,8 @@ function buildAtlas() {
             else if (hash(x, y, 93) < 0.12) { r = 150; g = 30; b = 0; k = 1; }
             break;
           case 'paint':
-            // Üst kısım renkli boya, alt kısım tahta düzlük
             if (y >= 8) {
-              r = 188; g = 152; b = 98; // tahta renkleri
+              r = 188; g = 152; b = 98;
               k = 0.9 + hash(x, y, 111) * 0.2;
               if (y === 8 || y === 12) k *= 0.72;
             } else {
