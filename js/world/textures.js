@@ -1,4 +1,4 @@
-export function hash(x, y, s) {
+Export function hash(x, y, s) {
   let n = Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(s, 1274126177);
   n = Math.imul(n ^ (n >>> 13), 1274126177);
   return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
@@ -75,6 +75,14 @@ export const isFlat = t => FLAT.has(t);
 
 export const atlas = { tex: null, T, cv: null };
 export const sideTile = t => FACE_TILES[t][1];
+
+// Eksik olan tileOf fonksiyonu eklendi:
+export function tileOf(t, face = 1) {
+  if (FACE_TILES[t]) {
+    return FACE_TILES[t][face];
+  }
+  return t;
+}
 
 const BASE = {
   grassTop: [95, 174, 69], grassSide: [139, 90, 43], dirt: [139, 90, 43], stone: [150, 148, 144],
@@ -455,4 +463,4 @@ export function iconURL(t) {
   const u = c.toDataURL();
   icons.set(t, u);
   return u;
-    }
+}
