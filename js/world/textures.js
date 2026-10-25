@@ -13,10 +13,14 @@ const TILE_NAMES = ['grassTop', 'grassSide', 'dirt', 'stone', 'woodSide', 'woodT
   'seeds', 'wheatI', 'bread', 'stick',
   'axeW', 'axeS', 'shovelW', 'shovelS', 'hoeW', 'hoeS', 'hoeI', 'hoeD', 'swordW', 'swordS', 'swordI', 'swordD',
   'coalOre', 'ironOre', 'goldOre', 'diamondOre', 'furnaceTop', 'furnaceSide', 'coal', 'ingotI', 'ingotG', 'gem', 'cooked',
-  'axeD', 'shovelD', 'helmI', 'chestI', 'legI', 'bootI', 'helmD', 'chestD', 'legD', 'bootD'];
+  'axeD', 'shovelD', 'helmI', 'chestI', 'legI', 'bootI', 'helmD', 'chestD', 'legD', 'bootD',
+  'tomato0', 'tomato1', 'tomato2', 'tomato3', 'tomato',
+  'pepper0', 'pepper1', 'pepper2', 'pepper3', 'pepper'];
+
 const FLOWERS = new Set(['lavender', 'daisy', 'poppy', 'bpoppy', 'tulipo', 'tulipp']);
-const ITEMS = new Set(['seeds', 'wheatI', 'bread', 'stick', 'coal', 'ingotI', 'ingotG', 'gem', 'cooked']);
+const ITEMS = new Set(['seeds', 'wheatI', 'bread', 'stick', 'coal', 'ingotI', 'ingotG', 'gem', 'cooked', 'tomato', 'pepper']);
 const WOOD = [176, 136, 72], STONE = [150, 150, 150], IRON = [222, 222, 228], DIAM = [80, 225, 215], NETH = [92, 76, 88];
+
 // Aletler: [tür, kafa rengi]
 const TOOL = {
   pickW: ['pick', WOOD], pickS: ['pick', STONE], pickI: ['pick', IRON], pickD: ['pick', DIAM], pickN: ['pick', NETH],
@@ -64,17 +68,20 @@ export const FACE_TILES = {
   82: same('coal'), 83: same('ingotI'), 84: same('ingotG'), 85: same('gem'), 86: same('cooked'),
   89: same('shovelD'),
   91: same('helmI'), 92: same('chestI'), 93: same('legI'), 94: same('bootI'),
-  95: same('helmD'), 96: same('chestD'), 97: same('legD'), 98: same('bootD')
+  95: same('helmD'), 96: same('chestD'), 97: same('legD'), 98: same('bootD'),
+  99: same('tomato0'), 100: same('tomato1'), 101: same('tomato2'), 102: same('tomato3'), 103: same('tomato'),
+  104: same('pepper0'), 105: same('pepper1'), 106: same('pepper2'), 107: same('pepper3'), 108: same('pepper')
 };
 
 // Blok olmayan eşyalar: yerde ve ikonda düz sprite olarak görünür
-const FLAT = new Set([12, 15, 30, 31, 33, 40, 41, 42, 43, 44, 45, 46, 71, 73, 74, 75]);
+const FLAT = new Set([12, 15, 30, 31, 33, 40, 41, 42, 43, 44, 45, 46, 71, 73, 74, 75, 103, 108]);
 for (let i = 50; i <= 68; i++) FLAT.add(i);
 for (const i of [69, 82, 83, 84, 85, 86, 89, 91, 92, 93, 94, 95, 96, 97, 98]) FLAT.add(i);
+for (let i = TI.tomato0; i <= TI.pepper3; i++) FLAT.add(i);
 export const isFlat = t => FLAT.has(t);
 
 export const atlas = { tex: null, T, cv: null };
-export const sideTile = t => FACE_TILES[t][1];
+export const sideTile = t => FACE_TILES[t] ? FACE_TILES[t][1] : t;
 
 export function tileOf(t, face = 1) {
   if (FACE_TILES[t]) {
@@ -89,7 +96,7 @@ const BASE = {
   brick: [181, 73, 58], snow: [245, 245, 245], glass: [159, 216, 232], gold: [255, 215, 0],
   bedrock: [62, 62, 66], sapling: [60, 170, 70], birchSide: [226, 223, 212], birchTop: [196, 178, 128],
   birchLeaf: [132, 184, 84], meat: [196, 70, 80], wool: [236, 236, 232], water: [50, 115, 205],
-  bucket: [170, 175, 182], wbucket: [170, 175, 182], lbucket: [170, 175, 182], paint: [245, 240, 225],
+  bucket: [170, 175, 182], wbucket: [170, 175, 182], lbucket: [170, 175, 182], paint: [188, 152, 98],
   lava: [240, 100, 20], apple: [200, 30, 30],
   lavender: [150, 90, 205], daisy: [248, 248, 248], poppy: [208, 34, 40],
   bpoppy: [48, 82, 205], tulipo: [243, 134, 32], tulipp: [240, 120, 172],
@@ -99,12 +106,14 @@ const BASE = {
   seeds: [95, 140, 55], wheatI: [215, 175, 70], bread: [195, 135, 70], stick: [140, 100, 52],
   coalOre: [150, 148, 144], ironOre: [150, 148, 144], goldOre: [150, 148, 144], diamondOre: [150, 148, 144],
   furnaceTop: [128, 128, 132], furnaceSide: [140, 140, 144],
-  coal: [40, 40, 44], ingotI: [205, 205, 214], ingotG: [248, 204, 60], gem: [80, 225, 215], cooked: [150, 85, 50]
+  coal: [40, 40, 44], ingotI: [205, 205, 214], ingotG: [248, 204, 60], gem: [80, 225, 215], cooked: [150, 85, 50],
+  tomato0: [100, 190, 65], tomato1: [90, 175, 55], tomato2: [150, 190, 55], tomato3: [220, 50, 40], tomato: [220, 40, 30],
+  pepper0: [90, 180, 50], pepper1: [80, 165, 45], pepper2: [140, 180, 45], pepper3: [50, 180, 50], pepper: [210, 40, 40]
 };
 for (const n in TOOL) BASE[n] = TOOL[n][1];
 for (const n in ARM) BASE[n] = ARM[n][1];
 
-// Kaldırım taşı için hücre noktaları (kenarlar birleşsin diye sarmalı)
+// Kaldırım taşı için hücre noktaları
 const SEEDS = Array.from({ length: 8 }, (_, i) => [hash(i, 1, 50) * 16, hash(i, 2, 50) * 16]);
 function cobble(x, y) {
   let d1 = 99, d2 = 99, id = 0;
@@ -117,7 +126,6 @@ function cobble(x, y) {
   return { id, edge: d2 - d1 };
 }
 
-// Çiçek ve elma pikselleri (null = şeffaf)
 function plantPix(name, x, y) {
   if (name === 'apple') {
     if (y >= 2 && y <= 4 && x === 8) return [95, 60, 30];
@@ -146,17 +154,50 @@ function plantPix(name, x, y) {
   return null;
 }
 
-// Detaylı ve estetik buğday büyüme aşamaları (0..3)
+// Buğday büyüme aşamaları (0..3)
 function wheatPix(s, x, y) {
   const h = [4, 8, 12, 15][s];
-  // Çeşitli sap ve başlık yapıları
   for (const c of [3, 7, 11, 13]) {
     if (x === c && y >= 16 - h) {
-      if (s === 3 && y < 16 - h + 5) return [240, 210, 90]; // Olgun başlık
+      if (s === 3 && y < 16 - h + 5) return [240, 210, 90];
       return s === 0 ? [100, 190, 65] : s === 1 ? [90, 175, 55] : s === 2 ? [165, 195, 65] : [220, 190, 70];
     }
     if (s === 3 && Math.abs(x - c) === 1 && y >= 16 - h + 1 && y < 16 - h + 5) return [250, 225, 110];
     if (s === 2 && Math.abs(x - c) === 1 && y >= 16 - h + 4 && y < 16 - h + 8) return [130, 185, 50];
+  }
+  return null;
+}
+
+// Domates büyüme aşamaları (0..3)
+function tomatoPix(s, x, y) {
+  const h = [4, 8, 12, 15][s];
+  for (const c of [4, 8, 12]) {
+    if (x === c && y >= 16 - h) return [70, 140, 45];
+  }
+  if (s >= 2) {
+    const tomatoes = s === 2 ? [[7, 10], [9, 8]] : [[6, 10], [9, 8], [8, 5], [10, 6]];
+    for (const [tx, ty] of tomatoes) {
+      if (Math.hypot(x - tx, y - ty) <= (s === 2 ? 1.2 : 1.7)) {
+        return (x === tx && y === ty + 1) ? [255, 120, 110] : [220, 40, 30];
+      }
+    }
+  }
+  return null;
+}
+
+// Biber büyüme aşamaları (0..3)
+function pepperPix(s, x, y) {
+  const h = [4, 8, 12, 15][s];
+  for (const c of [4, 8, 12]) {
+    if (x === c && y >= 16 - h) return [60, 150, 50];
+  }
+  if (s >= 2) {
+    const peppers = s === 2 ? [[7, 9], [9, 7]] : [[6, 10], [9, 8], [8, 5], [11, 6]];
+    for (const [px, py] of peppers) {
+      if (Math.abs(x - px) <= 1 && y >= py && y <= py + (s === 2 ? 2 : 3)) {
+        return (px % 2 === 0) ? [210, 40, 40] : [50, 180, 50];
+      }
+    }
   }
   return null;
 }
@@ -168,32 +209,39 @@ function ingotPix(col, x, y) {
   return y <= 7 ? col.map(v => Math.min(255, v + 30)) : col;
 }
 
-// Çubuk, tohum, buğday, ekmek, kömür, külçe, elmas, pişmiş et
 function itemPix(name, x, y) {
   if (name === 'stick') return ((x + y === 16 || x + y === 17) && x >= 4 && x <= 12) ? [140, 100, 52] : null;
   if (name === 'seeds') {
-    // Tohum pikselleri (küçük oval tanecikler)
     const e = Math.pow((x - 7.5) / 3.5, 2) + Math.pow((y - 8.5) / 4.5, 2);
     if (e >= 1) return null;
     return (x + y) % 2 === 0 ? [110, 160, 60] : [80, 120, 45];
   }
   if (name === 'wheatI') {
-    // Hasat edilmiş buğday demeti
     for (const c of [5, 8, 11]) {
       const sx = c + Math.floor((14 - y) / 6);
       if (y >= 6 && y <= 14 && x === sx) return [200, 160, 60];
       if (y >= 2 && y <= 6 && Math.abs(x - c) <= 1) return [235, 205, 90];
     }
-    // Bağlama ipi
     if (y === 10 && x >= 6 && x <= 10) return [210, 185, 130];
     return null;
   }
   if (name === 'bread') {
-    // Minecraft tarzı dilimli ekmek
     const e = Math.pow((x - 7.5) / 5.5, 2) + Math.pow((y - 8.5) / 3.2, 2);
     if (e >= 1) return null;
-    if (y === 6 && (x === 6 || x === 10)) return [150, 95, 45]; // Çizikler
+    if (y === 6 && (x === 6 || x === 10)) return [150, 95, 45];
     return y < 7 ? [210, 155, 85] : [175, 115, 60];
+  }
+  if (name === 'tomato') {
+    const e = Math.pow((x - 7.5) / 5.0, 2) + Math.pow((y - 8.5) / 5.0, 2);
+    if (e >= 1) return null;
+    if (x === 7 && y <= 4) return [70, 150, 50];
+    return (x === 6 && y === 7) ? [255, 120, 110] : [220, 40, 30];
+  }
+  if (name === 'pepper') {
+    const e = Math.pow((x - 7.5) / 3.0, 2) + Math.pow((y - 8.5) / 5.5, 2);
+    if (e >= 1) return null;
+    if (y <= 4 && x >= 7 && x <= 9) return [70, 150, 50];
+    return [210, 40, 40];
   }
   if (name === 'coal') {
     const e = Math.pow((x - 7.5) / 5.2, 2) + Math.pow((y - 8.5) / 4.2, 2);
@@ -215,7 +263,6 @@ function itemPix(name, x, y) {
   return null;
 }
 
-// Kazma, balta, kürek, çapa, kılıç pikselleri (null = şeffaf)
 function toolPix(kind, col, x, y) {
   if (kind === 'axe') {
     const e = Math.pow((x - 10.5) / 3.2, 2) + Math.pow((y - 5) / 3.4, 2);
@@ -239,7 +286,6 @@ function toolPix(kind, col, x, y) {
   return null;
 }
 
-// Zırh pikselleri: miğfer, göğüslük, pantolon, bot
 function armorPix(kind, col, x, y) {
   const dx = Math.abs(x - 7.5);
   let on;
@@ -264,7 +310,7 @@ function buildAtlas() {
         const stalk = (x === 7 || x === 8) && y >= 8;
         const dxx = (x - 7.5) / 4.5, dyy = (y - 5) / 3.6;
         const crown = dxx * dxx + dyy * dyy < 1 && hash(x, y, 31) < 0.9;
-        if (!stalk && !crown) continue; // şeffaf kalır
+        if (!stalk && !crown) continue;
         if (stalk) { r = 96; g = 140; b = 60; }
       } else if (FLOWERS.has(name) || name === 'apple') {
         const c = plantPix(name, x, y);
@@ -273,6 +319,16 @@ function buildAtlas() {
         k = 0.93 + hash(x, y, i) * 0.14;
       } else if (/^wheat[0-3]$/.test(name)) {
         const c = wheatPix(+name.slice(5), x, y);
+        if (!c) continue;
+        [r, g, b] = c;
+        k = 0.92 + hash(x, y, i) * 0.16;
+      } else if (/^tomato[0-3]$/.test(name)) {
+        const c = tomatoPix(+name.slice(6), x, y);
+        if (!c) continue;
+        [r, g, b] = c;
+        k = 0.92 + hash(x, y, i) * 0.16;
+      } else if (/^pepper[0-3]$/.test(name)) {
+        const c = pepperPix(+name.slice(6), x, y);
         if (!c) continue;
         [r, g, b] = c;
         k = 0.92 + hash(x, y, i) * 0.16;
@@ -400,11 +456,16 @@ function buildAtlas() {
             else if (hash(x, y, 93) < 0.12) { r = 150; g = 30; b = 0; k = 1; }
             break;
           case 'paint':
-            if (x < 2 || y < 2 || x > 13 || y > 13) { r = 112; g = 80; b = 48; k = 0.9 + hash(x, y, 81) * 0.2; }
-            else {
+            // Üst kısım renkli boya, alt kısım tahta düzlük
+            if (y >= 8) {
+              r = 188; g = 152; b = 98; // tahta renkleri
+              k = 0.9 + hash(x, y, 111) * 0.2;
+              if (y === 8 || y === 12) k *= 0.72;
+            } else {
               k = 0.97 + hash(x, y, 82) * 0.06;
-              if ((x * 3 + y * 5) % 13 === 0) { r = 214; g = 72; b = 72; k = 1; }
-              else if ((x * 5 + y * 2) % 17 === 0) { r = 60; g = 110; b = 210; k = 1; }
+              if ((x * 3 + y * 5) % 13 === 0) { r = 214; g = 72; b = 72; }
+              else if ((x * 5 + y * 2) % 17 === 0) { r = 60; g = 110; b = 210; }
+              else { r = 245; g = 240; b = 225; }
             }
             break;
           case 'planks':
@@ -424,9 +485,8 @@ function buildAtlas() {
             if (y >= 5 && y <= 9 && x >= 3 && x <= 12 && hash(x, y, 115) < 0.35) { r = 160; g = 160; b = 170; k = 1; }
             break;
           case 'farmTop':
-            // Çapa ile sürülmüş tarlanın çizgi/oluk (furrow) dokusu
             k = 0.85 + hash(x, y, 116) * 0.2;
-            if (y % 4 === 0 || y % 4 === 1) k *= 0.55; // Sürülmüş koyu kanal çizgileri
+            if (y % 4 === 0 || y % 4 === 1) k *= 0.55;
             break;
         }
       }
@@ -447,7 +507,6 @@ export function initAtlas() {
   return atlas.tex;
 }
 
-// Envanter ikonu (data URL): bloklar küçük 3D küp, diğer eşyalar düz piksel sprite
 const icons = new Map();
 export function iconURL(t) {
   if (icons.has(t)) return icons.get(t);
@@ -467,9 +526,9 @@ export function iconURL(t) {
       if (shade) { g.fillStyle = 'rgba(0,0,0,' + shade + ')'; g.fillRect(0, 0, 16, 16); }
       g.restore();
     };
-    face(ft[0], [0.875, 0.4375, -0.875, 0.4375, 16, 2], 0);       // üst
-    face(ft[1], [0.875, 0.4375, 0, 0.875, 2, 9], 0.22);           // sol yüz
-    face(ft[1], [0.875, -0.4375, 0, 0.875, 16, 16], 0.42);        // sağ yüz
+    face(ft[0], [0.875, 0.4375, -0.875, 0.4375, 16, 2], 0);
+    face(ft[1], [0.875, 0.4375, 0, 0.875, 2, 9], 0.22);
+    face(ft[1], [0.875, -0.4375, 0, 0.875, 16, 16], 0.42);
   }
   const u = c.toDataURL();
   icons.set(t, u);
