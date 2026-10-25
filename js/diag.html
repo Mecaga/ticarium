@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="tr"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teşhis</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#1d2330;color:#fff;padding:16px;font-size:14px}
+.ok{color:#6f6}.bad{color:#f77;font-weight:700}.old{color:#fc6;font-weight:700}div{padding:3px 0;word-break:break-all}
+</style></head><body>
+<h3>Import zinciri teşhisi</h3><div id="out">Taranıyor...</div>
+<script>
+var base = location.href.replace(/[^\/]*$/, '');
+var seen = {}, queue = [{ f: 'js/main.js', by: '(başlangıç)' }], rows = [], bad = 0, warn = 0, n = 0;
+function next() {
+  var it = queue.shift();
+  if (!it) {
+    document.getElementById('out').innerHTML =
+      '<div class="' + (bad || warn ? 'bad' : 'ok') + '">' + n + ' dosya tarandı, ' + bad + ' eksik, ' + warn + ' yarım/şüpheli</div>' + rows.join('');
+    return;
+  }
+  var url = new URL(it.f, base).href;
+  if (seen[url]) return next();
+  seen[url] = 1; n++;
+  fetch(url + '?t=' + Date.now(), { cache: 'no-store' }).then(function (r) {
+    if (!r.ok) { bad++; rows.push('<div class="bad">❌ EKSİK: ' + it.f + ' (isteyen: ' + it.by + ')</div>'); return; }
+    return r.text().then(function (t) {
+      var tail = t.replace(/\s+$/, '').slice(-1);
+      if (!/[};)]/.test(tail)) { warn++; rows.push('<div class="old">⚠️ SONU KESİK: ' + it.f + ' (' + t.length + ' karakter)</div>'); }
+      var re = /(?:from|import)\s*['"](\.[^'"]+)['"]/g, m;
+      while ((m = re.exec(t))) {
+        var p = new URL(m[1], url).href.replace(base, '').split('?')[0];
+        queue.push({ f: p, by: it.f });
+      }
+    });
+  }).catch(function (e) { bad++; rows.push('<div class="bad">❌ ' + it.f + ': ' + e.message + '</div>'); })
+    .then(next);
+}
+next();
+</script></body></html>
