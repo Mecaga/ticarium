@@ -94,9 +94,9 @@ const BASE = {
   lavender: [150, 90, 205], daisy: [248, 248, 248], poppy: [208, 34, 40],
   bpoppy: [48, 82, 205], tulipo: [243, 134, 32], tulipp: [240, 120, 172],
   obsidian: [26, 16, 44], netherite: [74, 64, 70],
-  planks: [188, 152, 98], craftTop: [160, 124, 76], craftSide: [170, 134, 84], farmTop: [92, 60, 34],
-  wheat0: [96, 175, 70], wheat1: [84, 160, 60], wheat2: [150, 175, 60], wheat3: [196, 164, 66],
-  seeds: [90, 120, 50], wheatI: [200, 170, 60], bread: [200, 150, 80], stick: [140, 100, 52],
+  planks: [188, 152, 98], craftTop: [160, 124, 76], craftSide: [170, 134, 84], farmTop: [110, 75, 45],
+  wheat0: [100, 190, 65], wheat1: [90, 175, 55], wheat2: [160, 190, 60], wheat3: [220, 190, 70],
+  seeds: [95, 140, 55], wheatI: [215, 175, 70], bread: [195, 135, 70], stick: [140, 100, 52],
   coalOre: [150, 148, 144], ironOre: [150, 148, 144], goldOre: [150, 148, 144], diamondOre: [150, 148, 144],
   furnaceTop: [128, 128, 132], furnaceSide: [140, 140, 144],
   coal: [40, 40, 44], ingotI: [205, 205, 214], ingotG: [248, 204, 60], gem: [80, 225, 215], cooked: [150, 85, 50]
@@ -146,16 +146,17 @@ function plantPix(name, x, y) {
   return null;
 }
 
-// Buğday büyüme aşamaları (0..3)
+// Detaylı ve estetik buğday büyüme aşamaları (0..3)
 function wheatPix(s, x, y) {
-  const h = [4, 7, 11, 14][s];
-  for (const c of [2, 5, 8, 11, 14]) {
+  const h = [4, 8, 12, 15][s];
+  // Çeşitli sap ve başlık yapıları
+  for (const c of [3, 7, 11, 13]) {
     if (x === c && y >= 16 - h) {
-      if (s === 3 && y < 16 - h + 4) return [226, 192, 72];
-      return s === 0 ? [96, 175, 70] : s === 1 ? [84, 160, 60] : s === 2 ? [150, 175, 60] : [196, 164, 66];
+      if (s === 3 && y < 16 - h + 5) return [240, 210, 90]; // Olgun başlık
+      return s === 0 ? [100, 190, 65] : s === 1 ? [90, 175, 55] : s === 2 ? [165, 195, 65] : [220, 190, 70];
     }
-    if (s === 3 && Math.abs(x - c) === 1 && y >= 16 - h + 1 && y < 16 - h + 4 && (x + y) % 2 === 0) return [235, 205, 90];
-    if (s === 2 && Math.abs(x - c) === 1 && y >= 16 - h + 3 && y < 16 - h + 6 && y % 2 === 0) return [120, 170, 55];
+    if (s === 3 && Math.abs(x - c) === 1 && y >= 16 - h + 1 && y < 16 - h + 5) return [250, 225, 110];
+    if (s === 2 && Math.abs(x - c) === 1 && y >= 16 - h + 4 && y < 16 - h + 8) return [130, 185, 50];
   }
   return null;
 }
@@ -171,17 +172,28 @@ function ingotPix(col, x, y) {
 function itemPix(name, x, y) {
   if (name === 'stick') return ((x + y === 16 || x + y === 17) && x >= 4 && x <= 12) ? [140, 100, 52] : null;
   if (name === 'seeds') {
-    const dots = [[5, 10], [8, 8], [10, 11], [7, 12], [11, 7], [9, 5]];
-    for (const d of dots) if (y === d[1] && x >= d[0] && x <= d[0] + 1) return d[0] % 2 ? [60, 130, 50] : [105, 150, 62];
-    return null;
+    // Tohum pikselleri (küçük oval tanecikler)
+    const e = Math.pow((x - 7.5) / 3.5, 2) + Math.pow((y - 8.5) / 4.5, 2);
+    if (e >= 1) return null;
+    return (x + y) % 2 === 0 ? [110, 160, 60] : [80, 120, 45];
   }
   if (name === 'wheatI') {
-    for (const c of [4, 8, 11]) {
-      const sx = c + Math.floor((14 - y) / 5);
-      if (y >= 7 && y <= 14 && x === sx) return [190, 150, 60];
-      if (y >= 2 && y <= 7 && Math.abs(x - (c + 2)) <= (y % 2 === 0 ? 1 : 0)) return [230, 195, 85];
+    // Hasat edilmiş buğday demeti
+    for (const c of [5, 8, 11]) {
+      const sx = c + Math.floor((14 - y) / 6);
+      if (y >= 6 && y <= 14 && x === sx) return [200, 160, 60];
+      if (y >= 2 && y <= 6 && Math.abs(x - c) <= 1) return [235, 205, 90];
     }
+    // Bağlama ipi
+    if (y === 10 && x >= 6 && x <= 10) return [210, 185, 130];
     return null;
+  }
+  if (name === 'bread') {
+    // Minecraft tarzı dilimli ekmek
+    const e = Math.pow((x - 7.5) / 5.5, 2) + Math.pow((y - 8.5) / 3.2, 2);
+    if (e >= 1) return null;
+    if (y === 6 && (x === 6 || x === 10)) return [150, 95, 45]; // Çizikler
+    return y < 7 ? [210, 155, 85] : [175, 115, 60];
   }
   if (name === 'coal') {
     const e = Math.pow((x - 7.5) / 5.2, 2) + Math.pow((y - 8.5) / 4.2, 2);
@@ -200,8 +212,7 @@ function itemPix(name, x, y) {
     if (e >= 1) return null;
     return (x + y) % 5 === 0 ? [215, 130, 75] : (y < 8 ? [168, 100, 56] : [128, 72, 40]);
   }
-  const e = Math.pow((x - 7.5) / 6, 2) + Math.pow((y - 9) / 3.6, 2);   // ekmek
-  return e < 1 ? (y < 8 ? [215, 165, 90] : [185, 125, 60]) : null;
+  return null;
 }
 
 // Kazma, balta, kürek, çapa, kılıç pikselleri (null = şeffaf)
@@ -413,8 +424,9 @@ function buildAtlas() {
             if (y >= 5 && y <= 9 && x >= 3 && x <= 12 && hash(x, y, 115) < 0.35) { r = 160; g = 160; b = 170; k = 1; }
             break;
           case 'farmTop':
-            k = 0.85 + hash(x, y, 116) * 0.25;
-            if (y % 4 === 1) k *= 0.62;
+            // Çapa ile sürülmüş tarlanın çizgi/oluk (furrow) dokusu
+            k = 0.85 + hash(x, y, 116) * 0.2;
+            if (y % 4 === 0 || y % 4 === 1) k *= 0.55; // Sürülmüş koyu kanal çizgileri
             break;
         }
       }
