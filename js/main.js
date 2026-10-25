@@ -29,7 +29,6 @@ import { tickVitals } from './entities/vitals.js';
 
 const $ = id => document.getElementById(id);
 
-// Sahne
 const scene = new THREE.Scene();
 G.scene = scene;
 scene.background = new THREE.Color(0x87ceeb);
@@ -58,14 +57,12 @@ if (!MARKET_ON) {
   $('coins').style.display = 'none';
 }
 
-// Bırak butonu
 const bDrop = document.createElement('div');
 bDrop.className = 'btn';
 bDrop.id = 'bDrop';
 bDrop.textContent = '⬇️';
 document.body.appendChild(bDrop);
 
-// Dünya yükleniyor ekranı
 const loadEl = document.createElement('div');
 loadEl.textContent = '🌍 Dünya yükleniyor...';
 loadEl.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:#000a;color:#fff;font-size:20px;font-weight:700;display:none;align-items:center;justify-content:center;z-index:9;pointer-events:none';
@@ -90,7 +87,6 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyQ' && !isDead()) dropFromInventory(eco.sel, 1);
 });
 
-// Başlat
 generate(1);
 initRender(scene);
 initItems(scene);
@@ -126,7 +122,6 @@ if (MARKET_ON) startPriceTicker(() => { if (isMarketOpen()) drawMarket(); });
 drawHud();
 drawHearts(20, 20);
 
-// Döngü
 let last = performance.now(), lastCoord = '', lx = P.x, lz = P.z, wasWater = false;
 let fpsN = 0, fpsT = 0, fps = 0;
 function loop(now) {
@@ -140,7 +135,7 @@ function loop(now) {
   const room = G.room;
   let ready = true;
   if (room) {
-    updateChunks(P.x, P.z, 6);          // 7x7 chunk yüklenir, uzaktakiler bellekten atılır
+    updateChunks(P.x, P.z, 6);
     ready = chunksReady(P.x, P.z);
   }
   loadEl.style.display = room && !ready ? 'flex' : 'none';
