@@ -6,13 +6,12 @@ import {
 export * from './defs.js';
 export { atlas, sideTile } from './textures.js';
 
-export const BUILD = 23;   // menünün altında görünen sürüm (eski dosya önbellekte mi diye kontrol için)
-export const CW = 25, H = 32, RD = 3, SEA = 7, SNOW_H = 19;   // chunk genişliği 25, 7x7 = 49 chunk görünür
+export const BUILD = 23;
+export const CW = 25, H = 32, RD = 3, SEA = 7, SNOW_H = 19;
 
-// ---- Chunk deposu: yüklü chunk'lar + kalıcı değişiklikler (mods) ----
 const chunks = new Map();
-const mods = new Map();      // chunk anahtarı -> Map(hücre indeksi -> ham blok). Chunk atılsa da kaybolmaz.
-const urgent = new Set();    // hemen yeniden çizilecek chunk'lar
+const mods = new Map();
+const urgent = new Set();
 const ck = (cx, cz) => (cx + 4096) * 8192 + (cz + 4096);
 let _seed = 1, _kind = 'normal', _sp = null, lcK = -1, lc = null;
 let group = null, material, waterMat, lavaMat, glassMat, hl;
@@ -35,21 +34,18 @@ export const waterLvl = (x, y, z) => {
   const c = chunkAt(x, z);
   return c ? c.l[(y * CW + (z - c.cz * CW)) * CW + (x - c.cx * CW)] : 0;
 };
-// Kayıt/senkron için: su 17..24, lav 25..28 (seviyeli), diğerleri normal
 export const getRaw = (x, y, z) => {
   const t = get(x, y, z);
   return (t === WATER || t === LAVA) ? t + waterLvl(x, y, z) : t;
 };
 export const isWater = (x, y, z) => get(x, y, z) === WATER;
 export const isLava = (x, y, z) => get(x, y, z) === LAVA;
-// Katı: cam dahil (çarpışma). Bitki, su ve lavın içinden geçilir.
 export const solid = (x, y, z) => { const t = get(x, y, z); return t !== 0 && !isPlant(t) && t !== WATER && t !== LAVA; };
-// Opak: arkasını gizler. Cam saydam olduğu için opak sayılmaz.
 const opaque = t => t !== 0 && !isPlant(t) && t !== WATER && t !== LAVA && t !== GLASS;
 
-export const wh = { fn: null };       // fluids.js: blok değişince haber alır
-export const wlHook = { fn: null };   // paints.js: gündüz/gece ışığı
-export const ph = { fn: null };       // actions.js: su/lav bir bitkinin üstüne akınca (x, y, z, eski blok)
+export const wh = { fn: null };
+export const wlHook = { fn: null };
+export const ph = { fn: null };
 
 function touch(c) { if (c.dirty === 0) { c.dirty = 2; urgent.add(ck(c.cx, c.cz)); } }
 function markDirty(c, lx, lz) {
@@ -60,7 +56,6 @@ function markDirty(c, lx, lz) {
   if (lz === CW - 1) { const n = chunks.get(ck(c.cx, c.cz + 1)); if (n) touch(n); }
 }
 
-// t: blok türü. 18..24 akan su, 26..28 akan lav. Yüklü olmayan chunk'ta sadece kalıcı kayda yazılır.
 export const set = (x, y, z, t) => {
   if (y < 0 || y >= H) return;
   const cx = Math.floor(x / CW), cz = Math.floor(z / CW), k = ck(cx, cz);
@@ -77,11 +72,10 @@ export const set = (x, y, z, t) => {
   const old = c.b[i];
   c.b[i] = tt; c.l[i] = lv;
   markDirty(c, lx, lz);
-  if (old && isPlant(old) && (tt === WATER || tt === LAVA) && ph.fn) ph.fn(x, y, z, old);   // akan sıvı bitkiyi kırar
+  if (old && isPlant(old) && (tt === WATER || tt === LAVA) && ph.fn) ph.fn(x, y, z, old);
   if (wh.fn) wh.fn(x, y, z);
 };
 
-// Yüklü chunk'lardaki belirli blokları tarar (fidan ve ekin büyütme için)
 export function eachBlock(ids, fn) {
   const m = new Uint8Array(256);
   for (const i of ids) m[i] = 1;
@@ -93,7 +87,6 @@ export function eachBlock(ids, fn) {
   }
 }
 
-// ---- Arazi (sonsuz, tohuma bağlı, saf fonksiyonlar) ----
 function vn(x, z, s) {
   const xi = Math.floor(x), zi = Math.floor(z), xf = x - xi, zf = z - zi;
   const u = xf * xf * (3 - 2 * xf), v = zf * zf * (3 - 2 * zf);
@@ -106,7 +99,6 @@ export function heightAt(x, z) {
   return Math.max(3, Math.min(H - 9, Math.floor(3 + g * 21)));
 }
 
-// Yer altı cevherleri: derinleştikçe değerli olanlar çıkar, küçük damarlar halinde
 function oreAt(x, y, z) {
   const cx = x >> 1, cy = y >> 1, cz = z >> 1;
   if (y <= 6 && hash(cx * 7 + cy, cz * 5 + 3, _seed + 31) < 0.0014 && hash(x * 3 + y, z * 11, _seed + 35) < 0.7) return DIAMOND_ORE;
@@ -129,7 +121,7 @@ export function treeCells(x, y, z, birch) {
   }
   return { trunk, leaves };
 }
-function treeAt(x, z) {   // 0 yok, 1 meşe, 2 huş
+function treeAt(x, z) {
   if (hash(x, z, _seed + 7) > 0.012) return 0;
   const h = heightAt(x, z);
   if (h <= SEA || h >= SNOW_H) return 0;
@@ -140,11 +132,10 @@ function flowerAt(x, z) {
   if (hash(px, pz, _seed + 9) > 0.22 || hash(x, z, _seed + 10) > 0.45) return 0;
   return FLOWER_MIN + Math.floor(hash(px, pz, _seed + 11) * 6);
 }
-// Uzun ot: öbekler halinde
 function grassAt(x, z) {
   return hash(x >> 1, z >> 1, _seed + 21) < 0.3 && hash(x, z, _seed + 22) < 0.65;
 }
-function ruinAt(rx, rz) {   // 48x48'lik bölge başına en fazla bir harabe
+function ruinAt(rx, rz) {
   if (hash(rx, rz, _seed + 12) > 0.22) return null;
   const x = rx * 48 + 6 + Math.floor(hash(rx, rz, _seed + 13) * 36), z = rz * 48 + 6 + Math.floor(hash(rx, rz, _seed + 14) * 36);
   const hc = heightAt(x, z);
@@ -163,7 +154,7 @@ function ruinCells(r, put) {
     }
   }
 }
-const SKY_CUBES = [[-3, -3], [0, -3], [-3, 0]];   // L şekli: köşe küp (-3,-3), yanındaki (0,-3), altındaki (-3,0)
+const SKY_CUBES = [[-3, -3], [0, -3], [-3, 0]];
 export function skyTops() {
   const a = [];
   for (const [ox, oz] of SKY_CUBES) for (let dx = 0; dx < 3; dx++) for (let dz = 0; dz < 3; dz++) a.push([ox + dx, 12, oz + dz]);
@@ -192,7 +183,6 @@ export function spawnPos() {
   return _sp || { x: 0.5, y: 20, z: 0.5 };
 }
 
-// Fidan büyütme: dünyadaki duruma göre yerleştirilecek bloklar (yer yoksa null)
 export function planTree(x, y, z, birch) {
   const { trunk, leaves } = treeCells(x, y, z, birch);
   const out = [];
@@ -213,7 +203,6 @@ export function losBlocked(ex, ey, ez, dx, dy, dz, t) {
   return false;
 }
 
-// ---- Chunk üretimi ----
 function newChunk(cx, cz) {
   return { cx, cz, b: new Uint8Array(CW * H * CW), l: new Uint8Array(CW * H * CW), dirty: 1, mt: null, mw: null, ml: null, mg: null };
 }
@@ -230,7 +219,7 @@ function genChunk(c) {
     if (y < 0 || y >= H || lx < 0 || lz < 0 || lx >= CW || lz >= CW) return -1;
     return b[(y * CW + lz) * CW + lx];
   };
-  const trees = list => {   // önce yapraklar (sadece boşluğa), sonra gövdeler
+  const trees = list => {
     for (const tr of list) for (const l of tr.leaves) if (at(l[0], l[1], l[2]) === 0) put(l[0], l[1], l[2], l[3]);
     for (const tr of list) for (const t of tr.trunk) put(t[0], t[1], t[2], t[3]);
   };
@@ -288,14 +277,13 @@ function genChunk(c) {
       const h = hs[lz * CW + lx];
       if (h <= SEA || h >= SNOW_H || h + 1 >= H) continue;
       const ix = ((h + 1) * CW + lz) * CW + lx;
-      if (b[ix] !== 0 || b[(h * CW + lz) * CW + lx] !== 1) continue;   // sadece çimen bloğunun üstü
+      if (b[ix] !== 0 || b[(h * CW + lz) * CW + lx] !== 1) continue;
       const f = flowerAt(x0 + lx, z0 + lz);
       if (f) b[ix] = f;
       else if (grassAt(x0 + lx, z0 + lz)) b[ix] = TALL;
     }
   }
 
-  // Oyuncu değişiklikleri (kalıcı kayıt) en üstte
   const flows = [];
   const m = mods.get(ck(c.cx, c.cz));
   if (m) {
@@ -316,7 +304,6 @@ function disposeChunk(c) {
   }
 }
 
-// Yeni dünya: eski chunk'ları ve kayıtları temizler (araziyi chunk'lar sırayla üretir)
 export function generate(seed = 1, kind = 'normal') {
   for (const c of chunks.values()) disposeChunk(c);
   chunks.clear(); mods.clear(); urgent.clear();
@@ -336,7 +323,6 @@ export function eachFlow(fn) {
   }
 }
 
-// Karakterin chunk'ı merkez 7x7 yüklenir, uzaktakiler atılır. Dönüş: yapılan iş sayısı.
 export function updateChunks(px, pz, budgetMs = 6) {
   if (!group) return 0;
   const cx0 = Math.floor(px / CW), cz0 = Math.floor(pz / CW), t0 = performance.now();
@@ -373,7 +359,6 @@ export function chunksReady(px, pz) {
   return true;
 }
 
-// ---- Çizim ----
 const AOV = [0.5, 0.68, 0.84, 1.0];
 const ORD_P = [[0, 0], [1, 0], [1, 1], [0, 1]];
 const ORD_N = [[0, 0], [0, 1], [1, 1], [1, 0]];
@@ -394,7 +379,6 @@ export function initRender(scene) {
     map: atlas.tex, vertexColors: true, transparent: true, opacity: 0.62, depthWrite: false, side: THREE.DoubleSide
   });
   lavaMat = new THREE.MeshBasicMaterial({ map: atlas.tex, vertexColors: true, side: THREE.DoubleSide });
-  // Cam yüzeyi: %95 saydam (opaklık 0,05). Camın varlığı opak çerçeve çubuklarıyla belli olur (buildChunk).
   glassMat = new THREE.MeshBasicMaterial({
     color: 0xcfeaf3, transparent: true, opacity: 0.05, depthWrite: false, side: THREE.DoubleSide
   });
@@ -451,7 +435,6 @@ function buildChunk(c) {
   const wS = sink(), lS = sink(), gS = sink();
   let vc = 0;
   const WT = FACE_TILES[WATER][0], LT = FACE_TILES[LAVA][0], GE = tileOf('glassEdge');
-  // Çerçeve çubukları ana (opak) mesh'e yazılır
   const mq = (tile, p, sh) => {
     for (let k = 0; k < 4; k++) {
       pos.push(p[k][0], p[k][1], p[k][2]);
@@ -462,14 +445,11 @@ function buildChunk(c) {
     vc += 4;
   };
   const GW = 0.07, EPS = 0.004;
-  // Cam: açıkta kalan her yüze %95 saydam yüzey + sadece GERÇEK kenarlara opak çerçeve çubuğu.
-  // Komşusu cam olan ve düz devam eden kenarda çubuk yoktur (camlar birleşir), başka blokla ya da havayla
-  // komşu kenarda köşe görünür.
   const glass = (x, y, z) => {
     for (let a = 0; a < 3; a++) for (let s = -1; s <= 1; s += 2) {
       const n = [x, y, z]; n[a] += s;
       const nt = get(n[0], n[1], n[2]);
-      if (nt === GLASS || opaque(nt)) continue;   // komşu cam ya da katı blok: iç yüz çizilmez
+      if (nt === GLASS || opaque(nt)) continue;
       const u = (a + 1) % 3, v = (a + 2) % 3;
       const sh = a === 1 ? (s > 0 ? 1 : 0.55) : a === 0 ? 0.82 : 0.68;
       const pts = (u0, u1, v0, v1, off) => {
@@ -487,7 +467,7 @@ function buildChunk(c) {
         const A = [x, y, z]; A[e] += d;
         const B = [A[0], A[1], A[2]]; B[a] += s;
         const at = get(A[0], A[1], A[2]), bt = get(B[0], B[1], B[2]);
-        if (at === GLASS && !(bt === GLASS || opaque(bt))) continue;   // cam düz devam ediyor: çizgi yok
+        if (at === GLASS && !(bt === GLASS || opaque(bt))) continue;
         const lo = d < 0 ? 0 : 1 - GW, hi = d < 0 ? GW : 1;
         if (e === u) mq(GE, pts(lo, hi, 0, 1, EPS), sh);
         else mq(GE, pts(0, 1, lo, hi, EPS), sh);
@@ -577,7 +557,6 @@ function buildChunk(c) {
   putMesh(c, 'mg', gS.pos, gS.uv, gS.col, gS.ind, glassMat, 3);
 }
 
-// Oyuncu değişikliklerini hemen çizer (kare başına en çok 2 chunk)
 export function rebuild(max = 2) {
   if (!group || !urgent.size) return;
   let n = 0;
@@ -588,10 +567,6 @@ export function rebuild(max = 2) {
   }
 }
 
-// ---- Hedef bulma ----
-// target/prev: bakılan ilk blok (bitki dahil) ve önündeki hücre.
-// stgt: bitkilerin içinden geçen ışının çarptığı ilk KATI blok (tohum ekmek için: arkadaki toprağa ulaşır).
-// wtarget: ışındaki ilk su/lav KAYNAĞI (kova için, akan sıvı atlanır).
 export let target = null, prev = null, wtarget = null, stgt = null;
 
 export function updateTarget(camera) {
@@ -614,4 +589,4 @@ export function updateTarget(camera) {
   if (!hl) return;
   hl.visible = !!target;
   if (target) hl.position.set(target[0] + 0.5, target[1] + 0.5, target[2] + 0.5);
-  }
+                                      }
