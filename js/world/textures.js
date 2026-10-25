@@ -76,7 +76,6 @@ export const isFlat = t => FLAT.has(t);
 export const atlas = { tex: null, T, cv: null };
 export const sideTile = t => FACE_TILES[t][1];
 
-// Eksik olan tileOf fonksiyonu eklendi:
 export function tileOf(t, face = 1) {
   if (FACE_TILES[t]) {
     return FACE_TILES[t][face];
