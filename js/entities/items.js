@@ -1,5 +1,5 @@
-import { solid, atlas, sideTile, TYPES, isLoaded } from '../world/world.js';
-import { isFlat } from '../world/textures.js';
+import { solid, atlas, TYPES, isLoaded } from '../world/world.js';
+import { isFlat, FACE_TILES } from '../world/textures.js';
 import { eco } from '../game/economy.js';
 import { P } from './player.js';
 import { drawHud, toast } from '../ui/ui.js';
@@ -18,6 +18,9 @@ let group, cubeMat, sprMat, lastFull = 0;
 const cubeGeo = {}, sprGeo = {};
 const list = new Map();
 let seq = 0;
+
+// Doku numarası bozuksa 0 kullanır (oyun çökmesin)
+const sideTile = t => { const f = FACE_TILES[t], v = f ? f[1] : undefined; return Number.isInteger(v) ? v : 0; };
 
 export function initItems(scene) {
   group = new THREE.Group();
@@ -73,6 +76,7 @@ function spriteGeometry(t) {
 const encC = a => ((a.d != null && isGear(a.t)) ? 100000 + Math.max(1, Math.round(a.d)) : a.c);
 
 export function spawnItem(id, d) {
+  if (!d || !FACE_TILES[d.t]) return;
   if (!group || list.has(id) || !TYPES[d.t]) return;
   let c = d.c, dur = null;
   if (c >= 100000) { dur = c - 100000; c = 1; }
@@ -189,4 +193,4 @@ export function updateItems(dt, canPick) {
       if (dx * dx + dy * dy + dz * dz < 2.25) tryTake(it);
     }
   }
-                                               }
+}
