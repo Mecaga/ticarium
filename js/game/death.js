@@ -13,6 +13,7 @@ import { isGear, durList } from './gear.js';
 import { returnCraft } from '../ui/craft.js';
 import { returnFurnace } from '../ui/furnace.js';
 import { SLOTS4, reduce } from './armor.js';
+import { bedSpawnPos } from './bed.js';
 
 const deathEl = document.createElement('div');
 deathEl.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:#200;opacity:0;pointer-events:none;transition:opacity .4s;z-index:7;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;font-weight:700';
@@ -22,7 +23,7 @@ document.body.appendChild(deathEl);
 let deathTimer = null;
 
 export function toSpawn() {
-  const sp = spawnPos();
+  const sp = bedSpawnPos() || spawnPos();
   P.x = sp.x; P.z = sp.z;
   let y = sp.y;
   while (y < H - 2 && collides(P.x, y, P.z)) y += 1; // ağaç vb. varsa yukarı çık
