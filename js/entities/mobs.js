@@ -117,6 +117,7 @@ function flashMob(m) {
 }
 
 export function mobKind(id) { const m = mobs.get(id); return m ? m.kind : null; }
+export function mobCol(id) { const m = mobs.get(id); return m ? m.col : -1; }
 
 // Koyunu boyar (sadece oda yönetimi olan cihaz çağırır, renk durum güncellemesiyle herkese gider)
 export function dyeMob(id, idx) {
@@ -319,4 +320,4 @@ export function updateMobs(dt, simulate) {
       mhooks.send(o);
     }
   }
-    }
+}
