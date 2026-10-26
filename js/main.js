@@ -26,6 +26,7 @@ import { isDrawOpen } from './ui/draw.js';
 import { isCraftOpen } from './ui/craft.js';
 import { updateFurnace, isFurnaceOpen } from './ui/furnace.js';
 import { tickVitals } from './entities/vitals.js';
+import { initPack } from './world/texturepack.js';
 
 const $ = id => document.getElementById(id);
 
@@ -89,6 +90,7 @@ addEventListener('keydown', e => {
 
 generate(1);
 initRender(scene);
+initPack();
 initItems(scene);
 initMobs(scene);
 initSky(scene);
@@ -116,6 +118,7 @@ bindBtn('bPlayers', togglePlayers);
 bindBtn('bDrop', () => { if (!isDead()) dropFromInventory(eco.sel, 1); });
 
 initMenu(enterGame);
+initPack();
 showMenu();
 applyRoomUI();
 if (MARKET_ON) startPriceTicker(() => { if (isMarketOpen()) drawMarket(); });
