@@ -25,6 +25,7 @@ import { isGear, wear } from './gear.js';
 import { openCraft, isCraftOpen } from '../ui/craft.js';
 import { openFurnace, isFurnaceOpen } from '../ui/furnace.js';
 import { isArmor } from './armor.js';
+import { useBed, BED } from './bed.js';
 
 // Açlık puanları: et, elma, ekmek, pişmiş et, patates, havuç, domates, biber, soğan, çiğköfte
 const FOOD = { 15: 6, 46: 4, 75: 5, 86: 10, 150: 3, 151: 4, 152: 3, 153: 2, 154: 2, 155: 14 };
@@ -365,6 +366,7 @@ export function placeBlock() {
     const tb = get(target[0], target[1], target[2]);
     if (tb === CRAFT) return openCraft(3);
     if (tb === FURNACE) return openFurnace();
+    if (tb === BED) return useBed(target);
   }
   const tl = TOOLS[t];
   if (tl && tl[0] === 'hoe') return useHoe();
@@ -444,4 +446,4 @@ export function attack() {
     else if (o) o.sendMobHit(m.id, dmg, P.x, P.z);
     if (isGear(sel) && has) afterWear(sel, isSword ? 1 : 2);
   }
-            }
+}
