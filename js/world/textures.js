@@ -632,3 +632,5 @@ export function iconURL(t) {
   icons.set(t, u);
   return u;
 }
+export const tileNames = TILE_NAMES;
+export const clearIcons = () => icons.clear();
