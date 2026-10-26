@@ -8,7 +8,8 @@ const tmp = new THREE.Color();
 const sunDir = new THREE.Vector3();
 let scene, sun, moon, stars, clouds, cloudMat, ambient, dirL, uwEl;
 
-export const gamePhase = () => ((Date.now() / 1000) % CYCLE) / CYCLE;
+export const clock = { off: 0 };
+export const gamePhase = () => ((Date.now() / 1000 + clock.off) % CYCLE) / CYCLE;
 
 export function gameClock() {
   const hr = (gamePhase() * 24 + 6) % 24;
@@ -125,4 +126,4 @@ export function updateSky(dt, camera, uw) {
     if (dz > 130) c.position.z -= 260; else if (dz < -130) c.position.z += 260;
   }
   uwEl.style.display = uw ? 'block' : 'none';
-                      }
+}
