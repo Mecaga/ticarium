@@ -26,6 +26,7 @@ import { openCraft, isCraftOpen } from '../ui/craft.js';
 import { openFurnace, isFurnaceOpen } from '../ui/furnace.js';
 import { isArmor } from './armor.js';
 import { useBed, BED } from './bed.js';
+import { useJuke, JUKE, isDisc, useShears, SHEARS, useBlueprint, BPRINT } from './extras.js';
 
 // Açlık puanları: et, elma, ekmek, pişmiş et, patates, havuç, domates, biber, soğan, çiğköfte
 const FOOD = { 15: 6, 46: 4, 75: 5, 86: 10, 150: 3, 151: 4, 152: 3, 153: 2, 154: 2, 155: 14 };
@@ -367,7 +368,13 @@ export function placeBlock() {
     if (tb === CRAFT) return openCraft(3);
     if (tb === FURNACE) return openFurnace();
     if (tb === BED) return useBed(target);
+    if (tb === JUKE) return useJuke(target, t);
+    if (tb === BPRINT) return useBlueprint(target);
   }
+
+  if (t === SHEARS) return useShears();
+  if (isDisc(t)) return toast('Diski müzik kutusuna bakıp Koy ile yerleştir');
+
   const tl = TOOLS[t];
   if (tl && tl[0] === 'hoe') return useHoe();
   if (isTool(t)) return toast('Bu bir alet: bloğa basılı tutup kır, kılıçla vur');
