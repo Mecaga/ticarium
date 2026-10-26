@@ -301,7 +301,6 @@ function itemPix(name, x, y) {
     return [210, 160, 180];
   }
   if (name === 'carrot') {
-    // Üçgen/konik turuncu havuç ve üstünde yeşil saplar
     if (y <= 3 && x >= 6 && x <= 10) return [70, 170, 50];
     const dx = Math.abs(x - 7.5);
     if (y >= 4 && y <= 14 && dx <= (15 - y) * 0.45) {
@@ -310,17 +309,15 @@ function itemPix(name, x, y) {
     return null;
   }
   if (name === 'cigkofte') {
-    // Marul yaprağı üstünde parmak şekli verilmiş esmer/kırmızı çiğköfte parçaları
     const lettuce = Math.pow((x - 7.5) / 6.5, 2) + Math.pow((y - 8.5) / 6.0, 2);
     if (lettuce <= 1) {
       const isEdge = (x <= 2 || x >= 13 || y <= 2 || y >= 13);
-      if (isEdge) return [90, 170, 50]; // Marul yeşili kenar
-      // Ortada çiğköfte tümseği
+      if (isEdge) return [90, 170, 50];
       const kofte = Math.pow((x - 7.5) / 3.5, 2) + Math.pow((y - 8.5) / 3.0, 2);
       if (kofte <= 1) {
         return (hash(x, y, 300) < 0.25) ? [120, 50, 25] : [145, 65, 35];
       }
-      return [110, 190, 60]; // İç marul rengi
+      return [110, 190, 60];
     }
     return null;
   }
@@ -611,6 +608,12 @@ export function iconURL(t) {
   const g = c.getContext('2d');
   g.imageSmoothingEnabled = false;
   const ft = FACE_TILES[t];
+  
+  if (!Number.isInteger(ft[1])) {   // doku yoksa düz renkli kare
+    g.fillStyle = '#8a8a8a'; g.fillRect(6, 6, 20, 20);
+    const u0 = c.toDataURL(); icons.set(t, u0); return u0;
+  }
+
   if (FLAT.has(t)) {
     g.drawImage(atlas.cv, ft[1] * 16, 0, 16, 16, 0, 0, 32, 32);
   } else {
