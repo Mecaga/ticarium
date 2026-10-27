@@ -41,6 +41,9 @@ export const getRaw = (x, y, z) => {
 export const isWater = (x, y, z) => get(x, y, z) === WATER;
 export const isLava = (x, y, z) => get(x, y, z) === LAVA;
 export const BOXES = {};   // ince bloklar: id -> [x0,y0,z0,x1,y1,z1] (yatak, kapı)
+export const tgtOpts = { sneak: false };
+for (let i = 0; i < 3; i++) { BOXES[180 + i] = [0, 0, 0, 1, 0.25 * (i + 1), 1]; FACE_TILES[180 + i] = FACE_TILES[8]; }   // kar katmanları 1/4, 2/4, 3/4
+
 export const solid = (x, y, z) => { const t = get(x, y, z); return t !== 0 && !BOXES[t] && !isPlant(t) && t !== WATER && t !== LAVA; };
 // Kesin nokta çarpışması (ince bloklar için)
 export function pointHit(px, py, pz) {
@@ -289,6 +292,12 @@ function genChunk(c) {
       const f = flowerAt(x0 + lx, z0 + lz);
       if (f) b[ix] = f;
       else if (grassAt(x0 + lx, z0 + lz)) b[ix] = TALL;
+    }
+    for (let lz = 0; lz < CW; lz++) for (let lx = 0; lx < CW; lx++) {   // dağ tepesi: basamak basamak kar
+      const h = hs[lz * CW + lx], d = h - SNOW_H;
+      if (d < 0 || d > 2 || h + 1 >= H) continue;
+      const ix = ((h + 1) * CW + lz) * CW + lx;
+      if (b[ix] === 0 && b[(h * CW + lz) * CW + lx] === 8) b[ix] = 180 + d;
     }
   }
 
@@ -595,16 +604,25 @@ export function updateTarget(camera) {
   let lx = -1e9, ly = -1e9, lz = -1e9;
   target = prev = wtarget = stgt = null;
   for (let s = 0; s < 6; s += 0.04) {
-    const x = Math.floor(o.x + d.x * s), y = Math.floor(o.y + d.y * s), z = Math.floor(o.z + d.z * s);
-    if (x === lx && y === ly && z === lz) continue;
-    const t = get(x, y, z);
+    const px = o.x + d.x * s, py = o.y + d.y * s, pz = o.z + d.z * s;
+    const x = Math.floor(px), y = Math.floor(py), z = Math.floor(pz);
+    const t = get(x, y, z), same = x === lx && y === ly && z === lz;
+    let hit = false;
     if (t === WATER || t === LAVA) {
-      if (!wtarget && waterLvl(x, y, z) === 0) wtarget = [x, y, z];
+      if (!same && !wtarget && waterLvl(x, y, z) === 0) wtarget = [x, y, z];
     } else if (t) {
-      if (!target) target = [x, y, z];
-      if (!isPlant(t)) { stgt = [x, y, z]; prev = lx === -1e9 ? null : [lx, ly, lz]; break; }
+      if (isPlant(t)) {   // bitkiler içinden geçilir, sadece eğilirken hedeflenir
+        if (tgtOpts.sneak && !target) { target = [x, y, z]; prev = lx === -1e9 ? null : [lx, ly, lz]; }
+      } else if (BOXES[t]) hit = pointHit(px, py, pz);   // kapı, yatak: sadece gerçek şekline çarpar
+      else hit = true;
     }
-    lx = x; ly = y; lz = z;
+    if (hit) {
+      if (!target) { target = [x, y, z]; prev = lx === -1e9 ? null : [lx, ly, lz]; }
+      stgt = [x, y, z];
+      if (stgt && !prev) prev = null;
+      break;
+    }
+    if (!same) { lx = x; ly = y; lz = z; }
   }
   if (!hl) return;
   hl.visible = !!target;
