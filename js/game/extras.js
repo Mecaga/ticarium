@@ -11,6 +11,7 @@ import { isCreative } from './creative.js';
 import { G } from '../core/state.js';
 import { recordChange } from './progress.js';
 import { sfx } from '../core/sound.js';
+import { addItem } from './inventory.js';
 
 export const JUKE = 101, DISC_MIN = 102, DISC_MAX = 104, SHEARS = 105, BPRINT = 107;
 export const isDisc = t => t >= DISC_MIN && t <= DISC_MAX;
@@ -114,7 +115,7 @@ export function useJuke(t, sel) {
   drawHud();
 }
 
-// ---------- Şema evi (5x5, 3 yüksek + çatı) ----------
+// ---------- Şema evi (5x5, zemin + 3 yüksek + çatı) ----------
 const cells = [];
 for (let x = 0; x < 5; x++) for (let z = 0; z < 5; z++) {
   const edge = x === 0 || x === 4 || z === 0 || z === 4;
@@ -125,6 +126,7 @@ for (let x = 0; x < 5; x++) for (let z = 0; z < 5; z++) {
     cells.push([x, y, z, win ? 9 : 70]);
   }
   cells.push([x, 3, z, 70]);   // çatı
+  cells.push([x, -1, z, 70]);   // zemin
 }
 export const BLUEPRINT = { name: 'Küçük Ahşap Ev', size: [5, 4, 5], cells };
 const REQ = {};
@@ -146,7 +148,8 @@ function drawPanel() {
     const have = Math.min(s[t] || 0, REQ[t]), f = have / REQ[t];
     h += '<div style="display:flex;align-items:center;gap:8px;margin:6px 0"><div style="flex:1">' + TYPES[t].name +
       '</div><b style="color:' + col(f) + '">' + have + ' / ' + REQ[t] + '</b>' +
-      '<button data-g="' + t + '" style="padding:8px 12px;border:0;border-radius:8px;background:#1565c0;color:#fff;font-weight:700">Ver</button></div>';
+      '<button data-g="' + t + '" style="padding:8px 12px;border:0;border-radius:8px;background:#1565c0;color:#fff;font-weight:700">Ver</button>' +
+      '<button data-t="' + t + '" style="padding:8px 12px;border:0;border-radius:8px;background:#6a1b9a;color:#fff;font-weight:700">Al</button></div>';
   });
   h += '<button data-b="1" ' + (ok && !building ? '' : 'disabled') + ' style="width:100%;margin-top:10px;padding:12px;border:0;border-radius:8px;font-weight:700;color:#fff;background:' +
     (ok ? '#2e7d32' : '#555') + '">' + (building ? '⏳ İnşa ediliyor...' : '🔨 Bina Kur') + '</button>' +
@@ -182,6 +185,13 @@ export function useBlueprint(t) {
         if (n < 1) return toast(n < 0 || (s[ty] || 0) >= REQ[ty] ? 'Bu malzeme tamam' : 'Çantanda yok');
         if (!isCreative()) eco.inv[ty] -= n;
         s[ty] = (s[ty] || 0) + n; putStock(bpPos, s);
+        drawHud(); drawPanel();
+      } else if (e.target.closest('[data-t]')) {
+        const ty = +e.target.closest('[data-t]').dataset.t, s = getStock(bpPos), n = s[ty] || 0;
+        if (n < 1) return;
+        const a = isCreative() ? n : addItem(ty, n);
+        s[ty] = n - a; putStock(bpPos, s);
+        if (a < n) toast('🎒 Çanta dolu');
         drawHud(); drawPanel();
       } else if (e.target.closest('[data-b]') && !building && done(getStock(bpPos))) {
         building = true; drawPanel();
