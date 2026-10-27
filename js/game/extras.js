@@ -65,28 +65,40 @@ const TUNES = {
   103: { bpm: 100, n: [57, 0, 60, 0, 64, 0, 60, 0, 55, 0, 59, 0, 62, 0, 59, 0] },
   104: { bpm: 140, n: [60, 64, 67, 72, 71, 67, 64, 67, 62, 65, 69, 74, 72, 69, 65, 0] }
 };
-let ac = null, gain = null, play = null;
-function stopTune(giveBack) {
-  if (!play) return;
-  clearTimeout(play.timer); clearInterval(play.chk);
-  if (giveBack) give(play.disc, 1);
-  play = null;
+let ac = null;
+const plays = new Map();   // her müzik kutusu kendi diskiyle bağımsız çalar
+function stopTune(key, giveBack) {
+  const p = plays.get(key);
+  if (!p) return;
+  clearTimeout(p.timer);
+  try { p.gain.disconnect(); } catch (e) {}
+  plays.delete(key);
+  if (giveBack) give(p.disc, 1);
 }
+setInterval(() => {   // uzaklaştıkça kısılır, kutu kırılırsa durur, dünyadan çıkınca susar
+  for (const [key, p] of plays) {
+    if (!G.room) { stopTune(key, false); continue; }
+    const [x, y, z] = p.pos;
+    if (isLoaded(x, z) && get(x, y, z) !== JUKE) { stopTune(key, true); continue; }
+    const d = Math.hypot(P.x - x - 0.5, P.y - y, P.z - z - 0.5);
+    p.gain.gain.value = Math.max(0, 1 - d / 24) * 0.9;
+  }
+}, 200);
 export function useJuke(t, sel) {
-  const key = t.join('_');
-  if (play && play.key === key) { stopTune(true); return toast('⏹ Müzik durdu'); }
+  const key = t.slice(0, 3).join('_');
+  if (plays.has(key)) { stopTune(key, true); return toast('⏹ Müzik durdu'); }
   if (!isDisc(sel) || (!isCreative() && (eco.inv[sel] || 0) < 1)) return toast('Çalmak için elinde disk olsun');
-  stopTune(true);
   if (!isCreative()) eco.inv[sel]--;
   ac = ac || new (window.AudioContext || window.webkitAudioContext)();
   if (ac.state === 'suspended') ac.resume();
-  gain = gain || ac.createGain();
+  const gain = ac.createGain();
   gain.connect(ac.destination);
-  const tune = TUNES[sel];
-  play = { key, disc: sel, i: 0 };
-  const step = 60 / tune.bpm;
+  const tune = TUNES[sel], step = 60 / tune.bpm;
+  const p = { disc: sel, i: 0, gain, pos: t.slice(0, 3), timer: 0 };
+  plays.set(key, p);
   const tick = () => {
-    const m = tune.n[play.i++ % tune.n.length];
+    if (!plays.has(key)) return;
+    const m = tune.n[p.i++ % tune.n.length];
     if (m) {
       const o = ac.createOscillator(), g = ac.createGain();
       o.type = 'triangle'; o.frequency.value = 440 * Math.pow(2, (m - 69) / 12);
@@ -95,14 +107,8 @@ export function useJuke(t, sel) {
       o.connect(g); g.connect(gain);
       o.start(); o.stop(ac.currentTime + step);
     }
-    play.timer = setTimeout(tick, step * 1000);
+    p.timer = setTimeout(tick, step * 1000);
   };
-  play.chk = setInterval(() => {   // uzaklaştıkça kısılır, blok kırılırsa durur
-    if (!play) return;
-    if (isLoaded(t[0], t[2]) && get(t[0], t[1], t[2]) !== JUKE) { stopTune(true); return; }
-    const d = Math.hypot(P.x - t[0], P.y - t[1], P.z - t[2]);
-    gain.gain.value = Math.max(0, 1 - d / 24);
-  }, 200);
   tick();
   toast('🎵 ' + TYPES[sel].name);
   drawHud();
