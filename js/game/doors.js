@@ -1,4 +1,4 @@
-import { TYPES, CATS, get, set, rebuild, isLoaded, isPlant, inBounds, solid, prev } from '../world/world.js';
+import { TYPES, CATS, get, set, rebuild, isLoaded, isPlant, inBounds, solid, prev, BOXES } from '../world/world.js';
 import { FACE_TILES, tileOf, addFlat } from '../world/textures.js';
 import { eco } from './economy.js';
 import { RECIPES } from './recipes.js';
@@ -11,20 +11,26 @@ import { recordChange } from './progress.js';
 import { sfx } from '../core/sound.js';
 import { BED } from './bed.js';
 
-export const DOOR = 108, DOORU = 109, DOORO = 87, DOOROU = 88, BEDH = 99;
+export const DOOR = 108, BEDH = 99;
+const LO = 160, LOO = 164, UP = 168, UPO = 172;   // kapalı alt, açık alt, kapalı üst, açık üst (her biri 4 yön)
+const PAN = [[0, 0, 0, 1, 1, 0.1875], [0.8125, 0, 0, 1, 1, 1], [0, 0, 0.8125, 1, 1, 1], [0, 0, 0, 0.1875, 1, 1]];
+const dc = tileOf('doorC');
 
 TYPES[DOOR] = { name: 'Kapı', color: 0x9a6a30, base: 30 };
 eco.inv[DOOR] = 0; eco.raw[DOOR] = 30; eco.trend[DOOR] = 0;
 CATS[0][1].push(DOOR);
-const dc = tileOf('doorC'), dop = tileOf('doorO');
-FACE_TILES[DOOR] = [dc, dc, dc]; FACE_TILES[DOORU] = [dc, dc, dc];
-FACE_TILES[DOORO] = [dop, dop, dop]; FACE_TILES[DOOROU] = [dop, dop, dop];
-FACE_TILES[BEDH] = [tileOf('wool'), tileOf('planks'), tileOf('planks')];
 RECIPES.push({ out: [DOOR, 1], pat: [[70, 70], [70, 70], [70, 70]] });
 addFlat(DOOR);
 
-// Kırılınca düşenler: üst yarılar ve yatağın baş kısmı eşya düşürmez (eşyayı alt yarı / ayak verir)
-export const EXTRA_DROPS = { [DOORU]: [], [DOOROU]: [], [DOORO]: [[DOOR, 1]], [BEDH]: [] };
+export const EXTRA_DROPS = { [BEDH]: [] };
+for (let f = 0; f < 4; f++) {
+  for (const id of [LO + f, UP + f]) { FACE_TILES[id] = [dc, dc, dc]; BOXES[id] = PAN[f]; }
+  for (const id of [LOO + f, UPO + f]) { FACE_TILES[id] = [dc, dc, dc]; BOXES[id] = PAN[(f + 1) % 4]; }   // açılınca levha yan kenara döner
+  EXTRA_DROPS[LO + f] = [[DOOR, 1]]; EXTRA_DROPS[LOO + f] = [[DOOR, 1]];
+  EXTRA_DROPS[UP + f] = []; EXTRA_DROPS[UPO + f] = [];
+}
+BOXES[BED] = BOXES[BEDH] = [0, 0, 0, 1, 0.5625, 1];   // yatak: yarım blok
+export const isDoorBlock = t => t >= LO && t <= UPO + 3;
 
 const commit = (x, y, z, t) => { recordChange(x, y, z, t); if (G.online) G.online.sendBlock(x, y, z, t); };
 const give = t => { if (!isCreative()) dropItems([{ t, c: 1, x: P.x, y: P.y + 1.3, z: P.z, vx: 0, vy: 2, vz: 0 }]); };
@@ -38,24 +44,26 @@ export function placeDoor() {
   if (!inBounds(x, y + 1, z) || !isLoaded(x, z)) return toast('Buraya konmaz');
   if (!emptyAt(x, y, z) || !emptyAt(x, y + 1, z)) return toast('Kapı için 2 blok boşluk gerek');
   if (!solid(x, y - 1, z)) return toast('Kapı sağlam zemine konur');
-  set(x, y, z, DOOR); set(x, y + 1, z, DOORU);
+  const dx = -Math.sin(P.yaw), dz = -Math.cos(P.yaw);   // levha oyuncuya yakın kenara gelir
+  const f = Math.abs(dz) >= Math.abs(dx) ? (dz < 0 ? 2 : 0) : (dx > 0 ? 3 : 1);
+  set(x, y, z, LO + f); set(x, y + 1, z, UP + f);
   if (collides(P.x, P.y, P.z)) { set(x, y, z, 0); set(x, y + 1, z, 0); return toast('Oyuncunun üstüne konmaz'); }
-  commit(x, y, z, DOOR); commit(x, y + 1, z, DOORU);
+  commit(x, y, z, LO + f); commit(x, y + 1, z, UP + f);
   if (!isCreative()) eco.inv[DOOR]--;
   sfx.place(); rebuild(); drawHud();
 }
 
 export function toggleDoor(t) {
-  let [x, y, z] = t;
-  const v = get(x, y, z);
-  if (v === DOORU || v === DOOROU) y--;
+  const x = t[0], z = t[2];
+  let y = t[1];
+  if (get(x, y, z) >= UP) y--;
   const lo = get(x, y, z);
-  if (lo !== DOOR && lo !== DOORO) return;
-  const open = lo === DOORO;
-  const a = open ? DOOR : DOORO, b = open ? DOORU : DOOROU;
+  if (lo < LO || lo >= UP) return;
+  const f = (lo - LO) & 3, open = lo >= LOO;
+  const a = open ? LO + f : LOO + f, b = open ? UP + f : UPO + f;
   set(x, y, z, a); set(x, y + 1, z, b);
-  if (open && collides(P.x, P.y, P.z)) {   // kapanırken içinde duruyorsan kapanmaz
-    set(x, y, z, DOORO); set(x, y + 1, z, DOOROU);
+  if (open && collides(P.x, P.y, P.z)) {   // kapanırken levhanın içindeysen kapanmaz
+    set(x, y, z, LOO + f); set(x, y + 1, z, UPO + f);
     return toast('Kapının içindesin');
   }
   commit(x, y, z, a); commit(x, y + 1, z, b);
@@ -73,21 +81,21 @@ export function placeBed() {
   if (!emptyAt(x, y, z) || !emptyAt(hx, y, hz)) return toast('Yatak için 2 blok boşluk gerek');
   if (!solid(x, y - 1, z) || !solid(hx, y - 1, hz)) return toast('Yatak sağlam zemine konur');
   set(x, y, z, BED); set(hx, y, hz, BEDH);
-  if (collides(P.x, P.y, P.z)) { set(x, y, z, 0); set(hx, y, hz, 0); return toast('Oyuncunun üstüne konmaz'); }
   commit(x, y, z, BED); commit(hx, y, hz, BEDH);
   if (!isCreative()) eco.inv[BED]--;
   sfx.place(); rebuild(); drawHud();
 }
 
-// Bir yarısı kırılınca diğer yarısını da kaldırır (kırılan blok t, x y z konumunda)
+// Bir yarısı kırılınca diğer yarısını da kaldırır
 export function pairFix(x, y, z, t) {
-  const clr = (cx, cy, cz, ids) => {
-    if (!ids.includes(get(cx, cy, cz))) return false;
+  const clr = (cx, cy, cz, ok) => {
+    if (!ok(get(cx, cy, cz))) return false;
     set(cx, cy, cz, 0); commit(cx, cy, cz, 0); return true;
   };
-  if (t === DOOR || t === DOORO) clr(x, y + 1, z, [DOORU, DOOROU]);
-  else if (t === DOORU || t === DOOROU) { if (clr(x, y - 1, z, [DOOR, DOORO])) give(DOOR); }
-  else if (t === BED) { for (const [a, b] of D4) clr(x + a, y, z + b, [BEDH]); }
-  else if (t === BEDH) { for (const [a, b] of D4) if (clr(x + a, y, z + b, [BED])) { give(BED); break; } }
+  const lower = v => v >= LO && v < UP, upper = v => v >= UP && v <= UPO + 3;
+  if (lower(t)) clr(x, y + 1, z, upper);
+  else if (upper(t)) { if (clr(x, y - 1, z, lower)) give(DOOR); }
+  else if (t === BED) { for (const [a, b] of D4) clr(x + a, y, z + b, v => v === BEDH); }
+  else if (t === BEDH) { for (const [a, b] of D4) if (clr(x + a, y, z + b, v => v === BED)) { give(BED); break; } }
   rebuild();
 }
