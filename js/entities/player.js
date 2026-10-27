@@ -12,16 +12,19 @@ export const P = {
   kx: 0, kz: 0,
   sx: sp0.x, sy: sp0.y, sz: sp0.z,
   fallY: sp0.y,
-  inWater: false, underWater: false
+  inWater: false, underWater: false,
+  sneak: false, fly: false, ghost: false, up: false, down: false
 };
 
 export function collides(x, y, z) {
+  if (P.ghost) return false;
   for (const dx of [-R, R]) for (const dz of [-R, R]) for (const dy of [0.05, 0.9, PH - 0.05])
     if (solid(Math.floor(x + dx), Math.floor(y + dy), Math.floor(z + dz)) || pointHit(x + dx, y + dy, z + dz)) return true;
   return false;
 }
 
 export function jump() {
+  if (P.fly) return;
   if (P.inWater) { P.vy = P.underWater ? 4.4 : 6.8; P.ground = false; return; }
   if (P.ground) { P.vy = 8; P.ground = false; }
 }
@@ -34,10 +37,21 @@ export function knock(dx, dz) {
   P.ground = false;
 }
 
+// Eğilirken kenardan düşmeyi engeller
+function edgeOk(nx, nz) {
+  return !(P.sneak && P.ground && !P.fly && !collides(nx, P.y - 0.4, nz) && collides(P.x, P.y - 0.4, P.z));
+}
+function mv(nx, nz) {
+  if (!edgeOk(nx, nz)) return;
+  if (!collides(nx, P.y, nz)) { P.x = nx; P.z = nz; return; }
+  if (P.ground && !P.fly) {   // alçak basamaklara (kar, yatak) otomatik çık
+    for (const h of [0.3, 0.55, 0.8]) if (!collides(nx, P.y + h, nz)) { P.x = nx; P.z = nz; P.y += h; return; }
+  }
+}
+
 export function updatePlayer(dt, frozen) {
   if (frozen) return;
-  if (!isLoaded(Math.floor(P.x), Math.floor(P.z))) return;   // chunk yüklenene kadar düşme
-  
+  if (!isLoaded(Math.floor(P.x), Math.floor(P.z))) return;
   if (collides(P.x, P.y, P.z)) {   // üstümüze blok konduysa dışarı çık
     let ok = false;
     for (let r = 0.25; r <= 1.25 && !ok; r += 0.25) for (let a = 0; a < 8 && !ok; a++) {
@@ -47,7 +61,6 @@ export function updatePlayer(dt, frozen) {
     for (let dy = 0.25; dy <= 2.5 && !ok; dy += 0.25) if (!collides(P.x, P.y + dy, P.z)) { P.y += dy; ok = true; }
     P.vy = 0;
   }
-
   const wx = Math.floor(P.x), wz = Math.floor(P.z);
   P.inWater = get(wx, Math.floor(P.y + 0.4), wz) === WATER;
   P.underWater = get(wx, Math.floor(P.y + 1.6), wz) === WATER;
@@ -61,10 +74,21 @@ export function updatePlayer(dt, frozen) {
   const decay = Math.max(0, 1 - 5 * dt);
   P.kx *= decay; P.kz *= decay;
 
-  const sp = P.inWater ? 2.6 : 4.5, sn = Math.sin(P.yaw), cs = Math.cos(P.yaw);
+  let sp = P.fly ? (P.ghost ? 10 : 7) : P.inWater ? 2.6 : 4.5;
+  if (P.sneak && !P.fly) sp *= 0.4;
+  const sn = Math.sin(P.yaw), cs = Math.cos(P.yaw);
   const vx = (-sn * f + cs * s) * sp + P.kx, vz = (-cs * f - sn * s) * sp + P.kz;
-  if (!collides(P.x + vx * dt, P.y, P.z)) P.x += vx * dt;
-  if (!collides(P.x, P.y, P.z + vz * dt)) P.z += vz * dt;
+  mv(P.x + vx * dt, P.z);
+  mv(P.x, P.z + vz * dt);
+
+  if (P.fly) {   // uçuş: yerçekimi yok, ⬆ ⬇ ile yükselir
+    const up = P.up || k.Space, dn = P.down || k.ShiftLeft || P.sneak;
+    P.vy = (up ? 8 : 0) - (dn ? 8 : 0);
+    P.fallY = P.y; P.ground = false;
+    const ny = P.y + P.vy * dt;
+    if (P.ghost || !collides(P.x, ny, P.z)) P.y = ny; else P.vy = 0;
+    return;
+  }
 
   if (P.inWater) {
     P.vy = Math.max(-3, P.vy - 7 * dt);
