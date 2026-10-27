@@ -27,6 +27,7 @@ import { openFurnace, isFurnaceOpen } from '../ui/furnace.js';
 import { isArmor } from './armor.js';
 import { useBed, BED } from './bed.js';
 import { useJuke, JUKE, isDisc, useShears, SHEARS, useBlueprint, BPRINT } from './extras.js';
+import { placeDoor, toggleDoor, placeBed, pairFix, EXTRA_DROPS, DOOR, DOORU, DOORO, DOOROU, BEDH } from './doors.js';
 
 // Açlık puanları: et, elma, ekmek, pişmiş et, patates, havuç, domates, biber, soğan, çiğköfte
 const FOOD = { 15: 6, 46: 4, 75: 5, 86: 10, 150: 3, 151: 4, 152: 3, 153: 2, 154: 2, 155: 14 };
@@ -71,6 +72,7 @@ function afterWear(t, amt) {
 
 // Blok kırılınca düşen eşyalar [[eşya, adet], ...]
 function dropsOf(t) {
+  if (EXTRA_DROPS[t]) return EXTRA_DROPS[t];
   if (t === FARM) return [[2, 1]];
   if (t === COAL_ORE) return [[COAL, 1]];
   if (t === DIAMOND_ORE) return [[GEM, 1]];
@@ -215,6 +217,7 @@ export function breakBlock(canDrop = true) {
   else toast('⚠️ Bu blok için daha iyi kazma gerekir, eşya düşmedi');
   commit(x, y, z, 0);
   popPlant(x, y + 1, z);   // üstündeki bitki desteksiz kalır
+  pairFix(x, y, z, t);
   if (isLeaf(t) && canDrop && !isCreative()) leafDrop(x, y, z, t);
   if (isLog(t)) decayLeaves(x, y, z);   // her odun tek tek kırılır, yapraklar son odundan sonra çürür
   queueFall(x, y + 1, z); // üstündeki kum/kar düşsün
@@ -367,11 +370,14 @@ export function placeBlock() {
     const tb = get(target[0], target[1], target[2]);
     if (tb === CRAFT) return openCraft(3);
     if (tb === FURNACE) return openFurnace();
-    if (tb === BED) return useBed(target);
+    if (tb === BED || tb === BEDH) return useBed(target);
+    if (tb === DOOR || tb === DOORU || tb === DOORO || tb === DOOROU) return toggleDoor(target);
     if (tb === JUKE) return useJuke(target, t);
     if (tb === BPRINT) return useBlueprint(target);
   }
 
+  if (t === DOOR) return placeDoor();
+  if (t === BED) return placeBed();
   if (t === SHEARS) return useShears();
   if (isDisc(t)) return toast('Diski müzik kutusuna bakıp Koy ile yerleştir');
 
