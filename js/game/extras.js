@@ -1,5 +1,5 @@
 import { TYPES, CATS, get, set, rebuild, isLoaded, isPlant, target, prev, WOOLC_MIN } from '../world/world.js';
-import { FACE_TILES, tileOf } from '../world/textures.js';
+import { FACE_TILES, tileOf, addFlat } from '../world/textures.js';
 import { eco } from './economy.js';
 import { RECIPES } from './recipes.js';
 import { MAXDUR, wear } from './gear.js';
@@ -28,6 +28,9 @@ reg(104, 'Disk: Macera', 0xd4a020, 70, 'gold', 'gold', 'gold', 4);
 reg(SHEARS, 'Makas', 0xd8d8d8, 60, 'hoeI', 'hoeI', 'hoeI', 3);
 reg(BPRINT, 'Şema bloğu (ev)', 0x4a90e2, 50, 'craftTop', 'craftSide', 'planks', 0);
 MAXDUR[SHEARS] = 238;
+for (const d of [102, 103, 104]) FACE_TILES[d] = [tileOf('disc'), tileOf('disc'), tileOf('disc')];
+FACE_TILES[SHEARS] = [tileOf('shears'), tileOf('shears'), tileOf('shears')];
+addFlat(102, 103, 104, SHEARS);
 
 const C = 82;
 RECIPES.push({ out: [JUKE, 1], pat: [[70, 70, 70], [70, 85, 70], [70, 70, 70]] });
