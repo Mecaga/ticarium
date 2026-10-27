@@ -118,7 +118,7 @@ export function updateMining(dt, active) {
   if (!M.down || !active || isDead() || !target) { if (M.key || M.sent) stop(); return; }
   const [x, y, z] = target;
   const t = get(x, y, z);
-  if (t === BEDROCK) {
+  if (t === BEDROCK && !isCreative()) {
     if (M.cool <= 0) { doBreak(true); M.cool = 0.8; }
     stop();
     return;
@@ -143,4 +143,4 @@ export function updateMining(dt, active) {
       if (mineHooks.onProgress) mineHooks.onProgress(x, y, z, stage);
     }
   }
-                   }
+}
