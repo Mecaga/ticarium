@@ -27,7 +27,8 @@ import { openFurnace, isFurnaceOpen } from '../ui/furnace.js';
 import { isArmor } from './armor.js';
 import { useBed, BED } from './bed.js';
 import { useJuke, JUKE, isDisc, useShears, SHEARS, useBlueprint, BPRINT } from './extras.js';
-import { placeDoor, toggleDoor, placeBed, pairFix, EXTRA_DROPS, DOOR, DOORU, DOORO, DOOROU, BEDH } from './doors.js';
+import { placeDoor, toggleDoor, placeBed, pairFix, EXTRA_DROPS, DOOR, isDoorBlock, BEDH } from './doors.js';
+import { openChest, chestBroken, isChestOpen, CHEST } from './chests.js';
 
 // Açlık puanları: et, elma, ekmek, pişmiş et, patates, havuç, domates, biber, soğan, çiğköfte
 const FOOD = { 15: 6, 46: 4, 75: 5, 86: 10, 150: 3, 151: 4, 152: 3, 153: 2, 154: 2, 155: 14 };
@@ -56,7 +57,7 @@ const give = (t, n = 1) => {
 const take = (t, n = 1) => { if (!isCreative()) eco.inv[t] -= n; };
 const isLog = t => t === 4 || t === 13;
 const isLeaf = t => t === 5 || t === 14;
-const uiOpen = () => isDrawOpen() || isCraftOpen() || isFurnaceOpen();
+const uiOpen = () => isDrawOpen() || isCraftOpen() || isFurnaceOpen() || isChestOpen();
 
 function commit(x, y, z, t) {
   recordChange(x, y, z, t);
@@ -218,6 +219,7 @@ export function breakBlock(canDrop = true) {
   commit(x, y, z, 0);
   popPlant(x, y + 1, z);   // üstündeki bitki desteksiz kalır
   pairFix(x, y, z, t);
+  if (t === CHEST) chestBroken(x, y, z);
   if (isLeaf(t) && canDrop && !isCreative()) leafDrop(x, y, z, t);
   if (isLog(t)) decayLeaves(x, y, z);   // her odun tek tek kırılır, yapraklar son odundan sonra çürür
   queueFall(x, y + 1, z); // üstündeki kum/kar düşsün
@@ -371,7 +373,8 @@ export function placeBlock() {
     if (tb === CRAFT) return openCraft(3);
     if (tb === FURNACE) return openFurnace();
     if (tb === BED || tb === BEDH) return useBed(target);
-    if (tb === DOOR || tb === DOORU || tb === DOORO || tb === DOOROU) return toggleDoor(target);
+    if (isDoorBlock(tb)) return toggleDoor(target);
+    if (tb === CHEST) return openChest(target);
     if (tb === JUKE) return useJuke(target, t);
     if (tb === BPRINT) return useBlueprint(target);
   }
