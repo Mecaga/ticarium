@@ -27,6 +27,7 @@ const HARD = {
   77: [0.05, null, 0], 78: [0.05, null, 0], 79: [0.05, null, 0], 80: [0.05, null, 0],
   106: [0.05, null, 0]   // uzun ot
 };
+for (let i = 180; i <= 182; i++) HARD[i] = [0.3, 'shovel', 0];
 for (let i = 130; i <= 149; i++) HARD[i] = [0.05, null, 0];   // sebze ekinleri
 for (let i = 120; i <= 125; i++) HARD[i] = [1.2, null, 0];    // renkli yün
 
