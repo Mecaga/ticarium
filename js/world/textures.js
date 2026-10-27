@@ -22,11 +22,13 @@ TILE_NAMES.push('potato', 'carrot', 'tomato', 'pepper', 'onion', 'cigkofte');
 TILE_NAMES.push('doorC', 'doorO', 'disc', 'shears', 'bedFoot', 'bedHead', 'bedSide', 'jukeTop', 'jukeSide', 'bprint');
 TILE_NAMES.push('chestTop', 'chestSide');
 TILE_NAMES.push('book');
+for (let i = 0; i < 6; i++) TILE_NAMES.push('book' + i);
 
 const FLOWERS = new Set(['lavender', 'daisy', 'poppy', 'bpoppy', 'tulipo', 'tulipp']);
 const ITEMS = new Set(['seeds', 'wheatI', 'bread', 'stick', 'coal', 'ingotI', 'ingotG', 'gem', 'cooked',
   'potato', 'carrot', 'tomato', 'pepper', 'onion', 'cigkofte', 'disc', 'shears']);
 ITEMS.add('book');
+for (let i = 0; i < 6; i++) ITEMS.add('book' + i);
 
 const WOOD = [176, 136, 72], STONE = [150, 150, 150], IRON = [222, 222, 228], DIAM = [80, 225, 215], NETH = [92, 76, 88];
 const TOOL = {
@@ -88,7 +90,11 @@ export const FACE_TILES = {
   108: same('doorC'), 109: same('doorC'),
   150: same('potato'), 151: same('carrot'), 152: same('tomato'), 153: same('pepper'), 154: same('onion'), 155: same('cigkofte')
 };
-for (let i = 0; i < 6; i++) { FACE_TILES[110 + i] = same('dye' + i); FACE_TILES[120 + i] = same('wc' + i); }
+for (let i = 0; i < 6; i++) {
+  FACE_TILES[110 + i] = same('dye' + i);
+  FACE_TILES[120 + i] = same('wc' + i);
+  FACE_TILES[160 + i] = same('book' + i);
+}
 for (let k = 0; k < 5; k++) for (let s = 0; s < 4; s++) FACE_TILES[130 + k * 4 + s] = same('cr' + k + '_' + s);
 
 // Düz sprite olarak görünen eşyalar (ikonda ve yerde)
@@ -97,6 +103,7 @@ for (let i = 50; i <= 68; i++) FLAT.add(i);
 for (const i of [69, 82, 83, 84, 85, 86, 89, 91, 92, 93, 94, 95, 96, 97, 98]) FLAT.add(i);
 for (let i = 110; i <= 115; i++) FLAT.add(i);
 for (let i = 130; i <= 155; i++) FLAT.add(i);
+for (let i = 160; i <= 165; i++) FLAT.add(i);
 FLAT.add(TI.book);
 export const isFlat = t => FLAT.has(t);
 export const addFlat = (...a) => a.forEach(i => FLAT.add(i));
@@ -131,7 +138,11 @@ const BASE = {
 };
 for (const n in TOOL) BASE[n] = TOOL[n][1];
 for (const n in ARM) BASE[n] = ARM[n][1];
-for (let i = 0; i < 6; i++) { BASE['dye' + i] = DYE_RGB[i]; BASE['wc' + i] = DYE_RGB[i]; }
+for (let i = 0; i < 6; i++) {
+  BASE['dye' + i] = DYE_RGB[i];
+  BASE['wc' + i] = DYE_RGB[i];
+}
+[[200, 50, 50], [60, 150, 80], [60, 120, 210], [160, 165, 180], [235, 125, 25], [140, 80, 190]].forEach((c, i) => { BASE['book' + i] = c; });
 for (let k = 0; k < 5; k++) for (let s = 0; s < 4; s++) BASE['cr' + k + '_' + s] = [80, 160, 60];
 
 const SEEDS = Array.from({ length: 8 }, (_, i) => [hash(i, 1, 50) * 16, hash(i, 2, 50) * 16]);
@@ -226,10 +237,12 @@ function ingotPix(col, x, y) {
 }
 
 function itemPix(name, x, y) {
-  if (name === 'book') {
+  if (/^book\d$/.test(name) || name === 'book') {
     if (x < 3 || x > 12 || y < 2 || y > 13) return null;
-    if (x === 3) return [70, 40, 100];
-    return y >= 12 ? [240, 235, 220] : [120, 70, 160];
+    const c = BASE[name] || [120, 70, 160];
+    if (x === 3) return c.map(v => Math.round(v * 0.55));
+    if (y >= 12) return [240, 235, 220];
+    return (x === 5 && y >= 4 && y <= 8) ? [250, 230, 150] : c;
   }
   if (name === 'disc') {
     const r = Math.hypot(x - 7.5, y - 7.5);
@@ -357,7 +370,7 @@ function buildAtlas() {
   const ctx = cv.getContext('2d');
   TILE_NAMES.forEach((name, i) => {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
-      let [r, g, b] = BASE[name];
+      let [r, g, b] = BASE[name] || [120, 120, 120];
       let k = 0.86 + hash(x, y, i) * 0.28;
       if (name === 'doorO' && x > 3) continue;
       if (name === 'sapling') {
@@ -386,7 +399,7 @@ function buildAtlas() {
         const c = wheatPix(+name.slice(5), x, y);
         if (!c) continue;
         [r, g, b] = c; k = 0.92 + hash(x, y, i) * 0.16;
-      } else if (ITEMS.has(name) || name === 'book') {
+      } else if (ITEMS.has(name) || name === 'book' || /^book\d$/.test(name)) {
         const c = itemPix(name, x, y);
         if (!c) continue;
         [r, g, b] = c; k = 0.93 + hash(x, y, i) * 0.14;
