@@ -27,6 +27,7 @@ import { isCraftOpen } from './ui/craft.js';
 import { updateFurnace, isFurnaceOpen } from './ui/furnace.js';
 import { tickVitals } from './entities/vitals.js';
 import { initPack } from './world/texturepack.js';
+import './game/looks.js';
 
 const $ = id => document.getElementById(id);
 
