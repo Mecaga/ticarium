@@ -125,7 +125,6 @@ var ids = ['flash','coord','coins','roomInfo','msg','hearts','hotbar','look','jo
   'jCode','jDo','mErr','mAuth'];
 var missing = ids.filter(function (i) { return !document.getElementById(i); });
 
-// Safari eski dosyada takılmasın: modüller yüklenmeden önce sunucuyla kontrol edilir (değişmediyse 304, çok hafif)
 var FILES = [
   'js/core/state.js', 'js/core/save.js', 'js/core/firebase.js', 'js/core/sound.js', 'js/core/auth.js',
   'js/world/world.js', 'js/world/textures.js', 'js/world/texturepack.js', 'js/world/fluids.js', 'js/world/gravity.js', 'js/world/sky.js', 'js/world/paints.js',
@@ -136,7 +135,7 @@ var FILES = [
   'js/ui/bag.js', 'js/ui/draw.js', 'js/ui/ui.js', 'js/ui/input.js', 'js/ui/craft.js', 'js/ui/furnace.js',
   'js/game/actions.js', 'js/game/mining.js', 'js/game/session.js', 'js/game/progress.js', 'js/game/death.js',
   'js/game/creative.js', 'js/game/commands.js', 'js/game/economy.js', 'js/game/inventory.js', 'js/game/gear.js',
-  'js/game/recipes.js', 'js/game/armor.js', 'js/game/doors.js', 'js/game/looks.js', 'js/main.js?v=22'
+  'js/game/recipes.js', 'js/game/armor.js', 'js/game/doors.js', 'js/game/looks.js', 'js/game/chests.js', 'js/main.js?v=22'
 ];
 function refresh() {
   var jobs = FILES.map(function (f) { return fetch(f, { cache: 'no-cache' }).catch(function () {}); });
