@@ -29,6 +29,7 @@ import { isChestOpen } from './game/chests.js';
 import { tickVitals } from './entities/vitals.js';
 import { initPack } from './world/texturepack.js';
 import './game/looks.js';
+import './game/modes.js';
 
 const $ = id => document.getElementById(id);
 
@@ -166,12 +167,12 @@ function loop(now) {
   if (G.online) G.online.updateOthers(dt);
   updateItems(dt, !frozen);
   rebuild();
-  camera.position.set(P.x, P.y + 1.6, P.z);
+  camera.position.set(P.x, P.y + (P.sneak ? 1.3 : 1.6), P.z);
   camera.rotation.set(P.pitch, P.yaw, 0);
   const uw = isWater(Math.floor(camera.position.x), Math.floor(camera.position.y), Math.floor(camera.position.z));
   updateSky(dt, camera, uw);
   updateTarget(camera);
-  updateMining(dt, !frozen && !!room);
+  updateMining(dt, !frozen && !!room && !P.ghost);
   renderer.render(scene, camera);
 }
 requestAnimationFrame(loop);
