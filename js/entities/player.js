@@ -37,6 +37,17 @@ export function knock(dx, dz) {
 export function updatePlayer(dt, frozen) {
   if (frozen) return;
   if (!isLoaded(Math.floor(P.x), Math.floor(P.z))) return;   // chunk yüklenene kadar düşme
+  
+  if (collides(P.x, P.y, P.z)) {   // üstümüze blok konduysa dışarı çık
+    let ok = false;
+    for (let r = 0.25; r <= 1.25 && !ok; r += 0.25) for (let a = 0; a < 8 && !ok; a++) {
+      const nx = P.x + Math.cos(a * 0.785) * r, nz = P.z + Math.sin(a * 0.785) * r;
+      if (!collides(nx, P.y, nz)) { P.x = nx; P.z = nz; ok = true; }
+    }
+    for (let dy = 0.25; dy <= 2.5 && !ok; dy += 0.25) if (!collides(P.x, P.y + dy, P.z)) { P.y += dy; ok = true; }
+    P.vy = 0;
+  }
+
   const wx = Math.floor(P.x), wz = Math.floor(P.z);
   P.inWater = get(wx, Math.floor(P.y + 0.4), wz) === WATER;
   P.underWater = get(wx, Math.floor(P.y + 1.6), wz) === WATER;
