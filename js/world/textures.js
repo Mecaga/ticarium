@@ -20,6 +20,7 @@ for (let i = 0; i < 6; i++) TILE_NAMES.push('wc' + i);
 for (let k = 0; k < 5; k++) for (let s = 0; s < 4; s++) TILE_NAMES.push('cr' + k + '_' + s);
 TILE_NAMES.push('potato', 'carrot', 'tomato', 'pepper', 'onion', 'cigkofte');
 TILE_NAMES.push('doorC', 'doorO', 'disc', 'shears', 'bedFoot', 'bedHead', 'bedSide', 'jukeTop', 'jukeSide', 'bprint');
+TILE_NAMES.push('chestTop', 'chestSide');
 
 const FLOWERS = new Set(['lavender', 'daisy', 'poppy', 'bpoppy', 'tulipo', 'tulipp']);
 const ITEMS = new Set(['seeds', 'wheatI', 'bread', 'stick', 'coal', 'ingotI', 'ingotG', 'gem', 'cooked',
@@ -120,7 +121,8 @@ const BASE = {
   potato: [196, 160, 96], carrot: [240, 130, 30], tomato: [220, 50, 40], pepper: [60, 170, 60], onion: [235, 225, 235], cigkofte: [168, 58, 32],
   doorC: [150, 100, 52], doorO: [150, 100, 52], disc: [30, 30, 36], shears: [215, 215, 225],
   bedFoot: [200, 45, 45], bedHead: [200, 45, 45], bedSide: [200, 45, 45],
-  jukeTop: [88, 58, 38], jukeSide: [120, 78, 48], bprint: [60, 120, 200]
+  jukeTop: [88, 58, 38], jukeSide: [120, 78, 48], bprint: [60, 120, 200],
+  chestTop: [158, 108, 54], chestSide: [158, 108, 54]
 };
 for (const n in TOOL) BASE[n] = TOOL[n][1];
 for (const n in ARM) BASE[n] = ARM[n][1];
@@ -560,6 +562,12 @@ function buildAtlas() {
             k = 0.9 + hash(x, y, 146) * 0.2;
             if (x % 5 === 0) k *= 0.8;
             if (y >= 5 && y <= 6 && x >= 4 && x <= 11) { r = 20; g = 20; b = 24; k = 1; }
+            break;
+          case 'chestTop': case 'chestSide':
+            k = 0.92 + hash(x, y, 150) * 0.16;
+            if (x < 1 || x > 14 || y < 1 || y > 14) { r = 80; g = 50; b = 22; k = 1; }
+            else if (name === 'chestSide' && (y === 6 || y === 7)) k *= 0.62;
+            if (name === 'chestSide' && x >= 7 && x <= 8 && y >= 6 && y <= 9) { r = 230; g = 200; b = 70; k = 1; }
             break;
           case 'bprint':
             k = 0.95 + hash(x, y, 147) * 0.08;
