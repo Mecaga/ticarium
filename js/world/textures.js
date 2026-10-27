@@ -19,10 +19,10 @@ const TILE_NAMES = ['grassTop', 'grassSide', 'dirt', 'stone', 'woodSide', 'woodT
   'potato0', 'potato1', 'potato2', 'potato3', 'potato',
   'onion0', 'onion1', 'onion2', 'onion3', 'onion',
   'carrot0', 'carrot1', 'carrot2', 'carrot3', 'carrot',
-  'cigkofte', 'doorC', 'doorO'];
+  'cigkofte', 'doorC', 'doorO', 'disc', 'shears'];
 
 const FLOWERS = new Set(['lavender', 'daisy', 'poppy', 'bpoppy', 'tulipo', 'tulipp']);
-const ITEMS = new Set(['seeds', 'wheatI', 'bread', 'stick', 'coal', 'ingotI', 'ingotG', 'gem', 'cooked', 'tomato', 'pepper', 'potato', 'onion', 'carrot', 'cigkofte']);
+const ITEMS = new Set(['seeds', 'wheatI', 'bread', 'stick', 'coal', 'ingotI', 'ingotG', 'gem', 'cooked', 'tomato', 'pepper', 'potato', 'onion', 'carrot', 'cigkofte', 'disc', 'shears']);
 const WOOD = [176, 136, 72], STONE = [150, 150, 150], IRON = [222, 222, 228], DIAM = [80, 225, 215], NETH = [92, 76, 88];
 
 // Aletler: [tür, kafa rengi]
@@ -79,11 +79,12 @@ export const FACE_TILES = {
   114: same('onion0'), 115: same('onion1'), 116: same('onion2'), 117: same('onion3'), 118: same('onion'),
   119: same('carrot0'), 120: same('carrot1'), 121: same('carrot2'), 122: same('carrot3'), 123: same('carrot'),
   124: same('cigkofte'),
-  125: same('doorC'), 126: same('doorO')
+  125: same('doorC'), 126: same('doorO'),
+  127: same('disc'), 128: same('shears')
 };
 
 // Blok olmayan eşyalar: yerde ve ikonda düz sprite olarak görünür
-const FLAT = new Set([12, 15, 30, 31, 33, 40, 41, 42, 43, 44, 45, 46, 71, 73, 74, 75, 103, 108, 113, 118, 123, 124]);
+const FLAT = new Set([12, 15, 30, 31, 33, 40, 41, 42, 43, 44, 45, 46, 71, 73, 74, 75, 103, 108, 113, 118, 123, 124, 127, 128]);
 for (let i = 50; i <= 68; i++) FLAT.add(i);
 for (const i of [69, 82, 83, 84, 85, 86, 89, 91, 92, 93, 94, 95, 96, 97, 98]) FLAT.add(i);
 for (let i = TI.tomato0; i <= TI.cigkofte; i++) FLAT.add(i);
@@ -121,7 +122,9 @@ const BASE = {
   potato0: [100, 190, 65], potato1: [95, 180, 60], potato2: [145, 170, 90], potato3: [185, 140, 90], potato: [185, 140, 90],
   onion0: [90, 185, 60], onion1: [85, 170, 55], onion2: [170, 140, 170], onion3: [210, 160, 180], onion: [210, 160, 180],
   carrot0: [85, 185, 50], carrot1: [90, 190, 45], carrot2: [180, 140, 40], carrot3: [240, 130, 40], carrot: [240, 130, 40],
-  cigkofte: [145, 65, 35]
+  cigkofte: [145, 65, 35],
+  disc: [30, 30, 36],
+  shears: [215, 215, 225]
 };
 for (const n in TOOL) BASE[n] = TOOL[n][1];
 for (const n in ARM) BASE[n] = ARM[n][1];
@@ -258,6 +261,20 @@ function ingotPix(col, x, y) {
 }
 
 function itemPix(name, x, y) {
+  if (name === 'disc') {
+    const r = Math.hypot(x - 7.5, y - 7.5);
+    if (r > 6.5) return null;
+    if (r < 1.6) return [200, 200, 205];
+    if (r < 3) return [190, 60, 70];
+    return r > 5.6 ? [60, 60, 70] : [24, 24, 30];
+  }
+  if (name === 'shears') {
+    const a = (x + y === 15 || x + y === 16) && x >= 5 && x <= 11;
+    const b = (x === y || x === y + 1) && x >= 5 && x <= 11;
+    if (a || b) return [215, 215, 225];
+    if (y >= 11 && y <= 14 && (x <= 4 || x >= 11) && (x >= 2 && x <= 4 || x >= 11 && x <= 13)) return [190, 50, 50];
+    return null;
+  }
   if (name === 'stick') return ((x + y === 16 || x + y === 17) && x >= 4 && x <= 12) ? [140, 100, 52] : null;
   if (name === 'seeds') {
     const e = Math.pow((x - 7.5) / 3.5, 2) + Math.pow((y - 8.5) / 4.5, 2);
@@ -429,7 +446,7 @@ function buildAtlas() {
         if (!c) continue;
         [r, g, b] = c;
         k = 0.92 + hash(x, y, i) * 0.16;
-      } else if (ITEMS.has(name)) {
+      } else if (ITEMS.has(name) || name === 'disc' || name === 'shears') {
         const c = itemPix(name, x, y);
         if (!c) continue;
         [r, g, b] = c;
@@ -449,7 +466,7 @@ function buildAtlas() {
         const body = y >= 3 && y <= 14 && Math.abs(x - 7.5) <= w;
         const handle = (y <= 2 && y >= 1 && x >= 4 && x <= 11) || ((x === 4 || x === 11) && y >= 2 && y <= 4);
         if (!body && !handle) continue;
-        if (handle) { r = 85; r = 85; b = 92; } // (note: r=85 twice in original logic or fixed)
+        if (handle) { r = 85; b = 92; }
         else if (name !== 'bucket' && y >= 4 && y <= 7 && Math.abs(x - 7.5) <= w - 1) {
           if (name === 'wbucket') { r = 55; g = 125; b = 225; } else { r = 240; g = 110; b = 20; }
         }
@@ -638,3 +655,5 @@ export function iconURL(t) {
 }
 export const tileNames = TILE_NAMES;
 export const clearIcons = () => icons.clear();
+
+export const addFlat = (...a) => a.forEach(i => FLAT.add(i));
