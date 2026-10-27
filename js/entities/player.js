@@ -1,4 +1,4 @@
-import { get, solid, WATER, spawnPos, isLoaded } from '../world/world.js';
+import { get, solid, WATER, spawnPos, isLoaded, pointHit } from '../world/world.js';
 import { input } from '../ui/input.js';
 
 const R = 0.3, PH = 1.7;
@@ -17,7 +17,7 @@ export const P = {
 
 export function collides(x, y, z) {
   for (const dx of [-R, R]) for (const dz of [-R, R]) for (const dy of [0.05, 0.9, PH - 0.05])
-    if (solid(Math.floor(x + dx), Math.floor(y + dy), Math.floor(z + dz))) return true;
+    if (solid(Math.floor(x + dx), Math.floor(y + dy), Math.floor(z + dz)) || pointHit(x + dx, y + dy, z + dz)) return true;
   return false;
 }
 
@@ -76,4 +76,4 @@ export function updatePlayer(dt, frozen) {
   }
 
   if (P.ground) { P.sx = P.x; P.sy = P.y; P.sz = P.z; }
-    }
+}
