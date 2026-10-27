@@ -22,8 +22,7 @@ export const DYE_COL = [0x9a5fd0, 0xf2c91e, 0xd02228, 0x3050cd, 0xf3861f, 0xf078
 export const DYE_NAMES = ['Mor', 'Sarı', 'Kırmızı', 'Mavi', 'Turuncu', 'Pembe'];
 
 export const isCrop = t => (t >= CROP_MIN && t <= CROP_MAX) || (t >= VCROP_MIN && t <= VCROP_MAX);
-export const isPlant = t => t === SAPLING || t === TALL || (t >= FLOWER_MIN && t <= FLOWER_MAX) || isCrop(t);
-
+export const isPlant = t => t === SAPLING || t === TALL || t === 87 || t === 88 || (t >= FLOWER_MIN && t <= FLOWER_MAX) || isCrop(t);
 export const TYPES = {
   1:  { name: 'Çim',    color: 0x5fae45, base: 10 },
   2:  { name: 'Toprak', color: 0x8b5a2b, base: 6 },
