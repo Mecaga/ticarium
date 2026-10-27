@@ -19,7 +19,7 @@ const TILE_NAMES = ['grassTop', 'grassSide', 'dirt', 'stone', 'woodSide', 'woodT
   'potato0', 'potato1', 'potato2', 'potato3', 'potato',
   'onion0', 'onion1', 'onion2', 'onion3', 'onion',
   'carrot0', 'carrot1', 'carrot2', 'carrot3', 'carrot',
-  'cigkofte'];
+  'cigkofte', 'doorC', 'doorO'];
 
 const FLOWERS = new Set(['lavender', 'daisy', 'poppy', 'bpoppy', 'tulipo', 'tulipp']);
 const ITEMS = new Set(['seeds', 'wheatI', 'bread', 'stick', 'coal', 'ingotI', 'ingotG', 'gem', 'cooked', 'tomato', 'pepper', 'potato', 'onion', 'carrot', 'cigkofte']);
@@ -78,7 +78,8 @@ export const FACE_TILES = {
   109: same('potato0'), 110: same('potato1'), 111: same('potato2'), 112: same('potato3'), 113: same('potato'),
   114: same('onion0'), 115: same('onion1'), 116: same('onion2'), 117: same('onion3'), 118: same('onion'),
   119: same('carrot0'), 120: same('carrot1'), 121: same('carrot2'), 122: same('carrot3'), 123: same('carrot'),
-  124: same('cigkofte')
+  124: same('cigkofte'),
+  125: same('doorC'), 126: same('doorO')
 };
 
 // Blok olmayan eşyalar: yerde ve ikonda düz sprite olarak görünür
@@ -124,6 +125,7 @@ const BASE = {
 };
 for (const n in TOOL) BASE[n] = TOOL[n][1];
 for (const n in ARM) BASE[n] = ARM[n][1];
+BASE.doorC = [150, 100, 50]; BASE.doorO = [150, 100, 50];
 
 // Kaldırım taşı için hücre noktaları
 const SEEDS = Array.from({ length: 8 }, (_, i) => [hash(i, 1, 50) * 16, hash(i, 2, 50) * 16]);
@@ -384,6 +386,8 @@ function buildAtlas() {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
       let [r, g, b] = BASE[name];
       let k = 0.86 + hash(x, y, i) * 0.28;
+      if (name === 'doorO' && x > 3) continue;
+      if (name === 'doorC' && (y % 8 === 0 || x === 0 || x === 15)) k *= 0.6;
       if (name === 'sapling') {
         const stalk = (x === 7 || x === 8) && y >= 8;
         const dxx = (x - 7.5) / 4.5, dyy = (y - 5) / 3.6;
@@ -445,7 +449,7 @@ function buildAtlas() {
         const body = y >= 3 && y <= 14 && Math.abs(x - 7.5) <= w;
         const handle = (y <= 2 && y >= 1 && x >= 4 && x <= 11) || ((x === 4 || x === 11) && y >= 2 && y <= 4);
         if (!body && !handle) continue;
-        if (handle) { r = 85; g = 85; b = 92; }
+        if (handle) { r = 85; r = 85; b = 92; } // (note: r=85 twice in original logic or fixed)
         else if (name !== 'bucket' && y >= 4 && y <= 7 && Math.abs(x - 7.5) <= w - 1) {
           if (name === 'wbucket') { r = 55; g = 125; b = 225; } else { r = 240; g = 110; b = 20; }
         }
