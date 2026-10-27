@@ -25,8 +25,7 @@ export function bedSpawnPos() {
   try { v = JSON.parse(localStorage.getItem(key())); } catch (e) {}
   if (!Array.isArray(v) || v.length !== 3) return null;
   const [x, y, z] = v;
-  if (isLoaded(x, z) && get(x, y, z) !== BED) {
-    try { localStorage.removeItem(key()); } catch (e) {}
+    if (isLoaded(x, z) && get(x, y, z) !== BED && get(x, y, z) !== 99) {    try { localStorage.removeItem(key()); } catch (e) {}
     return null;
   }
   return { x: x + 0.5, y: y + 1.05, z: z + 0.5 };
