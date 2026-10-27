@@ -6,6 +6,7 @@ import { isCreative } from '../game/creative.js';
 import { dropItems } from '../entities/items.js';
 import { P } from '../entities/player.js';
 import { sfx } from '../core/sound.js';
+import { loadAt, saveAt, canStore } from '../game/store.js';
 
 // Eritilenler: girdi → çıktı
 export const SMELT = { 37: 83, 38: 84, 6: 9, 15: 86 };   // demir cevheri, altın cevheri, kum, et
@@ -43,7 +44,7 @@ const el = document.createElement('div');
 el.id = 'furnP';
 document.body.appendChild(el);
 
-let open = false, F = null, sel = 0, qty = 1;
+let open = false, F = null, sel = 0, qty = 1, fpos = null;
 export const isFurnaceOpen = () => open;
 const fresh = () => ({ inp: null, fuel: null, out: null, burn: 0, prog: 0 });
 
@@ -63,7 +64,7 @@ function cell(c, id, label) {
 function draw() {
   const ids = Object.keys(TYPES).map(Number).filter(t => (eco.inv[t] || 0) > 0 && (SMELT[t] || FUEL[t]));
   let h = '<div id="furnBox"><h2>🔥 Ocak</h2>';
-  h += '<small style="opacity:.75;display:block">Aşağıdan eşya seç, sonra üstteki hücreye dokun. Cevher, kum ve et erir. Yakıt: kömür, odun, tahta, çubuk. <b>Ocak panel açıkken çalışır</b>, kapatınca kalanlar çantana döner.</small>';
+  h += '<small style="opacity:.75;display:block">Aşağıdan eşya seç, sonra üstteki hücreye dokun. Cevher, kum ve et erir. Yakıt: kömür, odun, tahta, çubuk. <b>Ocak arka planda da çalışır</b>, kapatsan bile erimeye devam eder.</small>';
   h += '<div id="furnRow"><div class="fcol">' + cell(F.inp, 'inp', 'eritilecek') + '<div style="font-size:20px">🔥</div>' + cell(F.fuel, 'fuel', 'yakıt') + '</div>';
   h += '<div class="farr">➡️<div class="pbar"><em id="fbar"></em></div></div>' + cell(F.out, 'out', 'sonuç') + '</div>';
   h += '<h3>Çantan</h3><div id="furnInv">' + (ids.length
@@ -75,7 +76,7 @@ function draw() {
 }
 
 function put(slot) {
-  if (!sel) {   // seçili eşya yoksa hücredekini çantaya geri al
+  if (!sel) {
     const c = F[slot];
     if (!c) return;
     giveBack(c.t, c.n);
@@ -117,9 +118,19 @@ el.addEventListener('click', e => {
   if (fc) { const id = fc.dataset.c; if (id === 'out') takeOut(); else put(id); }
 });
 
-export function openFurnace() {
+const dat = f => ({ inp: f.inp || null, fuel: f.fuel || null, out: f.out || null, burn: f.burn || 0, prog: f.prog || 0, ts: Date.now() });
+
+export async function openFurnace(p) {
   if (isCreative()) return toast('Yaratıcı modda ocak gerekmez');
+  if (!canStore()) return toast('Ocak sadece kayıtlı dünyada çalışır');
+  fpos = p.slice(0, 3);
+  const d = await loadAt('f', fpos);
   F = fresh(); sel = 0;
+  if (d) {
+    F.inp = d.inp || null; F.fuel = d.fuel || null; F.out = d.out || null; F.burn = d.burn || 0; F.prog = d.prog || 0;
+    const el2 = Math.min(7200, (Date.now() - (d.ts || Date.now())) / 1000);   // kapalıyken geçen süre kadar çalışmış sayılır
+    for (let s = 0; s < el2; s += 0.5) advance(0.5);
+  }
   open = true;
   el.style.display = 'flex';
   draw();
@@ -127,26 +138,32 @@ export function openFurnace() {
 
 export function closeFurnace() {
   if (!open) return;
-  for (const s of ['inp', 'fuel', 'out']) if (F[s]) giveBack(F[s].t, F[s].n);
-  F = null;
-  open = false;
+  const f = F;
+  open = false; F = null;
   el.style.display = 'none';
+  saveAt('f', fpos, (f.inp || f.fuel || f.out) ? dat(f) : null);
   drawHud();
 }
 
-// Ölüm, çıkış gibi durumlarda içindekileri geri verir
 export function returnFurnace() { if (open) closeFurnace(); }
 
-// Her karede çağrılır: yakıt yanar, eşya erir
-export function updateFurnace(dt) {
-  if (!open) return;
+// Ocak kırılınca içindekiler düşer
+export async function furnaceBroken(x, y, z) {
+  const p = [x, y, z], d = await loadAt('f', p);
+  if (!d) return;
+  await saveAt('f', p, null);
+  const arr = [];
+  for (const s of ['inp', 'fuel', 'out']) if (d[s]) arr.push({ t: d[s].t, c: d[s].n, x: x + 0.5, y: y + 0.5, z: z + 0.5, vx: 0, vy: 2.5, vz: 0 });
+  if (arr.length) dropItems(arr);
+}
+
+function advance(dt) {
   const rec = F.inp ? SMELT[F.inp.t] : 0;
   const room = rec && (!F.out || (F.out.t === rec && F.out.n < 64));
   let changed = false;
   if (room) {
     if (F.burn <= 0 && F.fuel) {
-      F.burn = FUEL[F.fuel.t];
-      F.fuel.n--;
+      F.burn = FUEL[F.fuel.t]; F.fuel.n--;
       if (F.fuel.n <= 0) F.fuel = null;
       changed = true;
     }
@@ -157,11 +174,15 @@ export function updateFurnace(dt) {
         F.inp.n--;
         if (F.inp.n <= 0) F.inp = null;
         F.out = F.out ? { t: F.out.t, n: F.out.n + 1 } : { t: rec, n: 1 };
-        sfx.place();
         changed = true;
       }
     } else F.prog = 0;
   } else F.prog = 0;
-  if (changed) draw();
+  return changed;
+}
+
+export function updateFurnace(dt) {
+  if (!open) return;
+  if (advance(dt)) draw();
   else { const b = el.querySelector('#fbar'); if (b) b.style.width = Math.round(F.prog / TIME * 100) + '%'; }
 }
