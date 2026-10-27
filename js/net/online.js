@@ -11,6 +11,7 @@ import { makeAvatar, tint, animateAvatar } from '../entities/avatars.js';
 import { setPaint, removePaint } from '../world/paints.js';
 import { G } from '../core/state.js';
 import { mineHooks, makeCrack } from '../game/mining.js';
+import { showArmor } from '../entities/armorvis.js';
 
 const DMG = 4;
 const pvp = { on: false };
@@ -207,6 +208,7 @@ export function startOnline(sc, roomCode, opts = {}) {
       }
       o.name = v.name || o.name;
       o.dead = !!v.dead;
+      showArmor(o, v.arm);
       if (typeof v.x === 'number') {
         o.tx = v.x; o.ty = v.y; o.tz = v.z; o.tyaw = v.yaw || 0; o.tpitch = v.pitch || 0;
         if (!o.init) { o.mesh.position.set(v.x, v.y, v.z); o.init = true; }
@@ -248,7 +250,14 @@ export function startOnline(sc, roomCode, opts = {}) {
 function sendPos() {
   if (!code || !uid) return;
   const r2 = n => Math.round(n * 100) / 100;
-  const d = { x: r2(P.x), y: r2(P.y), z: r2(P.z), yaw: r2(P.yaw), pitch: r2(P.pitch) };
+  const d = { 
+    x: r2(P.x), 
+    y: r2(P.y), 
+    z: r2(P.z), 
+    yaw: r2(P.yaw), 
+    pitch: r2(P.pitch), 
+    arm: [eco.armor.head, eco.armor.chest, eco.armor.legs, eco.armor.feet].join(',') 
+  };
   const s = JSON.stringify(d);
   if (s === last) return;
   last = s;
@@ -380,4 +389,4 @@ export function stopOnline() {
   pvp.on = false;
   cb = {};
   code = null; last = ''; ownerId = null; outB = {}; plist = [];
-    }
+}
