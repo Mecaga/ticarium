@@ -29,8 +29,7 @@ import { useBed, BED } from './bed.js';
 import { useJuke, JUKE, isDisc, useShears, SHEARS, useBlueprint, BPRINT } from './extras.js';
 import { placeDoor, toggleDoor, placeBed, pairFix, EXTRA_DROPS, DOOR, isDoorBlock, BEDH } from './doors.js';
 import { openChest, chestBroken, isChestOpen, CHEST } from './chests.js';
-import { openBook, BOOK } from './book.js';
-import { openBook2, BOOK2, BOOK3 } from './books2.js';
+import { openBook, isBook } from './library.js';
 
 // Açlık puanları: et, elma, ekmek, pişmiş et, patates, havuç, domates, biber, soğan, çiğköfte
 const FOOD = { 15: 6, 46: 4, 75: 5, 86: 10, 150: 3, 151: 4, 152: 3, 153: 2, 154: 2, 155: 14 };
@@ -357,8 +356,7 @@ function useDye(t) {
 export function placeBlock() {
   if (isDead() || uiOpen() || P.ghost) return;
   const t = eco.sel;
-  if (t === BOOK) return openBook();
-  if (t === BOOK2 || t === BOOK3) return openBook2(t);
+  if (isBook(t)) return openBook(t);
   if (target) {
     const tb = get(target[0], target[1], target[2]);
     if (tb === CRAFT) return openCraft(3);
