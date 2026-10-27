@@ -40,8 +40,16 @@ export const getRaw = (x, y, z) => {
 };
 export const isWater = (x, y, z) => get(x, y, z) === WATER;
 export const isLava = (x, y, z) => get(x, y, z) === LAVA;
-export const solid = (x, y, z) => { const t = get(x, y, z); return t !== 0 && !isPlant(t) && t !== WATER && t !== LAVA; };
-const opaque = t => t !== 0 && !isPlant(t) && t !== WATER && t !== LAVA && t !== GLASS;
+export const BOXES = {};   // ince bloklar: id -> [x0,y0,z0,x1,y1,z1] (yatak, kapı)
+export const solid = (x, y, z) => { const t = get(x, y, z); return t !== 0 && !BOXES[t] && !isPlant(t) && t !== WATER && t !== LAVA; };
+// Kesin nokta çarpışması (ince bloklar için)
+export function pointHit(px, py, pz) {
+  const x = Math.floor(px), y = Math.floor(py), z = Math.floor(pz), b = BOXES[get(x, y, z)];
+  if (!b) return false;
+  const fx = px - x, fy = py - y, fz = pz - z;
+  return fx >= b[0] && fx <= b[3] && fy >= b[1] && fy <= b[4] && fz >= b[2] && fz <= b[5];
+}
+const opaque = t => t !== 0 && !BOXES[t] && !isPlant(t) && t !== WATER && t !== LAVA && t !== GLASS;
 
 export const wh = { fn: null };
 export const wlHook = { fn: null };
@@ -430,6 +438,16 @@ function pushQ(s, tile, p, sh) {
   s.n += 4;
 }
 
+function boxMesh(mq, ft, b, x, y, z) {
+  const X0 = x + b[0], Y0 = y + b[1], Z0 = z + b[2], X1 = x + b[3], Y1 = y + b[4], Z1 = z + b[5];
+  mq(ft[0], [[X0, Y1, Z0], [X1, Y1, Z0], [X1, Y1, Z1], [X0, Y1, Z1]], 1);
+  mq(ft[2], [[X0, Y0, Z0], [X1, Y0, Z0], [X1, Y0, Z1], [X0, Y0, Z1]], 0.55);
+  mq(ft[1], [[X0, Y0, Z0], [X1, Y0, Z0], [X1, Y1, Z0], [X0, Y1, Z0]], 0.68);
+  mq(ft[1], [[X0, Y0, Z1], [X1, Y0, Z1], [X1, Y1, Z1], [X0, Y1, Z1]], 0.68);
+  mq(ft[1], [[X0, Y0, Z0], [X0, Y0, Z1], [X0, Y1, Z1], [X0, Y1, Z0]], 0.82);
+  mq(ft[1], [[X1, Y0, Z0], [X1, Y0, Z1], [X1, Y1, Z1], [X1, Y1, Z0]], 0.82);
+}
+
 function buildChunk(c) {
   const pos = [], uv = [], col = [], ind = [];
   const wS = sink(), lS = sink(), gS = sink();
@@ -502,6 +520,8 @@ function buildChunk(c) {
     }
 
     if (t === GLASS) { glass(x, y, z); continue; }
+
+    if (BOXES[t] && FACE_TILES[t]) { boxMesh(mq, FACE_TILES[t], BOXES[t], x, y, z); continue; }
 
     const ft = FACE_TILES[t];
     if (!ft) continue;
@@ -589,4 +609,4 @@ export function updateTarget(camera) {
   if (!hl) return;
   hl.visible = !!target;
   if (target) hl.position.set(target[0] + 0.5, target[1] + 0.5, target[2] + 0.5);
-                                      }
+}
