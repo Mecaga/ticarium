@@ -5,6 +5,7 @@ import { G } from '../core/state.js';
 import { clock } from '../world/sky.js';
 import { toast } from '../ui/ui.js';
 import { tgtOpts } from '../world/world.js';
+import { toSpawn } from './death.js';
 
 const $ = id => document.getElementById(id);
 function mk(id, txt, css) {
@@ -81,6 +82,8 @@ export function extraCmd(cmd) {
   }
   if (cmd === '/gunduz') { setTime(12); return ['☀️ Gündüz oldu (sadece sende)']; }
   if (cmd === '/gece') { setTime(0); return ['🌙 Gece oldu (sadece sende)']; }
+  if (cmd === '/ev') { toSpawn(); return ['🏠 Eve döndün']; }
+  if (cmd === '/hiz') { P.fast = !P.fast; return [P.fast ? '⚡ Hız 2 kat' : 'Hız normal']; }
   if (cmd === '/konfeti') { confetti(); return ['🎉']; }
   return null;
 }
