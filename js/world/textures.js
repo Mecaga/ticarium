@@ -21,10 +21,13 @@ for (let k = 0; k < 5; k++) for (let s = 0; s < 4; s++) TILE_NAMES.push('cr' + k
 TILE_NAMES.push('potato', 'carrot', 'tomato', 'pepper', 'onion', 'cigkofte');
 TILE_NAMES.push('doorC', 'doorO', 'disc', 'shears', 'bedFoot', 'bedHead', 'bedSide', 'jukeTop', 'jukeSide', 'bprint');
 TILE_NAMES.push('chestTop', 'chestSide');
+TILE_NAMES.push('book');
 
 const FLOWERS = new Set(['lavender', 'daisy', 'poppy', 'bpoppy', 'tulipo', 'tulipp']);
 const ITEMS = new Set(['seeds', 'wheatI', 'bread', 'stick', 'coal', 'ingotI', 'ingotG', 'gem', 'cooked',
   'potato', 'carrot', 'tomato', 'pepper', 'onion', 'cigkofte', 'disc', 'shears']);
+ITEMS.add('book');
+
 const WOOD = [176, 136, 72], STONE = [150, 150, 150], IRON = [222, 222, 228], DIAM = [80, 225, 215], NETH = [92, 76, 88];
 const TOOL = {
   pickW: ['pick', WOOD], pickS: ['pick', STONE], pickI: ['pick', IRON], pickD: ['pick', DIAM], pickN: ['pick', NETH],
@@ -94,6 +97,7 @@ for (let i = 50; i <= 68; i++) FLAT.add(i);
 for (const i of [69, 82, 83, 84, 85, 86, 89, 91, 92, 93, 94, 95, 96, 97, 98]) FLAT.add(i);
 for (let i = 110; i <= 115; i++) FLAT.add(i);
 for (let i = 130; i <= 155; i++) FLAT.add(i);
+FLAT.add(TI.book);
 export const isFlat = t => FLAT.has(t);
 export const addFlat = (...a) => a.forEach(i => FLAT.add(i));
 
@@ -122,7 +126,8 @@ const BASE = {
   doorC: [150, 100, 52], doorO: [150, 100, 52], disc: [30, 30, 36], shears: [215, 215, 225],
   bedFoot: [200, 45, 45], bedHead: [200, 45, 45], bedSide: [200, 45, 45],
   jukeTop: [88, 58, 38], jukeSide: [120, 78, 48], bprint: [60, 120, 200],
-  chestTop: [158, 108, 54], chestSide: [158, 108, 54]
+  chestTop: [158, 108, 54], chestSide: [158, 108, 54],
+  book: [120, 70, 160]
 };
 for (const n in TOOL) BASE[n] = TOOL[n][1];
 for (const n in ARM) BASE[n] = ARM[n][1];
@@ -221,6 +226,11 @@ function ingotPix(col, x, y) {
 }
 
 function itemPix(name, x, y) {
+  if (name === 'book') {
+    if (x < 3 || x > 12 || y < 2 || y > 13) return null;
+    if (x === 3) return [70, 40, 100];
+    return y >= 12 ? [240, 235, 220] : [120, 70, 160];
+  }
   if (name === 'disc') {
     const r = Math.hypot(x - 7.5, y - 7.5);
     if (r > 6.5) return null;
@@ -376,7 +386,7 @@ function buildAtlas() {
         const c = wheatPix(+name.slice(5), x, y);
         if (!c) continue;
         [r, g, b] = c; k = 0.92 + hash(x, y, i) * 0.16;
-      } else if (ITEMS.has(name)) {
+      } else if (ITEMS.has(name) || name === 'book') {
         const c = itemPix(name, x, y);
         if (!c) continue;
         [r, g, b] = c; k = 0.93 + hash(x, y, i) * 0.14;
@@ -544,7 +554,7 @@ function buildAtlas() {
             break;
           case 'bedHead':
             k = 0.93 + hash(x, y, 143) * 0.12;
-            if (y >= 1 && y <= 6 && x >= 2 && x <= 13) { r = 245; g = 245; b = 245; }
+            if (y >= 4 && y <= 11 && x >= 3 && x <= 12) { r = 245; g = 245; b = 245; }
             else if (x < 1 || x > 14 || y > 14) k *= 0.7;
             break;
           case 'bedSide':
