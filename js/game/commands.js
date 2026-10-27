@@ -3,6 +3,7 @@ import { setCreative, isCreative } from './creative.js';
 import { TYPES, CATS } from '../world/world.js';
 import { drawHud } from '../ui/ui.js';
 import { addItem } from './inventory.js';
+import { extraCmd, clearModes } from './modes.js';
 
 const norm = s => String(s).toLowerCase().replace(/\u0307/g, '')
   .replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ş/g, 's').replace(/ü/g, 'u')
@@ -40,6 +41,10 @@ export function runCommand(text) {
   const r = G.room;
   if (!r) return ['Önce bir dünyaya gir.'];
   if (!(r.solo || r.isOwner)) return ['⛔ Bu komutu sadece oda kurucusu kullanabilir.'];
+
+  const ex = extraCmd(cmd);
+  if (ex) return ex;
+  if (cmd === '/gm1' || cmd === '/gm0') clearModes();
 
   if (cmd === '/gm1') {
     if (isCreative()) return ['Zaten yaratıcı moddasın. Normale dönmek için /gm0'];
