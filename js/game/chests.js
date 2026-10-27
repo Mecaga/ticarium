@@ -7,7 +7,7 @@ import { dropItems } from '../entities/items.js';
 import { isCreative } from './creative.js';
 import { isGear, takeInstance } from './gear.js';
 import { canAdd, addItem } from './inventory.js';
-import { G } from '../core/state.js';
+import { loadAt, saveAt, watchAt, canStore } from './store.js';
 
 export const CHEST = 176;
 TYPES[CHEST] = { name: 'Sandık', color: 0x9a6a30, base: 50 };
@@ -16,10 +16,7 @@ eco.inv[CHEST] = 0; eco.raw[CHEST] = 50; eco.trend[CHEST] = 0;
 CATS[0][1].push(CHEST);
 RECIPES.push({ out: [CHEST, 1], pat: [[70, 70, 70], [70, 0, 70], [70, 70, 70]] });
 
-// İçerik: { tür: adet } ya da aletlerde { tür: [dayanıklılıklar] }. Sadece bu cihazda saklanır.
-const kk = p => 'bd_ch_' + (G.room ? (G.room.wid || G.room.code || 'x') : 'x') + '_' + p.join('_');
-const load = p => { try { return JSON.parse(localStorage.getItem(kk(p))) || {}; } catch (e) { return {}; } };
-const save = (p, d) => { try { if (Object.keys(d).length) localStorage.setItem(kk(p), JSON.stringify(d)); else localStorage.removeItem(kk(p)); } catch (e) {} };
+const norm = d => { const o = {}; if (d) for (const t in d) { const v = d[t]; o[t] = typeof v === 'object' ? Object.values(v) : v; } return o; };
 const cnt = v => (Array.isArray(v) ? v.length : v);
 
 const st = document.createElement('style');
@@ -39,14 +36,15 @@ document.head.appendChild(st);
 const el = document.createElement('div');
 el.id = 'chP';
 document.body.appendChild(el);
-let open = false, pos = null, qty = 1;
+let open = false, pos = null, qty = 1, cur = {}, unsub = null;
 export const isChestOpen = () => open;
 
+const sync = () => saveAt('c', pos, Object.keys(cur).length ? cur : null);
+
 function draw() {
-  const d = load(pos);
   const mine = Object.keys(TYPES).map(Number).filter(t => (eco.inv[t] || 0) > 0);
-  let h = '<div id="chBox"><h3>📦 Sandık</h3><small style="opacity:.7">Üstteki eşyaya dokun: çantana alırsın. Alttakine dokun: sandığa koyarsın.</small>';
-  h += '<h4>Sandığın içi</h4><div class="chg">' + (Object.keys(d).map(t => '<div class="chi" data-o="' + t + '">' + iconHTML(+t) + '<b>' + cnt(d[t]) + '</b></div>').join('') || '<span style="opacity:.6;font-size:13px;padding:6px">Boş</span>') + '</div>';
+  let h = '<div id="chBox"><h3>📦 Sandık</h3><small style="opacity:.7">Üstteki eşyaya dokun: çantana alırsın. Alttakine dokun: sandığa koyarsın. Herkes aynı sandığı görür.</small>';
+  h += '<h4>Sandığın içi</h4><div class="chg">' + (Object.keys(cur).map(t => '<div class="chi" data-o="' + t + '">' + iconHTML(+t) + '<b>' + cnt(cur[t]) + '</b></div>').join('') || '<span style="opacity:.6;font-size:13px;padding:6px">Boş</span>') + '</div>';
   h += '<h4>Çantan</h4><div class="chg">' + (mine.map(t => '<div class="chi" data-i="' + t + '">' + iconHTML(t) + '<b>' + eco.inv[t] + '</b></div>').join('') || '<span style="opacity:.6;font-size:13px;padding:6px">Boş</span>') + '</div>';
   h += '<div class="chq">Her dokunuşta: ' + [1, 8, 64].map(q => '<button data-q="' + q + '" class="' + (q === qty ? 'on' : '') + '">' + q + '</button>').join('') + '</div>';
   h += '<button class="chx" data-x="1">Kapat</button></div>';
@@ -54,31 +52,29 @@ function draw() {
 }
 
 function put(t) {
-  const d = load(pos);
-  if (d[t] === undefined && Object.keys(d).length >= 27) return toast('Sandık dolu');
+  if (cur[t] === undefined && Object.keys(cur).length >= 27) return toast('Sandık dolu');
   const n = Math.min(qty, eco.inv[t] || 0);
   if (n < 1) return;
-  if (isGear(t)) { d[t] = d[t] || []; for (let k = 0; k < n; k++) d[t].push(takeInstance(t, 0)); }
-  else { eco.inv[t] -= n; d[t] = (d[t] || 0) + n; }
-  save(pos, d); drawHud(); draw();
+  if (isGear(t)) { cur[t] = cur[t] || []; for (let k = 0; k < n; k++) cur[t].push(takeInstance(t, 0)); }
+  else { eco.inv[t] -= n; cur[t] = (cur[t] || 0) + n; }
+  sync(); drawHud(); draw();
 }
 
 function take(t) {
-  const d = load(pos);
-  if (d[t] === undefined) return;
+  if (cur[t] === undefined) return;
   if (isGear(t)) {
-    for (let k = 0; k < qty && d[t].length; k++) {
+    for (let k = 0; k < qty && cur[t].length; k++) {
       if (!canAdd(t, 1)) { toast('🎒 Çanta dolu'); break; }
-      addItem(t, 1, d[t].shift());
+      addItem(t, 1, cur[t].shift());
     }
-    if (!d[t].length) delete d[t];
+    if (!cur[t].length) delete cur[t];
   } else {
-    const a = addItem(t, Math.min(qty, d[t]));
+    const a = addItem(t, Math.min(qty, cur[t]));
     if (a < 1) toast('🎒 Çanta dolu');
-    d[t] -= a;
-    if (d[t] <= 0) delete d[t];
+    cur[t] -= a;
+    if (cur[t] <= 0) delete cur[t];
   }
-  save(pos, d); drawHud(); draw();
+  sync(); drawHud(); draw();
 }
 
 el.addEventListener('click', e => {
@@ -94,20 +90,26 @@ el.addEventListener('click', e => {
 
 export function openChest(p) {
   if (isCreative()) return toast('Yaratıcı modda sandık gerekmez');
-  pos = p.slice(0, 3); open = true;
+  if (!canStore()) return toast('Sandık sadece kayıtlı dünyada çalışır');
+  pos = p.slice(0, 3); open = true; cur = {};
   el.style.display = 'flex';
+  unsub = watchAt('c', pos, d => { cur = norm(d); if (open) draw(); });
   draw();
 }
-export function closeChest() { open = false; el.style.display = 'none'; drawHud(); }
+export function closeChest() {
+  open = false; el.style.display = 'none';
+  if (unsub) { unsub(); unsub = null; }
+  drawHud();
+}
 
-// Sandık kırılınca içindekiler yere düşer
-export function chestBroken(x, y, z) {
-  const p = [x, y, z], d = load(p), arr = [];
+// Sandık kırılınca (kim kırarsa) içindekiler yere düşer
+export async function chestBroken(x, y, z) {
+  const p = [x, y, z], d = norm(await loadAt('c', p)), arr = [];
+  await saveAt('c', p, null);
   const base = () => ({ x: x + 0.5, y: y + 0.5, z: z + 0.5, vx: (Math.random() - 0.5) * 2, vy: 2.5, vz: (Math.random() - 0.5) * 2 });
   for (const t in d) {
     if (Array.isArray(d[t])) d[t].forEach(dur => arr.push({ t: +t, c: 1, d: dur, ...base() }));
     else for (let n = d[t]; n > 0; n -= 64) arr.push({ t: +t, c: Math.min(64, n), ...base() });
   }
   if (arr.length) dropItems(arr);
-  save(p, {});
 }
