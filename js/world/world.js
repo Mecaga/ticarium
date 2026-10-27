@@ -601,8 +601,8 @@ export function updateTarget(camera) {
     if (t === WATER || t === LAVA) {
       if (!wtarget && waterLvl(x, y, z) === 0) wtarget = [x, y, z];
     } else if (t) {
-      if (!target) { target = [x, y, z]; prev = lx === -1e9 ? null : [lx, ly, lz]; }
-      if (!isPlant(t)) { stgt = [x, y, z]; break; }
+      if (!target) target = [x, y, z];
+      if (!isPlant(t)) { stgt = [x, y, z]; prev = lx === -1e9 ? null : [lx, ly, lz]; break; }
     }
     lx = x; ly = y; lz = z;
   }
