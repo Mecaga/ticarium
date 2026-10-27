@@ -1,5 +1,5 @@
 import { TYPES, CATS, get, set, rebuild, isLoaded, isPlant, inBounds, solid, prev } from '../world/world.js';
-import { FACE_TILES, tileOf } from '../world/textures.js';
+import { FACE_TILES, tileOf, addFlat } from '../world/textures.js';
 import { eco } from './economy.js';
 import { RECIPES } from './recipes.js';
 import { toast, drawHud } from '../ui/ui.js';
@@ -21,6 +21,7 @@ FACE_TILES[DOOR] = [dc, dc, dc]; FACE_TILES[DOORU] = [dc, dc, dc];
 FACE_TILES[DOORO] = [dop, dop, dop]; FACE_TILES[DOOROU] = [dop, dop, dop];
 FACE_TILES[BEDH] = [tileOf('wool'), tileOf('planks'), tileOf('planks')];
 RECIPES.push({ out: [DOOR, 1], pat: [[70, 70], [70, 70], [70, 70]] });
+addFlat(DOOR);
 
 // Kırılınca düşenler: üst yarılar ve yatağın baş kısmı eşya düşürmez (eşyayı alt yarı / ayak verir)
 export const EXTRA_DROPS = { [DOORU]: [], [DOOROU]: [], [DOORO]: [[DOOR, 1]], [BEDH]: [] };
