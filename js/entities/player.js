@@ -13,7 +13,7 @@ export const P = {
   sx: sp0.x, sy: sp0.y, sz: sp0.z,
   fallY: sp0.y,
   inWater: false, underWater: false,
-  sneak: false, fly: false, ghost: false, up: false, down: false
+  sneak: false, fly: false, ghost: false, up: false, down: false, fast: false
 };
 
 export function collides(x, y, z) {
@@ -75,6 +75,7 @@ export function updatePlayer(dt, frozen) {
   P.kx *= decay; P.kz *= decay;
 
   let sp = P.fly ? (P.ghost ? 10 : 7) : P.inWater ? 2.6 : 4.5;
+  if (P.fast) sp *= 2;
   if (P.sneak && !P.fly) sp *= 0.4;
   const sn = Math.sin(P.yaw), cs = Math.cos(P.yaw);
   const vx = (-sn * f + cs * s) * sp + P.kx, vz = (-cs * f - sn * s) * sp + P.kz;
