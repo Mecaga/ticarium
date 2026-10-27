@@ -80,8 +80,8 @@ export function placeBed() {
   if (!isLoaded(hx, hz)) return toast('Alan yüklenmedi');
   if (!emptyAt(x, y, z) || !emptyAt(hx, y, hz)) return toast('Yatak için 2 blok boşluk gerek');
   if (!solid(x, y - 1, z) || !solid(hx, y - 1, hz)) return toast('Yatak sağlam zemine konur');
-  set(x, y, z, BED); set(hx, y, hz, BEDH);
-  commit(x, y, z, BED); commit(hx, y, hz, BEDH);
+  set(x, y, z, BEDH); set(hx, y, hz, BED);
+  commit(x, y, z, BEDH); commit(hx, y, hz, BED);
   if (!isCreative()) eco.inv[BED]--;
   sfx.place(); rebuild(); drawHud();
 }
