@@ -23,12 +23,13 @@ import { isTool, TOOLS, hardTime } from './mining.js';
 import { addItem } from './inventory.js';
 import { isGear, wear } from './gear.js';
 import { openCraft, isCraftOpen } from '../ui/craft.js';
-import { openFurnace, isFurnaceOpen } from '../ui/furnace.js';
+import { openFurnace, isFurnaceOpen, furnaceBroken } from '../ui/furnace.js';
 import { isArmor } from './armor.js';
 import { useBed, BED } from './bed.js';
 import { useJuke, JUKE, isDisc, useShears, SHEARS, useBlueprint, BPRINT } from './extras.js';
 import { placeDoor, toggleDoor, placeBed, pairFix, EXTRA_DROPS, DOOR, isDoorBlock, BEDH } from './doors.js';
 import { openChest, chestBroken, isChestOpen, CHEST } from './chests.js';
+import { openBook, BOOK } from './book.js';
 
 // Açlık puanları: et, elma, ekmek, pişmiş et, patates, havuç, domates, biber, soğan, çiğköfte
 const FOOD = { 15: 6, 46: 4, 75: 5, 86: 10, 150: 3, 151: 4, 152: 3, 153: 2, 154: 2, 155: 14 };
@@ -148,7 +149,6 @@ function growTick() {
 }
 
 export function initActions() {
-  // Düşen kum/kar ve akan sıvılar da kaydedilsin, odadaki herkese gitsin
   ghooks.onChange = (x, y, z, t) => commit(x, y, z, t);
   setInterval(growTick, 3000);
 }
@@ -161,7 +161,6 @@ function leafDrop(x, y, z, t) {
   dropAt(arr, x, y, z);
 }
 
-// Hiçbir gövdeye 4 blok içinde bağlı olmayan yapraklar yavaş yavaş kaybolur.
 function decayLeaves(cx, cy, cz) {
   const R = 6, key = (x, y, z) => x + ',' + y + ',' + z;
   const dist = new Map(), queue = [];
@@ -197,13 +196,11 @@ function decayLeaves(cx, cy, cz) {
   }
 }
 
-// Bakılan bloğu kırar. mining.js süre dolunca çağırır.
-// canDrop=false: gereken alet yok, eşya düşmez. Bedrock'ta sadece uyarı verir.
 export function breakBlock(canDrop = true) {
   if (isDead() || uiOpen() || !target) return;
   const [x, y, z] = target;
   const t = get(x, y, z);
-  if (t === BEDROCK) return toast('Katman kayası kırılamaz');
+  if (t === BEDROCK && !isCreative()) return toast('Katman kayası kırılamaz');
   if (t === CANVAS) {
     const d = getPaint(x, y, z);
     if (d) {
@@ -217,20 +214,19 @@ export function breakBlock(canDrop = true) {
   if (canDrop) for (const [it, n] of dropsOf(t)) give(it, n);
   else toast('⚠️ Bu blok için daha iyi kazma gerekir, eşya düşmedi');
   commit(x, y, z, 0);
-  popPlant(x, y + 1, z);   // üstündeki bitki desteksiz kalır
+  popPlant(x, y + 1, z);
   pairFix(x, y, z, t);
   if (t === CHEST) chestBroken(x, y, z);
+  if (t === FURNACE) furnaceBroken(x, y, z);
   if (isLeaf(t) && canDrop && !isCreative()) leafDrop(x, y, z, t);
-  if (isLog(t)) decayLeaves(x, y, z);   // her odun tek tek kırılır, yapraklar son odundan sonra çürür
-  queueFall(x, y + 1, z); // üstündeki kum/kar düşsün
+  if (isLog(t)) decayLeaves(x, y, z);
+  queueFall(x, y + 1, z);
   const sel = eco.sel;
   if (isGear(sel) && hardTime(t) >= 0.5) afterWear(sel, TOOLS[sel] && TOOLS[sel][0] === 'sword' ? 2 : 1);
   sfx.breakB();
   rebuild(); drawHud();
 }
 
-// Boş kova: bakılan SU ya da LAV KAYNAĞINI alır (altında/çevresinde ne olduğu önemli değil).
-// Akan sıvı alınamaz: bakış ışını akan sıvıyı atlayıp ilk kaynak bloğu bulur.
 function useBucket() {
   if (eco.inv[BUCKET] < 1) return toast('Kova yok.');
   if (!wtarget) return toast('Bir su ya da lav kaynağına bak (akan sıvı alınamaz)');
@@ -245,7 +241,6 @@ function useBucket() {
   rebuild(); drawHud();
 }
 
-// Dolu kova: bakılan yüzeye kaynak döker. Su lav kaynağına değerse obsidiyen, akan lava değerse taş olur.
 function pour(item) {
   if (eco.inv[item] < 1) return toast('Kova boş.');
   if (!prev) return toast('Dökmek için bir yüzeye bak');
@@ -263,7 +258,6 @@ function pour(item) {
   rebuild(); drawHud();
 }
 
-// Tuval: bakılan tuvali düzenler, yoksa yeni tuval yerleştirir
 function useCanvas() {
   if (target && get(target[0], target[1], target[2]) === CANVAS) {
     const [x, y, z] = target;
@@ -290,16 +284,15 @@ function useCanvas() {
     sfx.place();
     rebuild(); drawHud();
   };
-  if (stack.length) place(stack.pop());   // kırılan tuvalin çizimi geri gelir
+  if (stack.length) place(stack.pop());
   else openDraw(null, place);
 }
 
-// Çapa: bakılan çimen/toprak bloğunu işlenmiş toprak yapar (üstündeki ot ya da çiçeği kırar)
 function useHoe() {
   const t = eco.sel;
   if (eco.inv[t] < 1) return toast('Çapa yok.');
-  if (!target) return toast('Çapayla çimen ya da toprak bloğuna bak');
-  const [x, y, z] = target, b = get(x, y, z);
+  if (!stgt && !target) return toast('Çapayla çimen ya da toprak bloğuna bak');
+  const [x, y, z] = stgt || target, b = get(x, y, z);
   if (b !== 1 && b !== 2) return toast('Çapa, çimen ya da toprak bloğunu işler');
   const a = get(x, y + 1, z);
   if (a !== 0) {
@@ -314,10 +307,6 @@ function useHoe() {
   rebuild(); drawHud();
 }
 
-// Ekim (tohum ve sebzeler). true: işlem yapıldı, false: ekilemedi (sebzede yeme yoluna düşer).
-//  1) Olgun aynı ürüne bakıyorsan: hasat edip yerine hemen yeni ekin diker (kır-ve-ek)
-//  2) Işın bitkilerin içinden geçer: arkadaki işlenmiş toprağa ekilir
-//     (üstünde ot/çiçek/fidan varsa kırılıp yerine ekilir)
 function plantCrop(item) {
   const first = CROPS[item];
   if (eco.inv[item] < 1) return false;
@@ -348,7 +337,6 @@ function plantCrop(item) {
   return true;
 }
 
-// Boya: bakılan koyunu boyar
 function useDye(t) {
   if (eco.inv[t] < 1) return toast('Boya yok.');
   const cp = Math.cos(P.pitch);
@@ -364,14 +352,14 @@ function useDye(t) {
   drawHud();
 }
 
-// Koy: masa/ocak açar, çapa/ekin/boya/kova/tuval kullanır, yiyecekse yer, değilse blok yerleştirir
 export function placeBlock() {
   if (isDead() || uiOpen()) return;
   const t = eco.sel;
+  if (t === BOOK) return openBook();
   if (target) {
     const tb = get(target[0], target[1], target[2]);
     if (tb === CRAFT) return openCraft(3);
-    if (tb === FURNACE) return openFurnace();
+    if (tb === FURNACE) return openFurnace(target);
     if (tb === BED || tb === BEDH) return useBed(target);
     if (isDoorBlock(tb)) return toggleDoor(target);
     if (tb === CHEST) return openChest(target);
@@ -393,7 +381,7 @@ export function placeBlock() {
     return;
   }
   if (t >= DYE_MIN && t <= DYE_MAX) return useDye(t);
-  if (CROPS[t] && plantCrop(t)) return;   // sebze ekilemiyorsa aşağıda yenir
+  if (CROPS[t] && plantCrop(t)) return;
   if (NOPLACE.has(t)) return toast('Bu eşya yerleştirilemez');
   if (FOOD[t]) {
     if (eco.inv[t] < 1) return toast(TYPES[t].name + ' yok.');
@@ -407,14 +395,13 @@ export function placeBlock() {
   if (t === BUCKET) return useBucket();
   if (t === WBUCKET || t === LBUCKET) return pour(t);
   if (t === CANVAS) return useCanvas();
-  // Uzun ot yerleştirmede yer açar: bakılan ot hücresine konur
-  const rep = target && get(target[0], target[1], target[2]) === TALL ? target : null;
-  const pc = rep || prev;
+  const pc = prev;
   if (!pc) return;
   if (eco.inv[t] < 1) return toast(TYPES[t].name + ' yok.');
   const [x, y, z] = pc;
   if (!inBounds(x, y, z)) return toast(y >= H ? 'Yükseklik sınırı (' + H + ')' : 'Dünya sınırı');
   const old = get(x, y, z);
+  if (isPlant(old) && old !== TALL && !(old >= 40 && old <= 45)) return toast('Burada ekin var');
   if (isPlant(t)) {
     if (old !== 0 && old !== TALL) return;
     const g = get(x, y - 1, z);
@@ -422,15 +409,14 @@ export function placeBlock() {
     if (t !== SAPLING && ![1, 2].includes(g)) return toast('Çiçek çimene ya da toprağa dikilir');
   }
   set(x, y, z, t);
-  if (collides(P.x, P.y, P.z)) { set(x, y, z, old === TALL ? TALL : 0); return; }
+  if (collides(P.x, P.y, P.z)) { set(x, y, z, old); return; }
   commit(x, y, z, t);
-  if (isFalling(t)) queueFall(x, y, z); // altı boşsa düşer
+  if (isFalling(t)) queueFall(x, y, z);
   take(t);
   sfx.place();
   rebuild(); drawHud();
 }
 
-// Vur: hayvanlara her zaman, oyunculara sadece PVP açıkken. Kılıç ve alet seviyesi hasarı artırır.
 export function attack() {
   const room = G.room;
   if (isDead() || uiOpen() || !room) return;
@@ -446,7 +432,7 @@ export function attack() {
 
   const sel = eco.sel, tl = TOOLS[sel], has = (eco.inv[sel] || 0) > 0 || isCreative();
   const isSword = !!tl && tl[0] === 'sword' && has;
-  const bonus = isSword ? tl[1] : 0;   // ahşap 1, taş 2, demir 3, elmas 4
+  const bonus = isSword ? tl[1] : 0;
   const m = findMob(ex, ey, ez, dx, dy, dz, 4.5);
   const p = (o && room.pvp) ? o.findPlayer(ex, ey, ez, dx, dy, dz, 4.5) : null;
   if (p && (!m || p.t <= m.t)) {
