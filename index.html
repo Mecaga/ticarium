@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>BlokDiyar</title>
-<link rel="stylesheet" href="css/style.css?v=22">
+<link rel="stylesheet" href="css/style.css?v=34">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
@@ -136,8 +136,8 @@ var FILES = [
   'js/game/actions.js', 'js/game/mining.js', 'js/game/session.js', 'js/game/progress.js', 'js/game/death.js',
   'js/game/creative.js', 'js/game/commands.js', 'js/game/economy.js', 'js/game/inventory.js', 'js/game/gear.js',
   'js/game/recipes.js', 'js/game/armor.js', 'js/game/doors.js', 'js/game/looks.js', 'js/game/chests.js',
-  'js/game/store.js', 'js/game/book.js',
-  'js/main.js?v=22'
+  'js/game/store.js', 'js/game/book.js', 'js/game/modes.js', 'js/game/books2.js', 'js/entities/armorvis.js',
+  'js/main.js?v=34'
 ];
 function refresh() {
   var jobs = FILES.map(function (f) { return fetch(f, { cache: 'no-cache' }).catch(function () {}); });
@@ -147,11 +147,11 @@ function refresh() {
 if (missing.length) {
   showErr('index.html eski, eksik elemanlar: ' + missing.join(', '));
 } else {
-  refresh().then(function () { return import('./js/main.js?v=22'); }).then(function () {
+  refresh().then(function () { return import('./js/main.js?v=34'); }).then(function () {
     return import('./js/world/world.js');
   }).then(function (m) {
     var v = document.getElementById('mVer');
-    if (v) v.textContent = 'Sürüm 22 · kod ' + (m.BUILD || 'ESKİ: site verisini temizle');
+    if (v) v.textContent = 'Sürüm 34 · kod ' + (m.BUILD || 'ESKİ: site verisini temizle');
   }).catch(function (e) {
     showErr('Yükleme hatası (bir js dosyası eski ya da eksik olabilir): ' + (e.message || e));
   });
