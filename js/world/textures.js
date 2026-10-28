@@ -24,7 +24,7 @@ export const BASE = {
   diamB: [80, 225, 215], salad: [220, 80, 50], maruls: [80, 200, 80], pancars: [180, 50, 80],
   doms: [220, 50, 40], kek: [240, 208, 160], sebzes: [210, 160, 80], patatesk: [240, 200, 80],
   hamur: [245, 225, 170], sut: [255, 255, 255], pancar: [220, 50, 80], marul: [80, 180, 80],
-  salatalik: [60, 150, 60]
+  salatalik: [60, 150, 60], glassEdge: [200, 230, 240]
 };
 
 export const FLOWERS = new Set(['lavender', 'daisy', 'poppy', 'blueP', 'orangeT', 'pinkT', 'whiteT', 'tulipw']);
@@ -52,22 +52,26 @@ const ARM = { helm: 4, chest: 4, leg: 4, boot: 4 };
 
 for (const k in TOOL) {
   const baseCol = BASE[k + 'W'];
-  for (let i = 0; i < TOOL[k]; i++) {
-    const key = k + ['S', 'I', 'D'][i];
-    if (BASE[key]) {
-      const mult = i === 0 ? 0.9 : i === 1 ? 1.1 : 1.3;
-      BASE[key] = baseCol.map(v => Math.min(255, Math.round(v * mult)));
+  if (baseCol) {
+    for (let i = 0; i < TOOL[k]; i++) {
+      const key = k + ['S', 'I', 'D'][i];
+      if (BASE[key]) {
+        const mult = i === 0 ? 0.9 : i === 1 ? 1.1 : 1.3;
+        BASE[key] = baseCol.map(v => Math.min(255, Math.round(v * mult)));
+      }
     }
   }
 }
 
 for (const k in ARM) {
   const baseCol = BASE[k + 'I'];
-  for (let i = 0; i < ARM[k]; i++) {
-    const key = k + ['I', 'D'][i];
-    if (BASE[key]) {
-      const mult = i === 0 ? 1.0 : 1.3;
-      BASE[key] = baseCol.map(v => Math.min(255, Math.round(v * mult)));
+  if (baseCol) {
+    for (let i = 0; i < ARM[k]; i++) {
+      const key = k + ['I', 'D'][i];
+      if (BASE[key]) {
+        const mult = i === 0 ? 1.0 : 1.3;
+        BASE[key] = baseCol.map(v => Math.min(255, Math.round(v * mult)));
+      }
     }
   }
 }
@@ -136,7 +140,12 @@ export function initAtlas() {
       sub.ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
       sub.ctx.fillRect(2, 14 - s * 3, 12, s * 3 + 1);
     } else if (ITEMS.has(k)) {
-      sub = itemPix(c);
+      sub = newPix();
+      sub.ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
+      sub.ctx.fillRect(2, 2, 12, 12);
+      sub.ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      sub.ctx.fillRect(2, 12, 12, 2);
+      sub.ctx.fillRect(12, 2, 2, 12);
     } else {
       sub = newPix();
       sub.ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
