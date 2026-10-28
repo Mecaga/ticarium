@@ -30,18 +30,6 @@ const ITEMS = new Set(['seeds', 'wheatI', 'bread', 'stick', 'coal', 'ingotI', 'i
   'potato', 'carrot', 'tomato', 'pepper', 'onion', 'cigkofte', 'disc', 'shears', 'book']);
 ['egg0', 'egg1', 'egg2'].forEach(n => ITEMS.add(n));
 
-const NI = {
-  eggI: [[245, 240, 225], 'egg'], milkB: [[245, 245, 250], 'bucket'], dough: [[235, 215, 170], 'blob'], cake: [[240, 200, 210], 'cake'],
-  lettuce: [[120, 200, 80], 'leaf'], beet: [[150, 30, 70], 'root'], cucumber: [[60, 150, 60], 'long'],
-  saladC: [[210, 60, 50], 'bowl'], saladL: [[130, 200, 90], 'bowl'], soupB: [[150, 30, 70], 'bowl'],
-  soupT: [[215, 70, 40], 'bowl'], soupV: [[230, 150, 50], 'bowl'], fries: [[235, 190, 70], 'fries']
-};
-for (const n in NI) { BASE[n] = NI[n][0]; ITEMS.add(n); }
-BASE.dye6 = [60, 160, 60]; BASE.dye7 = [240, 240, 240]; BASE.wc6 = [60, 160, 60]; BASE.wc7 = [240, 240, 240];
-BASE.ironB = [215, 215, 222]; BASE.diamB = [80, 225, 215]; BASE.tulipw = [245, 245, 245];
-for (let k = 5; k < 8; k++) for (let s = 0; s < 4; s++) BASE['cr' + k + '_' + s] = [80, 160, 60];
-FLOWERS.add('tulipw');
-
 const WOOD = [176, 136, 72], STONE = [150, 150, 150], IRON = [222, 222, 228], DIAM = [80, 225, 215], NETH = [92, 76, 88];
 const TOOL = {
   pickW: ['pick', WOOD], pickS: ['pick', STONE], pickI: ['pick', IRON], pickD: ['pick', DIAM], pickN: ['pick', NETH],
@@ -168,6 +156,19 @@ BASE.egg0 = [150, 100, 60]; BASE.egg1 = [235, 235, 235]; BASE.egg2 = [240, 200, 
 
 for (let i = 0; i < 8; i++) { BASE['dye' + i] = DYE_RGB[i]; BASE['wc' + i] = DYE_RGB[i]; }
 for (let k = 0; k < 8; k++) for (let s = 0; s < 4; s++) BASE['cr' + k + '_' + s] = [80, 160, 60];
+
+// NI (Yeni Öğeler) tanımları ve BASE atamaları artık BASE tanımlandıktan sonra güvenle yapılıyor:
+const NI = {
+  eggI: [[245, 240, 225], 'egg'], milkB: [[245, 245, 250], 'bucket'], dough: [[235, 215, 170], 'blob'], cake: [[240, 200, 210], 'cake'],
+  lettuce: [[120, 200, 80], 'leaf'], beet: [[150, 30, 70], 'root'], cucumber: [[60, 150, 60], 'long'],
+  saladC: [[210, 60, 50], 'bowl'], saladL: [[130, 200, 90], 'bowl'], soupB: [[150, 30, 70], 'bowl'],
+  soupT: [[215, 70, 40], 'bowl'], soupV: [[230, 150, 50], 'bowl'], fries: [[235, 190, 70], 'fries']
+};
+for (const n in NI) { BASE[n] = NI[n][0]; ITEMS.add(n); }
+BASE.dye6 = [60, 160, 60]; BASE.dye7 = [240, 240, 240]; BASE.wc6 = [60, 160, 60]; BASE.wc7 = [240, 240, 240];
+BASE.ironB = [215, 215, 222]; BASE.diamB = [80, 225, 215]; BASE.tulipw = [245, 245, 245];
+for (let k = 5; k < 8; k++) for (let s = 0; s < 4; s++) BASE['cr' + k + '_' + s] = [80, 160, 60];
+FLOWERS.add('tulipw');
 
 const SEEDS = Array.from({ length: 8 }, (_, i) => [hash(i, 1, 50) * 16, hash(i, 2, 50) * 16]);
 function cobble(x, y) {
