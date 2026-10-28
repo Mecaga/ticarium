@@ -6,9 +6,6 @@
 <title>BlokDiyar</title>
 <link rel="stylesheet" href="css/style.css?v=35">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
-<!-- Telefonda hata ayıklamak için konsol aracı -->
-<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-<script>eruda.init();</script>
 </head>
 <body>
 <div id="flash"></div>
@@ -128,31 +125,11 @@ var ids = ['flash','coord','coins','roomInfo','msg','hearts','hotbar','look','jo
   'jCode','jDo','mErr','mAuth'];
 var missing = ids.filter(function (i) { return !document.getElementById(i); });
 
-var FILES = [
-  'js/core/state.js', 'js/core/save.js', 'js/core/firebase.js', 'js/core/sound.js', 'js/core/auth.js',
-  'js/world/world.js', 'js/world/textures.js', 'js/world/texturepack.js', 'js/world/fluids.js', 'js/world/gravity.js', 'js/world/sky.js', 'js/world/paints.js',
-  'js/entities/player.js', 'js/entities/mobs.js', 'js/entities/avatars.js', 'js/entities/items.js', 'js/entities/health.js',
-  'js/entities/hunger.js', 'js/entities/vitals.js',
-  'js/net/cloud.js', 'js/net/rooms.js', 'js/net/online.js',
-  'js/ui/menu.js', 'js/ui/menu-lists.js', 'js/ui/menu-worlds.js', 'js/ui/dialog.js', 'js/ui/panels.js', 'js/ui/chat.js',
-  'js/ui/bag.js', 'js/ui/draw.js', 'js/ui/ui.js', 'js/ui/input.js', 'js/ui/craft.js', 'js/ui/furnace.js',
-  'js/game/actions.js', 'js/game/mining.js', 'js/game/session.js', 'js/game/progress.js', 'js/game/death.js',
-  'js/game/creative.js', 'js/game/commands.js', 'js/game/economy.js', 'js/game/inventory.js', 'js/game/gear.js',
-  'js/game/recipes.js', 'js/game/armor.js', 'js/game/doors.js', 'js/game/looks.js', 'js/game/chests.js',
-  'js/game/store.js', 'js/game/library.js', 'js/game/modes.js', 'js/entities/armorvis.js',
-  'js/main.js?v=35'
-];
-function refresh() {
-  var jobs = FILES.map(function (f) { return fetch(f, { cache: 'no-cache' }).catch(function () {}); });
-  return Promise.race([Promise.all(jobs), new Promise(function (r) { setTimeout(r, 3500); })]);
-}
-
 if (missing.length) {
-  showErr('index.html eski, eksik elemanlar: ' + missing.join(', '));
+  showErr('Eksik elemanlar: ' + missing.join(', '));
 } else {
-  refresh().then(function () {
-    return import('./js/main.js?v=35');
-  }).catch(function (e) {
+  // Modüllerin çakışmasını engellemek için doğrudan main.js'i güvenli import ediyoruz
+  import('./js/main.js?v=35').catch(function (e) {
     showErr('Yükleme hatası: ' + (e.message || e));
   });
 }
