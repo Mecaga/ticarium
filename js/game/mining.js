@@ -5,9 +5,9 @@ import { isDead } from '../entities/health.js';
 import { isCreative } from './creative.js';
 import { sfx } from '../core/sound.js';
 
-// Aletler: [tür, seviye, hız]  (seviye: 1 ahşap, 2 taş, 3 demir, 4 elmas, 5 netherit)
+// Aletler: [tür, seviye, hız]  (seviye: 1 ahşap, 2 taş, 3 demir, 4 elmas)
 export const TOOLS = {
-  50: ['pick', 1, 2], 51: ['pick', 2, 4], 52: ['pick', 3, 6], 53: ['pick', 4, 8], 54: ['pick', 5, 9],
+  50: ['pick', 1, 2], 51: ['pick', 2, 4], 52: ['pick', 3, 6], 53: ['pick', 4, 8],
   57: ['axe', 1, 2], 58: ['axe', 2, 4], 55: ['axe', 3, 6], 69: ['axe', 4, 8],
   59: ['shovel', 1, 2], 60: ['shovel', 2, 4], 56: ['shovel', 3, 6], 89: ['shovel', 4, 8],
   61: ['hoe', 1, 1], 62: ['hoe', 2, 1], 63: ['hoe', 3, 1], 64: ['hoe', 4, 1],
