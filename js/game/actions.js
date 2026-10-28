@@ -118,6 +118,14 @@ function popPlant(x, y, z) {
   if (!isCreative()) dropAt(dropsOf(a), x, y, z);
 }
 
+// Kar katmanının düşmesi için eklenen fonksiyon
+function popSnow(x, y, z) {
+  const a = get(x, y, z);
+  if (a < 180 || a > 182) return;
+  set(x, y, z, 0); commit(x, y, z, 0);
+  if (!isCreative()) dropAt([[8, 1]], x, y, z);
+}
+
 ph.fn = (x, y, z, old) => {
   const r = G.room;
   if (!r || !r.sim) return;
@@ -220,6 +228,7 @@ export function breakBlock(canDrop = true) {
   else toast('⚠️ Bu blok için daha iyi kazma gerekir, eşya düşmedi');
   commit(x, y, z, 0);
   popPlant(x, y + 1, z);
+  popSnow(x, y + 1, z);
   pairFix(x, y, z, t);
   if (t === CHEST) chestBroken(x, y, z);
   if (t === FURNACE) furnaceBroken(x, y, z);
