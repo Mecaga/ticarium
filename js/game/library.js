@@ -42,7 +42,7 @@ const row = r => {
 const inR = (o, a, b) => o >= a && o <= b;
 const isTool = o => inR(o, 50, 69) || o === 89 || o === 105;
 const isArm = o => inR(o, 91, 98);
-const isFood = o => o === 75 || o === 155;
+const isFood = o => o === 75 || o === 155 || (o >= 170 && o <= 178);
 
 function list(f) { return RECIPES.filter(r => !ids.includes(r.out[0]) && f(r.out[0])).map(row).join('') || '<div class="k2">Tarif yok</div>'; }
 function smelt() {
@@ -51,6 +51,7 @@ function smelt() {
 }
 function food() {
   return list(isFood) + '<div class="k2">' + iconHTML(15) + ' Et → pişmiş et<small>Ocakta pişer. +10 açlık</small></div>' +
+    '<div class="k2">' + iconHTML(150) + ' Patates → Patates kızartması<small>Ocakta pişer.</small></div>' +
     '<div class="k2"><b>Doğrudan yenenler</b><small>Et +6 · Elma +4 · Havuç +4 · Patates +3 · Domates +3 · Biber +2 · Soğan +2 · Ekmek +5 · Çiğköfte +14</small></div>';
 }
 function guide() {
@@ -65,4 +66,4 @@ export function openBook(t) {
   el.innerHTML = '<div id="lbB"><h3 style="margin:0 0 6px">📖 ' + b.n + '</h3>' + body +
     '<button style="width:100%;margin-top:8px;padding:11px;border:0;border-radius:8px;background:#b3261e;color:#fff;font-weight:700">Kapat</button></div>';
   el.querySelector('button').onclick = () => { el.style.display = 'none'; };
-    }
+}
