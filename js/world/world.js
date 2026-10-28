@@ -1,6 +1,6 @@
 import { hash, atlas, FACE_TILES, T, initAtlas, tileOf } from './textures.js';
 import {
-  BEDROCK, SAPLING, BIRCH_LOG, BIRCH_LEAF, WATER, GLASS, WATER_MAX, LAVA, LAVA_MAX, OBSIDIAN, NETHERITE,
+  BEDROCK, SAPLING, BIRCH_LOG, BIRCH_LEAF, WATER, GLASS, WATER_MAX, LAVA, LAVA_MAX, OBSIDIAN,
   COAL_ORE, IRON_ORE, GOLD_ORE, DIAMOND_ORE, FLOWER_MIN, TALL, isPlant
 } from './defs.js';
 export * from './defs.js';
@@ -142,7 +142,7 @@ function flowerAt(x, z) {
   const px = Math.floor(x / 8), pz = Math.floor(z / 8);
   if (hash(px, pz, _seed + 9) > 0.22 || hash(x, z, _seed + 10) > 0.45) return 0;
   const k = Math.floor(hash(px, pz, _seed + 11) * 7);
-  return k === 6 ? 47 : FLOWER_MIN + k; // 47: Beyaz lale (defs.js içindeki karşılığına göre)
+  return k === 6 ? 47 : FLOWER_MIN + k; // 47: Beyaz lale
 }
 function grassAt(x, z) {
   return hash(x >> 1, z >> 1, _seed + 21) < 0.3 && hash(x, z, _seed + 22) < 0.65;
@@ -293,7 +293,7 @@ function genChunk(c) {
       if (f) b[ix] = f;
       else if (grassAt(x0 + lx, z0 + lz)) b[ix] = TALL;
     }
-    for (let lz = 0; lz < CW; lz++) for (let lx = 0; lx < CW; lx++) {   // dağ tepesi: basamak basamak kar
+    for (let lz = 0; lz < CW; lz++) for (let lx = 0; lx < CW; lx++) {
       const h = hs[lz * CW + lx], d = h - SNOW_H;
       if (d < 0 || d > 2 || h + 1 >= H) continue;
       const ix = ((h + 1) * CW + lz) * CW + lx;
@@ -611,9 +611,9 @@ export function updateTarget(camera) {
     if (t === WATER || t === LAVA) {
       if (!same && !wtarget && waterLvl(x, y, z) === 0) wtarget = [x, y, z];
     } else if (t) {
-      if (isPlant(t)) {   // bitkiler içinden geçilir, sadece eğilirken hedeflenir
+      if (isPlant(t)) {
         if (tgtOpts.sneak && !target) { target = [x, y, z]; prev = lx === -1e9 ? null : [lx, ly, lz]; }
-      } else if (BOXES[t]) hit = pointHit(px, py, pz);   // kapı, yatak: sadece gerçek şekline çarpar
+      } else if (BOXES[t]) hit = pointHit(px, py, pz);
       else hit = true;
     }
     if (hit) {
