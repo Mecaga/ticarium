@@ -34,6 +34,7 @@ export function resetEco() {
     }
   }
 }
+resetEco();
 
 export const clampRaw = (t, v) => {
   const base = getBase(t);
