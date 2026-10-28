@@ -91,8 +91,8 @@ export function applyState(s) {
     }
   }
   if (Array.isArray(s.layout) && s.layout.length === SLOTS) eco.layout = s.layout.map(t => (TYPES[t] ? +t : 0));
-  if (Array.isArray(s.hotbar) && s.hotbar.length === eco.hotbar.length && s.hotbar.every(t => TYPES[t])) {
-    eco.hotbar = s.hotbar.map(Number);
+  if (Array.isArray(s.hotbar) && s.hotbar.length === eco.hotbar.length) {
+    eco.hotbar = s.hotbar.map(t => (TYPES[t] ? Number(t) : 1));
   }
   eco.hsel = Math.min(Math.max(0, s.hsel | 0), eco.hotbar.length - 1);
   eco.sel = eco.hotbar[eco.hsel];
