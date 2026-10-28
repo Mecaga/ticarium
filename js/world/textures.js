@@ -1,4 +1,4 @@
-export function hash(x, y, s) {
+Export function hash(x, y, s) {
   let n = Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(s, 1274126177);
   n = Math.imul(n ^ (n >>> 13), 1274126177);
   return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
@@ -22,6 +22,7 @@ TILE_NAMES.push('potato', 'carrot', 'tomato', 'pepper', 'onion', 'cigkofte');
 TILE_NAMES.push('doorC', 'doorO', 'disc', 'shears', 'bedFoot', 'bedHead', 'bedSide', 'jukeTop', 'jukeSide', 'bprint', 'book');
 TILE_NAMES.push('chestTop', 'chestSide');
 TILE_NAMES.push('egg0', 'egg1', 'egg2');
+for (let i = 0; i < 6; i++) TILE_NAMES.push('book' + i);
 TILE_NAMES.push('ironB', 'diamB', 'tulipw', 'eggI', 'milkB', 'dough', 'cake', 'lettuce', 'beet', 'cucumber', 'saladC', 'saladL', 'soupB', 'soupT', 'soupV', 'fries');
 
 const FLOWERS = new Set(['lavender', 'daisy', 'poppy', 'bpoppy', 'tulipo', 'tulipp', 'tulipw']);
@@ -29,6 +30,7 @@ const ITEMS = new Set(['seeds', 'wheatI', 'bread', 'stick', 'coal', 'ingotI', 'i
   'potato', 'carrot', 'tomato', 'pepper', 'onion', 'cigkofte', 'disc', 'shears', 'book',
   'eggI', 'milkB', 'dough', 'cake', 'lettuce', 'beet', 'cucumber', 'saladC', 'saladL', 'soupB', 'soupT', 'soupV', 'fries']);
 ['egg0', 'egg1', 'egg2'].forEach(n => ITEMS.add(n));
+for (let i = 0; i < 6; i++) ITEMS.add('book' + i);
 
 const WOOD = [176, 136, 72], STONE = [150, 150, 150], IRON = [222, 222, 228], DIAM = [80, 225, 215], NETH = [92, 76, 88];
 const TOOL = {
@@ -78,6 +80,7 @@ const BASE = {
 for (const n in TOOL) BASE[n] = TOOL[n][1];
 for (const n in ARM) BASE[n] = ARM[n][1];
 BASE.egg0 = [150, 100, 60]; BASE.egg1 = [235, 235, 235]; BASE.egg2 = [240, 200, 90];
+[[200, 50, 50], [60, 150, 80], [60, 120, 210], [160, 165, 180], [235, 125, 25], [140, 80, 190]].forEach((c, i) => { BASE['book' + i] = c; });
 
 for (let i = 0; i < 8; i++) { BASE['dye' + i] = DYE_RGB[i]; BASE['wc' + i] = DYE_RGB[i]; }
 for (let k = 0; k < 8; k++) for (let s = 0; s < 4; s++) BASE['cr' + k + '_' + s] = [80, 160, 60];
@@ -109,7 +112,7 @@ export const FACE_TILES = {
   34: same('obsidian'), 35: same('netherite'),
   36: same('coalOre'), 37: same('ironOre'), 38: same('goldOre'), 39: same('diamondOre'),
   40: same('lavender'), 41: same('daisy'), 42: same('poppy'), 43: same('bpoppy'), 44: same('tulipo'), 45: same('tulipp'),
-  46: same('apple'), 47: same('tulipw'),
+  46: same('apple'),
   50: same('pickW'), 51: same('pickS'), 52: same('pickI'), 53: same('pickD'), 54: same('pickN'),
   55: same('axe'), 56: same('shovel'), 57: same('axeW'), 58: same('axeS'), 59: same('shovelW'), 60: same('shovelS'),
   61: same('hoeW'), 62: same('hoeS'), 63: same('hoeI'), 64: same('hoeD'),
@@ -133,25 +136,16 @@ export const FACE_TILES = {
   106: same('tallGrass'),
   107: same('bprint'),
   108: same('doorC'), 109: same('doorC'),
-  150: same('potato'), 151: same('carrot'), 152: same('tomato'), 153: same('pepper'), 154: same('onion'), 155: same('cigkofte'),
-  156: same('book'),
-  157: same('egg0'), 158: same('egg1'), 159: same('egg2'),
-  160: same('ironB'), 161: same('diamB'),
-  170: same('saladC'), 171: same('saladL'), 172: same('soupB'), 173: same('soupT'), 174: same('cake'), 175: same('soupV'), 176: same('fries'), 177: same('dough'), 178: same('milkB'),
-  190: same('beet'), 191: same('lettuce'), 192: same('cucumber'),
-  230: same('eggI')
+  150: same('potato'), 151: same('carrot'), 152: same('tomato'), 153: same('pepper'), 154: same('onion'), 155: same('cigkofte')
 };
 for (let i = 0; i < 8; i++) { FACE_TILES[110 + i] = same('dye' + i); FACE_TILES[120 + i] = same('wc' + i); }
 for (let k = 0; k < 8; k++) for (let s = 0; s < 4; s++) FACE_TILES[130 + k * 4 + s] = same('cr' + k + '_' + s);
 
-const FLAT = new Set([12, 15, 30, 31, 33, 40, 41, 42, 43, 44, 45, 46, 47, 71, 73, 74, 75, 77, 78, 79, 80, 87, 88, 102, 103, 104, 105, 106, 108, 109, 156, 157, 158, 159]);
+const FLAT = new Set([12, 15, 30, 31, 33, 40, 41, 42, 43, 44, 45, 46, 47, 71, 73, 74, 75, 77, 78, 79, 80, 87, 88, 102, 103, 104, 105, 106, 108, 109]);
 for (let i = 50; i <= 68; i++) FLAT.add(i);
 for (const i of [69, 82, 83, 84, 85, 86, 89, 91, 92, 93, 94, 95, 96, 97, 98]) FLAT.add(i);
 for (let i = 110; i <= 117; i++) FLAT.add(i);
-for (let i = 130; i <= 161; i++) FLAT.add(i);
-for (let i = 170; i <= 178; i++) FLAT.add(i);
-for (let i = 190; i <= 192; i++) FLAT.add(i);
-for (let i = 210; i <= 232; i++) FLAT.add(i);
+for (let i = 130; i <= 155; i++) FLAT.add(i);
 export const isFlat = t => FLAT.has(t);
 export const addFlat = (...a) => a.forEach(i => FLAT.add(i));
 
@@ -255,7 +249,7 @@ function ingotPix(col, x, y) {
 }
 
 function newPix(name, x, y) {
-  const [c, sh] = NI[name], el = (a, b, cx, cy) => Math.pow((x - cx) / a, 2) + Math.pow((y - cy) / b, 2) < 1;
+  const [c, sh] = NI[name] || [[255, 255, 255], 'blob'], el = (a, b, cx, cy) => Math.pow((x - cx) / a, 2) + Math.pow((y - cy) / b, 2) < 1;
   if (sh === 'egg') return el(3.8, 5, 7.5, 9) ? c : null;
   if (sh === 'blob') return el(6, 4, 7.5, 9) ? c : null;
   if (sh === 'long') return el(6.5, 2.8, 7.5, 8.5) ? (x < 4 ? [120, 190, 100] : c) : null;
