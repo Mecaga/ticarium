@@ -99,9 +99,11 @@ export function hash(x, z, s = 1) {
 
 export const isFlat = () => false;
 export const addFlat = () => {};
-export const iconURL = () => '';
-export const tileNames = [];
+export const tileNames = Object.keys(BASE);
 export const clearIcons = () => {};
+export const iconURL = (name) => {
+  return '';
+};
 
 export const FACE_TILES = {};
 export const atlas = { tex: null };
@@ -125,14 +127,12 @@ export function initAtlas() {
       const s = parseInt(k.slice(-1)) || 0;
       ctx.fillRect(2, 14 - s * 3, 12, s * 3 + 1);
     } else if (ITEMS.has(k)) {
-      // Item Çerçevesi ve İç Dolgusu
       ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
       ctx.fillRect(2, 2, 12, 12);
       ctx.fillStyle = 'rgba(0,0,0,0.3)';
       ctx.fillRect(2, 12, 12, 2);
       ctx.fillRect(12, 2, 2, 12);
     } else {
-      // Blok Yüzeyi Detayı
       ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
       ctx.fillRect(0, 0, T, T);
       ctx.fillStyle = 'rgba(0,0,0,0.18)';
@@ -147,13 +147,23 @@ export function initAtlas() {
   FACE_TILES.wood = [keys.indexOf('woodb'), keys.indexOf('wood'), keys.indexOf('woodb')];
   FACE_TILES.leaf = [keys.indexOf('leafb'), keys.indexOf('leaf'), keys.indexOf('leafb')];
 
-  const tex = new THREE.CanvasTexture(cv);
-  tex.magFilter = THREE.NearestFilter;
-  tex.minFilter = THREE.NearestFilter;
-  tex.generateMipmaps = false;
-  tex.needsUpdate = true;
-  atlas.tex = tex;
+  if (!atlas.tex) {
+    atlas.tex = new THREE.CanvasTexture(cv);
+    atlas.tex.magFilter = THREE.NearestFilter;
+    atlas.tex.minFilter = THREE.NearestFilter;
+    atlas.tex.generateMipmaps = false;
+  } else {
+    atlas.tex.image = cv;
+    atlas.tex.needsUpdate = true;
+  }
 }
+
+// Otomatik başlatma desteği
+try {
+  if (typeof window !== 'undefined') {
+    initAtlas();
+  }
+} catch (e) {}
 
 export function tileOf(name) {
   return FACE_TILES[name] ? FACE_TILES[name][0] : 0;
