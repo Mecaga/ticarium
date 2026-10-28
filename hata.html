@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="tr"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hata taraması</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#1d2330;color:#fff;padding:14px;font-size:14px}
+button{padding:10px 14px;border:0;border-radius:8px;background:#1565c0;color:#fff;font-weight:700;margin:0 6px 8px 0}
+.e{background:#3a1d22;border-left:4px solid #f55;padding:8px;margin:8px 0;border-radius:6px;word-break:break-word}
+.o{color:#6f6;font-size:13px;opacity:.85}
+small{opacity:.7}
+</style></head><body>
+<h3>🔍 Dosya ve satır taraması</h3>
+<button id="go">Taramayı başlat</button><button id="cp">Raporu kopyala</button>
+<div id="sum"></div><div id="out"></div>
+<script>
+var base = location.href.replace(/[^\/]*$/, ''), report = '';
+var nl = function (m) { return m.replace(/[^\n]/g, ''); };
+function lineOf(t, i) { return t.slice(0, i).split('\n').length; }
+
+// import/export satırlarını temizler, satır sayısı aynı kalır
+function clean(t) {
+  t = t.replace(/^[ \t]*import\s*['"][^'"]+['"]\s*;?/gm, nl);
+  t = t.replace(/^[ \t]*import\s+[^('"][\s\S]*?\bfrom\s*['"][^'"]+['"]\s*;?/gm, nl);
+  t = t.replace(/^[ \t]*export\s*\*\s*from\s*['"][^'"]+['"]\s*;?/gm, nl);
+  t = t.replace(/^[ \t]*export\s*\{[^}]*\}\s*(?:from\s*['"][^'"]+['"])?\s*;?/gm, nl);
+  t = t.replace(/\bexport\s+default\s+/g, '');
+  t = t.replace(/^([ \t]*)export\s+(?=async\s|function|const|let|var|class)/gm, '$1');
+  return t;
+}
+
+// Sözdizimi denetimi: kod bir fonksiyonun içine konur, çalıştırılmaz sadece ayrıştırılır
+function syntax(code) {
+  return new Promise(function (res) {
+    var msgs = [];
+    function onE(e) { msgs.push({ m: e.message, l: e.lineno }); }
+    window.addEventListener('error', onE);
+    var url = URL.createObjectURL(new Blob(['async function __chk(){' + code + '\n}'], { type: 'text/javascript' }));
+    var s = document.createElement('script'); s.type = 'module'; s.src = url;
+    var failed = false;
+    function done() { window.removeEventListener('error', onE); URL.revokeObjectURL(url); s.remove(); res(msgs[0] || (failed ? { m: 'Sözdizimi hatası (satır bilgisi alınamadı)', l: 0 } : null)); }
+    s.onload = function () { setTimeout(done, 20); };
+    s.onerror = function () { failed = true; setTimeout(done, 60); };
+    document.head.appendChild(s);
+  });
+}
+
+function exportsOf(t) {
+  var set = {}, stars = [], m, re;
+  re = /^[ \t]*export\s+(?:async\s+)?(?:function\*?|class)\s+([\w$]+)/gm;
+  while ((m = re.exec(t))) set[m[1]] = 1;
+  re = /^[ \t]*export\s+(?:const|let|var)\s+([\s\S]*?);/gm;
+  while ((m = re.exec(t))) { var r2 = /(?:^|[,\s{])([A-Za-z_$][\w$]*)\s*=(?!=|>)/g, n; while ((n = r2.exec(m[1]))) set[n[1]] = 1; }
+  re = /^[ \t]*export\s*\{([^}]*)\}/gm;
+  while ((m = re.exec(t))) m[1].split(',').forEach(function (p) { p = p.trim(); if (p) set[p.split(/\s+as\s+/).pop().trim()] = 1; });
+  re = /^[ \t]*export\s*\*\s*from\s*['"](\.[^'"?]+)/gm;
+  while ((m = re.exec(t))) stars.push(m[1]);
+  return { set: set, stars: stars };
+}
+
+async function run() {
+  var out = document.getElementById('out'), sum = document.getElementById('sum');
+  out.textContent = ''; sum.textContent = 'Taranıyor...';
+  var q = [{ f: 'js/main.js', by: '', line: 0 }], seen = {}, errs = [], oks = [], texts = {};
+  while (q.length) {
+    var it = q.shift(), url = new URL(it.f, base).href;
+    if (seen[url]) continue; seen[url] = 1;
+    var t;
+    try {
+      var r = await fetch(url + '?t=' + Date.now(), { cache: 'no-store' });
+      if (!r.ok) { errs.push({ f: it.f, by: it.by, line: it.line, msg: 'Dosya bulunamadı (404). Bu klasörde yok ya da adı yanlış.' }); continue; }
+      t = await r.text();
+    } catch (e) { errs.push({ f: it.f, by: it.by, line: it.line, msg: 'Yüklenemedi: ' + e.message }); continue; }
+    texts[it.f] = t;
+    var m, re = /(?:\bfrom\s*|\bimport\s*\(?\s*)['"](\.[^'"?]+)/g;
+    while ((m = re.exec(t))) q.push({ f: new URL(m[1], url).href.replace(base, ''), by: it.f, line: lineOf(t, m.index) });
+    var good = true, last = t.replace(/\s+$/, '').slice(-1);
+    if (!/[};)]/.test(last)) { errs.push({ f: it.f, line: lineOf(t, t.length), msg: 'Dosya yarım kalmış gibi (son karakter: "' + last + '"). Baştan yapıştır.' }); good = false; }
+    var se = await syntax(clean(t));
+    if (se) { errs.push({ f: it.f, line: se.l, msg: 'Sözdizimi hatası: ' + se.m }); good = false; }
+    if (good) oks.push(it.f);
+  }
+  // import edilen isimler gerçekten var mı
+  var ex = {};
+  for (var f in texts) ex[f] = exportsOf(texts[f]);
+  function has(f, n, vis) {
+    if (!ex[f] || vis[f]) return false; vis[f] = 1;
+    if (ex[f].set[n]) return true;
+    return ex[f].stars.some(function (s) { return has(new URL(s, base + f).href.replace(base, ''), n, vis); });
+  }
+  for (var f2 in texts) {
+    var t2 = texts[f2], m2, re2 = /^[ \t]*import\s*\{([^}]*)\}\s*from\s*['"](\.[^'"?]+)['"]/gm;
+    while ((m2 = re2.exec(t2))) {
+      var tf = new URL(m2[2], base + f2).href.replace(base, '');
+      if (!ex[tf]) continue;
+      m2[1].split(',').forEach(function (p) {
+        var n = p.trim().split(/\s+as\s+/)[0].trim();
+        if (n && !has(tf, n, {})) errs.push({ f: f2, line: lineOf(t2, m2.index), msg: '"' + n + '" ismi ' + tf + ' içinde yok (eski ya da eksik dosya olabilir)' });
+      });
+    }
+  }
+  // rapor
+  report = '';
+  var groups = {};
+  errs.forEach(function (e) { var d = e.f.replace(/\/[^\/]*$/, ''); (groups[d] = groups[d] || []).push(e); });
+  Object.keys(groups).sort().forEach(function (d) {
+    groups[d].forEach(function (e) {
+      var name = e.f.split('/').pop();
+      var line = '📁 ' + d + '  →  📄 ' + name + (e.line ? '  →  satır ' + e.line : '') + '\n❌ ' + e.msg + (e.by ? '\n(isteyen: ' + e.by + ')' : '');
+      report += line + '\n\n';
+      var div = document.createElement('div'); div.className = 'e'; div.style.whiteSpace = 'pre-wrap'; div.textContent = line;
+      out.appendChild(div);
+    });
+  });
+  var ok = document.createElement('div'); ok.className = 'o';
+  ok.textContent = '✅ Sorunsuz ' + oks.length + ' dosya: ' + oks.join(', ');
+  out.appendChild(ok);
+  sum.innerHTML = errs.length ? '<b style="color:#f77">' + errs.length + ' sorun bulundu</b> <small>(' + Object.keys(texts).length + ' dosya tarandı)</small>' : '<b style="color:#6f6">Sorun yok ✅</b> <small>' + Object.keys(texts).length + ' dosya tarandı. Oyun yine hata veriyorsa önbellektir, site verisini temizle.</small>';
+}
+document.getElementById('go').onclick = run;
+document.getElementById('cp').onclick = function () {
+  var t = report || 'Sorun yok';
+  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).catch(function () {
+    var a = document.createElement('textarea'); a.value = t; document.body.appendChild(a); a.select(); document.execCommand('copy'); a.remove();
+  });
+};
+run();
+</script></body></html>
