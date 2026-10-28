@@ -15,19 +15,19 @@ const TILE_NAMES = ['grassTop', 'grassSide', 'dirt', 'stone', 'woodSide', 'woodT
   'coalOre', 'ironOre', 'goldOre', 'diamondOre', 'furnaceTop', 'furnaceSide', 'coal', 'ingotI', 'ingotG', 'gem', 'cooked',
   'axeD', 'shovelD', 'helmI', 'chestI', 'legI', 'bootI', 'helmD', 'chestD', 'legD', 'bootD'];
 TILE_NAMES.push('glassEdge', 'tallGrass');
-for (let i = 0; i < 6; i++) TILE_NAMES.push('dye' + i);
-for (let i = 0; i < 6; i++) TILE_NAMES.push('wc' + i);
-for (let k = 0; k < 5; k++) for (let s = 0; s < 4; s++) TILE_NAMES.push('cr' + k + '_' + s);
+for (let i = 0; i < 8; i++) TILE_NAMES.push('dye' + i);
+for (let i = 0; i < 8; i++) TILE_NAMES.push('wc' + i);
+for (let k = 0; k < 8; k++) for (let s = 0; s < 4; s++) TILE_NAMES.push('cr' + k + '_' + s);
 TILE_NAMES.push('potato', 'carrot', 'tomato', 'pepper', 'onion', 'cigkofte');
 TILE_NAMES.push('doorC', 'doorO', 'disc', 'shears', 'bedFoot', 'bedHead', 'bedSide', 'jukeTop', 'jukeSide', 'bprint', 'book');
 TILE_NAMES.push('chestTop', 'chestSide');
 TILE_NAMES.push('egg0', 'egg1', 'egg2');
-TILE_NAMES.push('dye6', 'dye7', 'wc6', 'wc7', 'ironB', 'diamB', 'tulipw', 'eggI', 'milkB', 'dough', 'cake', 'lettuce', 'beet', 'cucumber', 'saladC', 'saladL', 'soupB', 'soupT', 'soupV', 'fries');
-for (let k = 5; k < 8; k++) for (let s = 0; s < 4; s++) TILE_NAMES.push('cr' + k + '_' + s);
+TILE_NAMES.push('ironB', 'diamB', 'tulipw', 'eggI', 'milkB', 'dough', 'cake', 'lettuce', 'beet', 'cucumber', 'saladC', 'saladL', 'soupB', 'soupT', 'soupV', 'fries');
 
-const FLOWERS = new Set(['lavender', 'daisy', 'poppy', 'bpoppy', 'tulipo', 'tulipp']);
+const FLOWERS = new Set(['lavender', 'daisy', 'poppy', 'bpoppy', 'tulipo', 'tulipp', 'tulipw']);
 const ITEMS = new Set(['seeds', 'wheatI', 'bread', 'stick', 'coal', 'ingotI', 'ingotG', 'gem', 'cooked',
-  'potato', 'carrot', 'tomato', 'pepper', 'onion', 'cigkofte', 'disc', 'shears', 'book']);
+  'potato', 'carrot', 'tomato', 'pepper', 'onion', 'cigkofte', 'disc', 'shears', 'book',
+  'eggI', 'milkB', 'dough', 'cake', 'lettuce', 'beet', 'cucumber', 'saladC', 'saladL', 'soupB', 'soupT', 'soupV', 'fries']);
 ['egg0', 'egg1', 'egg2'].forEach(n => ITEMS.add(n));
 
 const WOOD = [176, 136, 72], STONE = [150, 150, 150], IRON = [222, 222, 228], DIAM = [80, 225, 215], NETH = [92, 76, 88];
@@ -43,7 +43,52 @@ const ARM = {
   helmD: ['helm', DIAM], chestD: ['chest', DIAM], legD: ['leg', DIAM], bootD: ['boot', DIAM]
 };
 const ORE_COL = { coalOre: [40, 40, 46], ironOre: [216, 172, 140], goldOre: [250, 214, 70], diamondOre: [90, 232, 232] };
-const DYE_RGB = [[154, 95, 208], [242, 201, 30], [208, 34, 40], [48, 80, 205], [243, 134, 31], [240, 120, 172]];
+const DYE_RGB = [[154, 95, 208], [242, 201, 30], [208, 34, 40], [48, 80, 205], [243, 134, 31], [240, 120, 172], [60, 160, 60], [240, 240, 240]];
+
+const BASE = {
+  grassTop: [95, 174, 69], grassSide: [139, 90, 43], dirt: [139, 90, 43], stone: [150, 148, 144],
+  woodSide: [107, 68, 35], woodTop: [150, 110, 62], leaves: [47, 125, 50], sand: [230, 214, 144],
+  brick: [181, 73, 58], snow: [245, 245, 245], glass: [159, 216, 232], gold: [255, 215, 0],
+  bedrock: [62, 62, 66], sapling: [60, 170, 70], birchSide: [226, 223, 212], birchTop: [196, 178, 128],
+  birchLeaf: [132, 184, 84], meat: [196, 70, 80], wool: [236, 236, 232], water: [50, 115, 205],
+  bucket: [170, 175, 182], wbucket: [170, 175, 182], lbucket: [170, 175, 182], paint: [245, 240, 225],
+  lava: [240, 100, 20], apple: [200, 30, 30],
+  lavender: [150, 90, 205], daisy: [248, 248, 248], poppy: [208, 34, 40],
+  bpoppy: [48, 82, 205], tulipo: [243, 134, 32], tulipp: [240, 120, 172], tulipw: [245, 245, 245],
+  obsidian: [26, 16, 44], netherite: [74, 64, 70],
+  planks: [188, 152, 98], craftTop: [160, 124, 76], craftSide: [170, 134, 84], farmTop: [92, 60, 34],
+  wheat0: [96, 175, 70], wheat1: [84, 160, 60], wheat2: [150, 175, 60], wheat3: [196, 164, 66],
+  seeds: [90, 120, 50], wheatI: [200, 170, 60], bread: [200, 150, 80], stick: [140, 100, 52],
+  coalOre: [150, 148, 144], ironOre: [150, 148, 144], goldOre: [150, 148, 144], diamondOre: [150, 148, 144],
+  furnaceTop: [128, 128, 132], furnaceSide: [140, 140, 144],
+  coal: [40, 40, 44], ingotI: [205, 205, 214], ingotG: [248, 204, 60], gem: [80, 225, 215], cooked: [150, 85, 50],
+  glassEdge: [226, 244, 250], tallGrass: [84, 160, 62],
+  potato: [196, 160, 96], carrot: [240, 130, 30], tomato: [220, 50, 40], pepper: [60, 170, 60], onion: [235, 225, 235], cigkofte: [168, 58, 32],
+  doorC: [150, 100, 52], doorO: [150, 100, 52], disc: [30, 30, 36], shears: [215, 215, 225],
+  bedFoot: [200, 45, 45], bedHead: [200, 45, 45], bedSide: [200, 45, 45],
+  jukeTop: [88, 58, 38], jukeSide: [120, 78, 48], bprint: [60, 120, 200], book: [120, 70, 160],
+  chestTop: [160, 124, 76], chestSide: [150, 110, 62],
+  ironB: [215, 215, 222], diamB: [80, 225, 215],
+  eggI: [245, 240, 225], milkB: [245, 245, 250], dough: [235, 215, 170], cake: [240, 200, 210],
+  lettuce: [120, 200, 80], beet: [150, 30, 70], cucumber: [60, 150, 60],
+  saladC: [210, 60, 50], saladL: [130, 200, 90], soupB: [150, 30, 70],
+  soupT: [215, 70, 40], soupV: [230, 150, 50], fries: [235, 190, 70]
+};
+
+for (const n in TOOL) BASE[n] = TOOL[n][1];
+for (const n in ARM) BASE[n] = ARM[n][1];
+BASE.egg0 = [150, 100, 60]; BASE.egg1 = [235, 235, 235]; BASE.egg2 = [240, 200, 90];
+
+for (let i = 0; i < 8; i++) { BASE['dye' + i] = DYE_RGB[i]; BASE['wc' + i] = DYE_RGB[i]; }
+for (let k = 0; k < 8; k++) for (let s = 0; s < 4; s++) BASE['cr' + k + '_' + s] = [80, 160, 60];
+
+const NI = {
+  eggI: [[245, 240, 225], 'egg'], milkB: [[245, 245, 250], 'bucket'], dough: [[235, 215, 170], 'blob'], cake: [[240, 200, 210], 'cake'],
+  lettuce: [[120, 200, 80], 'leaf'], beet: [[150, 30, 70], 'root'], cucumber: [[60, 150, 60], 'long'],
+  saladC: [[210, 60, 50], 'bowl'], saladL: [[130, 200, 90], 'bowl'], soupB: [[150, 30, 70], 'bowl'],
+  soupT: [[215, 70, 40], 'bowl'], soupV: [[230, 150, 50], 'bowl'], fries: [[235, 190, 70], 'fries']
+};
+
 const TI = {};
 TILE_NAMES.forEach((n, i) => { TI[n] = i; });
 export const T = TILE_NAMES.length;
@@ -64,7 +109,7 @@ export const FACE_TILES = {
   34: same('obsidian'), 35: same('netherite'),
   36: same('coalOre'), 37: same('ironOre'), 38: same('goldOre'), 39: same('diamondOre'),
   40: same('lavender'), 41: same('daisy'), 42: same('poppy'), 43: same('bpoppy'), 44: same('tulipo'), 45: same('tulipp'),
-  46: same('apple'),
+  46: same('apple'), 47: same('tulipw'),
   50: same('pickW'), 51: same('pickS'), 52: same('pickI'), 53: same('pickD'), 54: same('pickN'),
   55: same('axe'), 56: same('shovel'), 57: same('axeW'), 58: same('axeS'), 59: same('shovelW'), 60: same('shovelS'),
   61: same('hoeW'), 62: same('hoeS'), 63: same('hoeI'), 64: same('hoeD'),
@@ -90,29 +135,16 @@ export const FACE_TILES = {
   108: same('doorC'), 109: same('doorC'),
   150: same('potato'), 151: same('carrot'), 152: same('tomato'), 153: same('pepper'), 154: same('onion'), 155: same('cigkofte'),
   156: same('book'),
-  157: same('egg0'), 158: same('egg1'), 159: same('egg2')
+  157: same('egg0'), 158: same('egg1'), 159: same('egg2'),
+  160: same('ironB'), 161: same('diamB'),
+  170: same('saladC'), 171: same('saladL'), 172: same('soupB'), 173: same('soupT'), 174: same('cake'), 175: same('soupV'), 176: same('fries'), 177: same('dough'), 178: same('milkB'),
+  190: same('beet'), 191: same('lettuce'), 192: same('cucumber'),
+  230: same('eggI')
 };
-FACE_TILES[160] = same('ironB');
-FACE_TILES[161] = same('diamB');
-FACE_TILES[47] = same('tulipw');
 for (let i = 0; i < 8; i++) { FACE_TILES[110 + i] = same('dye' + i); FACE_TILES[120 + i] = same('wc' + i); }
 for (let k = 0; k < 8; k++) for (let s = 0; s < 4; s++) FACE_TILES[130 + k * 4 + s] = same('cr' + k + '_' + s);
-FACE_TILES[190] = same('beet');
-FACE_TILES[191] = same('lettuce');
-FACE_TILES[192] = same('cucumber');
-FACE_TILES[178] = same('milkB');
-FACE_TILES[177] = same('dough');
-FACE_TILES[174] = same('cake');
-FACE_TILES[170] = same('saladC');
-FACE_TILES[171] = same('saladL');
-FACE_TILES[172] = same('soupB');
-FACE_TILES[173] = same('soupT');
-FACE_TILES[175] = same('soupV');
-FACE_TILES[176] = same('fries');
-FACE_TILES[230] = same('eggI');
 
-// Düz sprite olarak görünen eşyalar (ikonda ve yerde)
-const FLAT = new Set([12, 15, 30, 31, 33, 40, 41, 42, 43, 44, 45, 46, 71, 73, 74, 75, 77, 78, 79, 80, 87, 88, 102, 103, 104, 105, 106, 108, 109, 156, 157, 158, 159]);
+const FLAT = new Set([12, 15, 30, 31, 33, 40, 41, 42, 43, 44, 45, 46, 47, 71, 73, 74, 75, 77, 78, 79, 80, 87, 88, 102, 103, 104, 105, 106, 108, 109, 156, 157, 158, 159]);
 for (let i = 50; i <= 68; i++) FLAT.add(i);
 for (const i of [69, 82, 83, 84, 85, 86, 89, 91, 92, 93, 94, 95, 96, 97, 98]) FLAT.add(i);
 for (let i = 110; i <= 117; i++) FLAT.add(i);
@@ -125,50 +157,6 @@ export const addFlat = (...a) => a.forEach(i => FLAT.add(i));
 
 export const atlas = { tex: null, T, cv: null };
 export const sideTile = t => FACE_TILES[t][1];
-
-const BASE = {
-  grassTop: [95, 174, 69], grassSide: [139, 90, 43], dirt: [139, 90, 43], stone: [150, 148, 144],
-  woodSide: [107, 68, 35], woodTop: [150, 110, 62], leaves: [47, 125, 50], sand: [230, 214, 144],
-  brick: [181, 73, 58], snow: [245, 245, 245], glass: [159, 216, 232], gold: [255, 215, 0],
-  bedrock: [62, 62, 66], sapling: [60, 170, 70], birchSide: [226, 223, 212], birchTop: [196, 178, 128],
-  birchLeaf: [132, 184, 84], meat: [196, 70, 80], wool: [236, 236, 232], water: [50, 115, 205],
-  bucket: [170, 175, 182], wbucket: [170, 175, 182], lbucket: [170, 175, 182], paint: [245, 240, 225],
-  lava: [240, 100, 20], apple: [200, 30, 30],
-  lavender: [150, 90, 205], daisy: [248, 248, 248], poppy: [208, 34, 40],
-  bpoppy: [48, 82, 205], tulipo: [243, 134, 32], tulipp: [240, 120, 172],
-  obsidian: [26, 16, 44], netherite: [74, 64, 70],
-  planks: [188, 152, 98], craftTop: [160, 124, 76], craftSide: [170, 134, 84], farmTop: [92, 60, 34],
-  wheat0: [96, 175, 70], wheat1: [84, 160, 60], wheat2: [150, 175, 60], wheat3: [196, 164, 66],
-  seeds: [90, 120, 50], wheatI: [200, 170, 60], bread: [200, 150, 80], stick: [140, 100, 52],
-  coalOre: [150, 148, 144], ironOre: [150, 148, 144], goldOre: [150, 148, 144], diamondOre: [150, 148, 144],
-  furnaceTop: [128, 128, 132], furnaceSide: [140, 140, 144],
-  coal: [40, 40, 44], ingotI: [205, 205, 214], ingotG: [248, 204, 60], gem: [80, 225, 215], cooked: [150, 85, 50],
-  glassEdge: [226, 244, 250], tallGrass: [84, 160, 62],
-  potato: [196, 160, 96], carrot: [240, 130, 30], tomato: [220, 50, 40], pepper: [60, 170, 60], onion: [235, 225, 235], cigkofte: [168, 58, 32],
-  doorC: [150, 100, 52], doorO: [150, 100, 52], disc: [30, 30, 36], shears: [215, 215, 225],
-  bedFoot: [200, 45, 45], bedHead: [200, 45, 45], bedSide: [200, 45, 45],
-  jukeTop: [88, 58, 38], jukeSide: [120, 78, 48], bprint: [60, 120, 200], book: [120, 70, 160],
-  chestTop: [160, 124, 76], chestSide: [150, 110, 62]
-};
-for (const n in TOOL) BASE[n] = TOOL[n][1];
-for (const n in ARM) BASE[n] = ARM[n][1];
-BASE.egg0 = [150, 100, 60]; BASE.egg1 = [235, 235, 235]; BASE.egg2 = [240, 200, 90];
-
-for (let i = 0; i < 8; i++) { BASE['dye' + i] = DYE_RGB[i]; BASE['wc' + i] = DYE_RGB[i]; }
-for (let k = 0; k < 8; k++) for (let s = 0; s < 4; s++) BASE['cr' + k + '_' + s] = [80, 160, 60];
-
-// NI (Yeni Öğeler) tanımları ve BASE atamaları artık BASE tanımlandıktan sonra güvenle yapılıyor:
-const NI = {
-  eggI: [[245, 240, 225], 'egg'], milkB: [[245, 245, 250], 'bucket'], dough: [[235, 215, 170], 'blob'], cake: [[240, 200, 210], 'cake'],
-  lettuce: [[120, 200, 80], 'leaf'], beet: [[150, 30, 70], 'root'], cucumber: [[60, 150, 60], 'long'],
-  saladC: [[210, 60, 50], 'bowl'], saladL: [[130, 200, 90], 'bowl'], soupB: [[150, 30, 70], 'bowl'],
-  soupT: [[215, 70, 40], 'bowl'], soupV: [[230, 150, 50], 'bowl'], fries: [[235, 190, 70], 'fries']
-};
-for (const n in NI) { BASE[n] = NI[n][0]; ITEMS.add(n); }
-BASE.dye6 = [60, 160, 60]; BASE.dye7 = [240, 240, 240]; BASE.wc6 = [60, 160, 60]; BASE.wc7 = [240, 240, 240];
-BASE.ironB = [215, 215, 222]; BASE.diamB = [80, 225, 215]; BASE.tulipw = [245, 245, 245];
-for (let k = 5; k < 8; k++) for (let s = 0; s < 4; s++) BASE['cr' + k + '_' + s] = [80, 160, 60];
-FLOWERS.add('tulipw');
 
 const SEEDS = Array.from({ length: 8 }, (_, i) => [hash(i, 1, 50) * 16, hash(i, 2, 50) * 16]);
 function cobble(x, y) {
@@ -231,8 +219,7 @@ function dyePix(col, x, y) {
 }
 
 const CROPC = [[[70, 150, 60], [196, 160, 96]], [[84, 170, 70], [240, 130, 30]], [[60, 140, 55], [220, 50, 40]],
-  [[55, 135, 60], [225, 70, 40]], [[110, 170, 70], [235, 225, 235]]];
-CROPC.push([[110, 200, 80], [130, 210, 90]], [[60, 130, 60], [150, 30, 70]], [[50, 130, 50], [60, 150, 60]]);
+  [[55, 135, 60], [225, 70, 40]], [[110, 170, 70], [235, 225, 235]], [[110, 200, 80], [130, 210, 90]], [[60, 130, 60], [150, 30, 70]], [[50, 130, 50], [60, 150, 60]]];
 
 function cropPix(k, s, x, y) {
   const h = [3, 6, 9, 12][s], lc = CROPC[k][0], fc = CROPC[k][1];
@@ -380,10 +367,10 @@ function itemPix(name, x, y) {
     if (e >= 1) return null;
     return hash(x, y, 130) < 0.2 ? [210, 120, 60] : [168, 58, 32];
   }
-  if (name === 'book') {
+  if (/^book\d$/.test(name) || name === 'book') {
     if (x >= 3 && x <= 12 && y >= 2 && y <= 13) {
       if (x === 3 || x === 12) return [80, 40, 110];
-      return [120, 70, 160];
+      return BASE[name] || [120, 70, 160];
     }
     return null;
   }
@@ -434,7 +421,7 @@ function buildAtlas() {
   const ctx = cv.getContext('2d');
   TILE_NAMES.forEach((name, i) => {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
-      let [r, g, b] = BASE[name];
+      let [r, g, b] = BASE[name] || [150, 150, 150];
       let k = 0.86 + hash(x, y, i) * 0.28;
       if (name === 'doorO' && x > 3) continue;
       if (name === 'sapling') {
@@ -463,7 +450,7 @@ function buildAtlas() {
         const c = wheatPix(+name.slice(5), x, y);
         if (!c) continue;
         [r, g, b] = c; k = 0.92 + hash(x, y, i) * 0.16;
-      } else if (ITEMS.has(name)) {
+      } else if (ITEMS.has(name) || /^book\d$/.test(name)) {
         const c = itemPix(name, x, y);
         if (!c) continue;
         [r, g, b] = c; k = 0.93 + hash(x, y, i) * 0.14;
