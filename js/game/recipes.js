@@ -14,14 +14,34 @@ export const RECIPES = [
   { out: [81, 1], pat: [[C, C, C], [C, 0, C], [C, C, C]] },        // ocak (8 taş)
   { out: [10, 1], pat: [[GOLD, GOLD, GOLD], [GOLD, GOLD, GOLD], [GOLD, GOLD, GOLD]] },   // altın blok (9 külçe)
   { out: [84, 9], shapeless: [10] },                               // altın blok → 9 külçe
-  { out: [155, 2], shapeless: [W, W, TOMATO, PEPPER, ONION] }      // çiğköfte: 2 buğday + domates + biber + soğan
+  { out: [160, 1], pat: [[IRON, IRON, IRON], [IRON, IRON, IRON], [IRON, IRON, IRON]] }, // demir blok (9 demir külçe)
+  { out: [83, 9], shapeless: [160] },                              // demir blok → 9 demir külçe
+  { out: [161, 1], pat: [[GEM, GEM, GEM], [GEM, GEM, GEM], [GEM, GEM, GEM]] },         // elmas blok (9 elmas)
+  { out: [85, 9], shapeless: [161] },                              // elmas blok → 9 elmas
+  { out: [155, 2], shapeless: [W, W, TOMATO, PEPPER, ONION] },      // çiğköfte: 2 buğday + domates + biber + soğan
+  { out: [177, 1], shapeless: [W, W, W, 31] },                     // hamur: 3 buğday + su kovası (su kovası kullandıktan sonra boş kova geri döner)
+  { out: [170, 1], shapeless: [152, 192] },                        // salatalık: domates + salatalık
+  { out: [171, 1], shapeless: [191, ONION] },                      // marul salatası: marul + soğan
+  { out: [172, 1], shapeless: [190, 31] },                         // pancar çorbası: pancar
+  { out: [173, 1], shapeless: [152, 31] },                         // domates çorbası: domates
+  { out: [174, 1], shapeless: [178, 177, 'eggI'] },                // kek: süt + hamur + yumurta
+  { out: [175, 1], shapeless: [151, ONION, POTATO] },              // sebze çorbası: havuç + soğan + patates
+  { out: [176, 1], shapeless: [POTATO] }                           // patates kızartması (fırında pişince çıkar)
 ];
 
-// Çiçek → 2 boya; boya + yün → renkli yün (lavanta, papatya, gelincik, mavi gelincik, turuncu lale, pembe lale)
-for (let i = 0; i < 6; i++) {
-  RECIPES.push({ out: [110 + i, 2], shapeless: [40 + i] });
+// Çiçek → 2 boya; boya + yün → renkli yün (lavanta, papatya, gelincik, mavi gelincik, turuncu lale, pembe lale, yeşil, beyaz lale)
+for (let i = 0; i < 8; i++) {
+  RECIPES.push({ out: [110 + i, i === 7 ? 2 : 2], shapeless: [40 + i] }); // Beyaz lale (47) veya diğerleri 2 boya verir
   RECIPES.push({ out: [120 + i, 1], shapeless: [110 + i, WOOLANY] });
 }
+
+// Renk karışımları (Craft boya birleşimleri)
+RECIPES.push(
+  { out: [116, 1], shapeless: [111, 113] }, // Sarı + Mavi = Yeşil boya
+  { out: [114, 1], shapeless: [111, 112] }, // Sarı + Kırmızı = Turuncu boya
+  { out: [110, 1], shapeless: [112, 113] }, // Kırmızı + Mavi = Mor boya
+  { out: [115, 1], shapeless: [117, 112] }  // Beyaz + Kırmızı = Pembe boya
+);
 
 // [malzeme, kazma, balta, kürek, çapa, kılıç]
 for (const [m, pick, axe, shovel, hoe, sword] of [
@@ -45,7 +65,7 @@ for (const [m, helm, chest, legs, boots] of [[IRON, 91, 92, 93, 94], [GEM, 95, 9
 const ok = (tok, t) => {
   if (tok === 0) return t === 0;
   if (tok === LOG) return t === 4 || t === 13;
-  if (tok === WOOLANY) return t === 16 || (t >= 120 && t <= 125);
+  if (tok === WOOLANY) return t === 16 || (t >= 120 && t <= 127);
   return tok === t;
 };
 
