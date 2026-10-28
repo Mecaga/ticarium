@@ -4,10 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>BlokDiyar</title>
-<link rel="stylesheet" href="css/style.css?v=35">
+<link rel="stylesheet" href="css/style.css?v=37">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
-<!-- Hata Ayıklayıcı / Konsol Aracı -->
-<script src="js/dbg.js"></script>
+<script src="js/dbg.js?v=37"></script>
 </head>
 <body>
 <div id="flash"></div>
@@ -100,7 +99,7 @@
     </div>
     <div id="mErr"></div>
     <div id="mAuth"></div>
-    <div id="mVer" style="font-size:11px;opacity:.55;text-align:center;margin-top:4px">Sürüm 35</div>
+    <div id="mVer" style="font-size:11px;opacity:.55;text-align:center;margin-top:4px">Sürüm 37</div>
   </div>
 </div>
 
@@ -131,7 +130,7 @@ if (missing.length) {
   showErr('Eksik elemanlar: ' + missing.join(', '));
 } else {
   // Modüllerin çakışmasını engellemek için doğrudan main.js'i güvenli import ediyoruz
-  import('./js/main.js?v=35').catch(function (e) {
+  import('./js/main.js?v=37').catch(function (e) {
     showErr('Yükleme hatası: ' + (e.message || e));
   });
 }
