@@ -1,4 +1,4 @@
-// Doku atlası ve detaylı çizim fonksiyonları içeren orijinal sürüm
+// Doku atlası oluşturma ve renk tanımları
 export const T = 16;
 export const BASE = {
   grass: [95, 174, 69], dirt: [139, 90, 43], stone: [150, 148, 144], wood: [107, 68, 35],
@@ -106,6 +106,8 @@ export const iconURL = (name) => '';
 export const FACE_TILES = {};
 export const atlas = { tex: null };
 
+
+
 function newPix() {
   const cv = document.createElement('canvas');
   cv.width = T; cv.height = T;
@@ -149,7 +151,8 @@ function itemPix(name, col) {
 export function initAtlas() {
   const keys = Object.keys(BASE);
   const cv = document.createElement('canvas');
-  cv.width = T * keys.length; 
+  const len = keys.length;
+  cv.width = T * len; 
   cv.height = T;
   const ctx = cv.getContext('2d');
   ctx.clearRect(0, 0, cv.width, cv.height);
