@@ -15,16 +15,17 @@ const TILE_NAMES = ['grassTop', 'grassSide', 'dirt', 'stone', 'woodSide', 'woodT
   'coalOre', 'ironOre', 'goldOre', 'diamondOre', 'furnaceTop', 'furnaceSide', 'coal', 'ingotI', 'ingotG', 'gem', 'cooked',
   'axeD', 'shovelD', 'helmI', 'chestI', 'legI', 'bootI', 'helmD', 'chestD', 'legD', 'bootD'];
 TILE_NAMES.push('glassEdge', 'tallGrass');
-for (let i = 0; i < 6; i++) TILE_NAMES.push('dye' + i);
-for (let i = 0; i < 6; i++) TILE_NAMES.push('wc' + i);
-for (let k = 0; k < 5; k++) for (let s = 0; s < 4; s++) TILE_NAMES.push('cr' + k + '_' + s);
+for (let i = 0; i < 8; i++) TILE_NAMES.push('dye' + i);
+for (let i = 0; i < 8; i++) TILE_NAMES.push('wc' + i);
+for (let k = 0; k < 8; k++) for (let s = 0; s < 4; s++) TILE_NAMES.push('cr' + k + '_' + s);
 TILE_NAMES.push('potato', 'carrot', 'tomato', 'pepper', 'onion', 'cigkofte');
 TILE_NAMES.push('doorC', 'doorO', 'disc', 'shears', 'bedFoot', 'bedHead', 'bedSide', 'jukeTop', 'jukeSide', 'bprint');
 TILE_NAMES.push('chestTop', 'chestSide');
 TILE_NAMES.push('book');
 for (let i = 0; i < 6; i++) TILE_NAMES.push('book' + i);
+TILE_NAMES.push('ironB', 'diamB', 'tulipw', 'eggI', 'milkB', 'dough', 'cake', 'lettuce', 'beet', 'cucumber', 'saladC', 'saladL', 'soupB', 'soupT', 'soupV', 'fries');
 
-const FLOWERS = new Set(['lavender', 'daisy', 'poppy', 'bpoppy', 'tulipo', 'tulipp']);
+const FLOWERS = new Set(['lavender', 'daisy', 'poppy', 'bpoppy', 'tulipo', 'tulipp', 'tulipw']);
 const ITEMS = new Set(['seeds', 'wheatI', 'bread', 'stick', 'coal', 'ingotI', 'ingotG', 'gem', 'cooked',
   'potato', 'carrot', 'tomato', 'pepper', 'onion', 'cigkofte', 'disc', 'shears']);
 ITEMS.add('book');
@@ -43,7 +44,7 @@ const ARM = {
   helmD: ['helm', DIAM], chestD: ['chest', DIAM], legD: ['leg', DIAM], bootD: ['boot', DIAM]
 };
 const ORE_COL = { coalOre: [40, 40, 46], ironOre: [216, 172, 140], goldOre: [250, 214, 70], diamondOre: [90, 232, 232] };
-const DYE_RGB = [[154, 95, 208], [242, 201, 30], [208, 34, 40], [48, 80, 205], [243, 134, 31], [240, 120, 172]];
+const DYE_RGB = [[154, 95, 208], [242, 201, 30], [208, 34, 40], [48, 80, 205], [243, 134, 31], [240, 120, 172], [60, 160, 60], [240, 240, 240]];
 const TI = {};
 TILE_NAMES.forEach((n, i) => { TI[n] = i; });
 export const T = TILE_NAMES.length;
@@ -64,7 +65,7 @@ export const FACE_TILES = {
   34: same('obsidian'), 35: same('netherite'),
   36: same('coalOre'), 37: same('ironOre'), 38: same('goldOre'), 39: same('diamondOre'),
   40: same('lavender'), 41: same('daisy'), 42: same('poppy'), 43: same('bpoppy'), 44: same('tulipo'), 45: same('tulipp'),
-  46: same('apple'),
+  46: same('apple'), 47: same('tulipw'),
   50: same('pickW'), 51: same('pickS'), 52: same('pickI'), 53: same('pickD'), 54: same('pickN'),
   55: same('axe'), 56: same('shovel'), 57: same('axeW'), 58: same('axeS'), 59: same('shovelW'), 60: same('shovelS'),
   61: same('hoeW'), 62: same('hoeS'), 63: same('hoeI'), 64: same('hoeD'),
@@ -88,28 +89,38 @@ export const FACE_TILES = {
   106: same('tallGrass'),
   107: same('bprint'),
   108: same('doorC'), 109: same('doorC'),
-  150: same('potato'), 151: same('carrot'), 152: same('tomato'), 153: same('pepper'), 154: same('onion'), 155: same('cigkofte')
+  150: same('potato'), 151: same('carrot'), 152: same('tomato'), 153: same('pepper'), 154: same('onion'), 155: same('cigkofte'),
+  160: same('ironB'), 161: same('diamB')
 };
-for (let i = 0; i < 6; i++) {
+for (let i = 0; i < 8; i++) {
   FACE_TILES[110 + i] = same('dye' + i);
   FACE_TILES[120 + i] = same('wc' + i);
-  FACE_TILES[160 + i] = same('book' + i);
 }
-for (let k = 0; k < 5; k++) for (let s = 0; s < 4; s++) FACE_TILES[130 + k * 4 + s] = same('cr' + k + '_' + s);
+for (let i = 0; i < 6; i++) FACE_TILES[160 + i] = same('book' + i);
+for (let k = 0; k < 8; k++) for (let s = 0; s < 4; s++) FACE_TILES[130 + k * 4 + s] = same('cr' + k + '_' + s);
 
 // Düz sprite olarak görünen eşyalar (ikonda ve yerde)
-const FLAT = new Set([12, 15, 30, 31, 33, 40, 41, 42, 43, 44, 45, 46, 71, 73, 74, 75, 77, 78, 79, 80, 87, 88, 102, 103, 104, 105, 106, 108, 109]);
+const FLAT = new Set([12, 15, 30, 31, 33, 40, 41, 42, 43, 44, 45, 46, 47, 71, 73, 74, 75, 77, 78, 79, 80, 87, 88, 102, 103, 104, 105, 106, 108, 109]);
 for (let i = 50; i <= 68; i++) FLAT.add(i);
 for (const i of [69, 82, 83, 84, 85, 86, 89, 91, 92, 93, 94, 95, 96, 97, 98]) FLAT.add(i);
-for (let i = 110; i <= 115; i++) FLAT.add(i);
-for (let i = 130; i <= 155; i++) FLAT.add(i);
+for (let i = 110; i <= 117; i++) FLAT.add(i);
+for (let i = 130; i <= 195; i++) FLAT.add(i);
 for (let i = 160; i <= 165; i++) FLAT.add(i);
+for (let i = 170; i <= 178; i++) FLAT.add(i);
 FLAT.add(TI.book);
 export const isFlat = t => FLAT.has(t);
 export const addFlat = (...a) => a.forEach(i => FLAT.add(i));
 
 export const atlas = { tex: null, T, cv: null };
 export const sideTile = t => FACE_TILES[t][1];
+
+const NI = {
+  eggI: [[245, 240, 225], 'egg'], milkB: [[245, 245, 250], 'bucket'], dough: [[235, 215, 170], 'blob'], cake: [[240, 200, 210], 'cake'],
+  lettuce: [[120, 200, 80], 'leaf'], beet: [[150, 30, 70], 'root'], cucumber: [[60, 150, 60], 'long'],
+  saladC: [[210, 60, 50], 'bowl'], saladL: [[130, 200, 90], 'bowl'], soupB: [[150, 30, 70], 'bowl'],
+  soupT: [[215, 70, 40], 'bowl'], soupV: [[230, 150, 50], 'bowl'], fries: [[235, 190, 70], 'fries']
+};
+for (const n in NI) { BASE[n] = NI[n][0]; ITEMS.add(n); }
 
 const BASE = {
   grassTop: [95, 174, 69], grassSide: [139, 90, 43], dirt: [139, 90, 43], stone: [150, 148, 144],
@@ -120,7 +131,7 @@ const BASE = {
   bucket: [170, 175, 182], wbucket: [170, 175, 182], lbucket: [170, 175, 182], paint: [245, 240, 225],
   lava: [240, 100, 20], apple: [200, 30, 30],
   lavender: [150, 90, 205], daisy: [248, 248, 248], poppy: [208, 34, 40],
-  bpoppy: [48, 82, 205], tulipo: [243, 134, 32], tulipp: [240, 120, 172],
+  bpoppy: [48, 82, 205], tulipo: [243, 134, 32], tulipp: [240, 120, 172], tulipw: [245, 245, 245],
   obsidian: [26, 16, 44], netherite: [74, 64, 70],
   planks: [188, 152, 98], craftTop: [160, 124, 76], craftSide: [170, 134, 84], farmTop: [92, 60, 34],
   wheat0: [96, 175, 70], wheat1: [84, 160, 60], wheat2: [150, 175, 60], wheat3: [196, 164, 66],
@@ -134,16 +145,17 @@ const BASE = {
   bedFoot: [200, 45, 45], bedHead: [200, 45, 45], bedSide: [200, 45, 45],
   jukeTop: [88, 58, 38], jukeSide: [120, 78, 48], bprint: [60, 120, 200],
   chestTop: [158, 108, 54], chestSide: [158, 108, 54],
-  book: [120, 70, 160]
+  book: [120, 70, 160],
+  ironB: [215, 215, 222], diamB: [80, 225, 215]
 };
 for (const n in TOOL) BASE[n] = TOOL[n][1];
 for (const n in ARM) BASE[n] = ARM[n][1];
-for (let i = 0; i < 6; i++) {
+for (let i = 0; i < 8; i++) {
   BASE['dye' + i] = DYE_RGB[i];
   BASE['wc' + i] = DYE_RGB[i];
 }
 [[200, 50, 50], [60, 150, 80], [60, 120, 210], [160, 165, 180], [235, 125, 25], [140, 80, 190]].forEach((c, i) => { BASE['book' + i] = c; });
-for (let k = 0; k < 5; k++) for (let s = 0; s < 4; s++) BASE['cr' + k + '_' + s] = [80, 160, 60];
+for (let k = 0; k < 8; k++) for (let s = 0; s < 4; s++) BASE['cr' + k + '_' + s] = [80, 160, 60];
 
 const SEEDS = Array.from({ length: 8 }, (_, i) => [hash(i, 1, 50) * 16, hash(i, 2, 50) * 16]);
 function cobble(x, y) {
@@ -169,6 +181,10 @@ function plantPix(name, x, y) {
   const leaf = (y === 11 && (x === 6 || x === 9)) || (y === 12 && (x === 5 || x === 10));
   if (stem || leaf) return [70, 150, 60];
   const r = Math.hypot(x - 7.5, y - 4.5);
+  if (name === 'tulipw') {
+    const e = Math.pow((x - 7.5) / 2.8, 2) + Math.pow((y - 5.5) / 3.2, 2);
+    return (e < 1 || ((x === 6 || x === 9) && y === 2)) ? [245, 245, 245] : null;
+  }
   switch (name) {
     case 'daisy': if (r < 1.4) return [250, 205, 40]; if (r < 3.8) return [248, 248, 248]; break;
     case 'poppy': if (r < 1.4) return [25, 25, 25]; if (r < 3.8) return [208, 34, 40]; break;
@@ -203,6 +219,8 @@ function dyePix(col, x, y) {
 
 const CROPC = [[[70, 150, 60], [196, 160, 96]], [[84, 170, 70], [240, 130, 30]], [[60, 140, 55], [220, 50, 40]],
   [[55, 135, 60], [225, 70, 40]], [[110, 170, 70], [235, 225, 235]]];
+CROPC.push([[110, 200, 80], [130, 210, 90]], [[60, 130, 60], [150, 30, 70]], [[50, 130, 50], [60, 150, 60]]);
+
 function cropPix(k, s, x, y) {
   const h = [3, 6, 9, 12][s], lc = CROPC[k][0], fc = CROPC[k][1];
   for (const c of [2, 5, 8, 11, 14]) {
@@ -236,7 +254,35 @@ function ingotPix(col, x, y) {
   return y <= 7 ? col.map(v => Math.min(255, v + 30)) : col;
 }
 
+function newPix(name, x, y) {
+  const [c, sh] = NI[name], el = (a, b, cx, cy) => Math.pow((x - cx) / a, 2) + Math.pow((y - cy) / b, 2) < 1;
+  if (sh === 'egg') return el(3.8, 5, 7.5, 9) ? c : null;
+  if (sh === 'blob') return el(6, 4, 7.5, 9) ? c : null;
+  if (sh === 'long') return el(6.5, 2.8, 7.5, 8.5) ? (x < 4 ? [120, 190, 100] : c) : null;
+  if (sh === 'leaf') return Math.hypot(x - 7.5, y - 9) < 5.5 ? (x === 7 || x === 8 ? [80, 150, 55] : c) : null;
+  if (sh === 'root') {
+    if (y >= 2 && y <= 5 && x >= 7 && x <= 8) return [70, 150, 60];
+    return Math.hypot(x - 7.5, y - 10) < 4.5 ? c : null;
+  }
+  if (sh === 'bucket') {
+    if (y < 4 || y > 13 || Math.abs(x - 7.5) > (y < 8 ? 5 : 4)) return null;
+    return y <= 6 ? c : [150, 155, 165];
+  }
+  if (sh === 'cake') {
+    if (y === 4 && x >= 7 && x <= 8) return [210, 40, 50];
+    if (y >= 5 && y <= 7 && x >= 2 && x <= 13) return c;
+    return (y >= 8 && y <= 13 && x >= 2 && x <= 13) ? [200, 150, 90] : null;
+  }
+  if (sh === 'bowl') {
+    if (y < 8 || !el(6, 5, 7.5, 8)) return null;
+    return y <= 9 ? c : [190, 190, 200];
+  }
+  if (sh === 'fries') return ([4, 6, 8, 10].includes(x) && y >= 4 + (x % 3) && y <= 13) ? c : null;
+  return null;
+}
+
 function itemPix(name, x, y) {
+  if (NI[name]) return newPix(name, x, y);
   if (/^book\d$/.test(name) || name === 'book') {
     if (x < 3 || x > 12 || y < 2 || y > 13) return null;
     const c = BASE[name] || [120, 70, 160];
@@ -387,7 +433,7 @@ function buildAtlas() {
         const c = grassPix(x, y);
         if (!c) continue;
         [r, g, b] = c; k = 0.92 + hash(x, y, i) * 0.16;
-      } else if (/^dye[0-5]$/.test(name)) {
+      } else if (/^dye[0-7]$/.test(name)) {
         const c = dyePix([r, g, b], x, y);
         if (!c) continue;
         [r, g, b] = c; k = 0.95 + hash(x, y, i) * 0.1;
@@ -443,6 +489,10 @@ function buildAtlas() {
             }
             break;
           }
+          case 'ironB': case 'diamB':
+            k = 0.92 + hash(x, y, 160) * 0.16;
+            if (x % 8 === 0 || y % 8 === 0) k *= 0.75;
+            break;
           case 'furnaceTop':
             k = 0.9 + hash(x, y, 121) * 0.2;
             if (x < 1 || y < 1 || x > 14 || y > 14) { r = 80; g = 80; b = 84; k = 1; }
@@ -511,7 +561,7 @@ function buildAtlas() {
             k = 0.93 + hash(x, y, 62) * 0.1;
             if ((x + y) % 4 === 0) k *= 0.95;
             break;
-          case 'wc0': case 'wc1': case 'wc2': case 'wc3': case 'wc4': case 'wc5':
+          case 'wc0': case 'wc1': case 'wc2': case 'wc3': case 'wc4': case 'wc5': case 'wc6': case 'wc7':
             k = 0.93 + hash(x, y, 62 + i) * 0.1;
             if ((x + y) % 4 === 0) k *= 0.95;
             break;
@@ -556,7 +606,7 @@ function buildAtlas() {
             k = 0.92 + hash(x, y, 140) * 0.16;
             if (x < 1 || x > 14 || y < 1 || y > 14) { r = 95; g = 62; b = 30; k = 1; }
             else if (y === 7 || y === 8) k *= 0.7;
-            if (x >= 11 && x <= 12 && y >= 8 && y <= 9) { r = 235; g = 205; b = 60; k = 1; }
+            if (x >= 11 && x <= 12 && y >= 8 && y === 9) { r = 235; g = 205; b = 60; k = 1; }
             break;
           case 'doorO':
             k = 0.92 + hash(x, y, 141) * 0.16;
