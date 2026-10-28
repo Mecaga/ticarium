@@ -8,6 +8,7 @@ import {
 export * from './defs.js';
 export { atlas, sideTile } from './textures.js';
 
+export const tgtOpts = { sneak: false };
 export const BUILD = 23;
 export const CW = 25, H = 32, RD = 3, SEA = 7, SNOW_H = 19;
 
