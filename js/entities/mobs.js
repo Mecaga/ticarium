@@ -168,6 +168,11 @@ function landSpot() {
   return null;
 }
 
+export function spawnMob(kind, x, y, z) {
+  if (!group) return;
+  createMob(kind + Date.now().toString(36) + Math.floor(Math.random() * 99), x, y, z, 0, -1);
+}
+
 export function spawnAnimals() {
   if (!group) return;
   const w = want();
