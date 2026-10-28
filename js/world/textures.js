@@ -1,4 +1,4 @@
-// Doku atlası oluşturma ve renk tanımları
+// Doku atlası ve detaylı çizim fonksiyonları içeren orijinal sürüm
 export const T = 16;
 export const BASE = {
   grass: [95, 174, 69], dirt: [139, 90, 43], stone: [150, 148, 144], wood: [107, 68, 35],
@@ -24,7 +24,7 @@ export const BASE = {
   diamB: [80, 225, 215], salad: [220, 80, 50], maruls: [80, 200, 80], pancars: [180, 50, 80],
   doms: [220, 50, 40], kek: [240, 208, 160], sebzes: [210, 160, 80], patatesk: [240, 200, 80],
   hamur: [245, 225, 170], sut: [255, 255, 255], pancar: [220, 50, 80], marul: [80, 180, 80],
-  salatalik: [60, 150, 60], glassEdge: [200, 230, 240]
+  salatalik: [60, 150, 60], glassEdge: [200, 230, 240], book: [120, 70, 160]
 };
 
 export const FLOWERS = new Set(['lavender', 'daisy', 'poppy', 'blueP', 'orangeT', 'pinkT', 'whiteT', 'tulipw']);
@@ -36,7 +36,7 @@ export const ITEMS = new Set([
   'bootD', 'potato', 'carrot', 'tomato', 'pepper', 'onion', 'cig', 'salad',
   'maruls', 'pancars', 'doms', 'kek', 'sebzes', 'patatesk', 'hamur', 'sut',
   'pancar', 'marul', 'salatalik', 'patatez', 'havucz', 'domatez', 'biberz', 'onione',
-  'marulz', 'salatalikz', 'pancarz'
+  'marulz', 'salatalikz', 'pancarz', 'book'
 ]);
 
 for (let i = 0; i < 8; i++) ITEMS.add('dye' + i);
@@ -112,21 +112,44 @@ function newPix() {
   return { cv: cv, ctx: cv.getContext('2d') };
 }
 
-function itemPix(col) {
+function itemPix(name, col) {
   const p = newPix(), ctx = p.ctx;
   ctx.fillStyle = `rgb(${col[0]},${col[1]},${col[2]})`;
-  ctx.fillRect(2, 2, 12, 12);
-  ctx.fillStyle = 'rgba(0,0,0,0.3)';
-  ctx.fillRect(2, 12, 12, 2);
-  ctx.fillRect(12, 2, 2, 12);
+  
+  if (name.startsWith('pick')) {
+    ctx.fillRect(3, 10, 10, 2);
+    ctx.fillRect(7, 4, 2, 8);
+  } else if (name.startsWith('axe')) {
+    ctx.fillRect(4, 10, 2, 4);
+    ctx.fillRect(6, 4, 6, 6);
+  } else if (name.startsWith('shov')) {
+    ctx.fillRect(7, 6, 2, 8);
+    ctx.fillRect(5, 3, 6, 4);
+  } else if (name.startsWith('swd')) {
+    ctx.fillRect(4, 10, 2, 2);
+    ctx.fillRect(5, 4, 2, 6);
+    ctx.fillRect(7, 2, 2, 4);
+  } else if (name === 'apple') {
+    ctx.fillRect(4, 5, 8, 8);
+    ctx.fillStyle = '#8B4513';
+    ctx.fillRect(7, 3, 2, 3);
+  } else if (name === 'book') {
+    ctx.fillRect(3, 2, 10, 12);
+    ctx.fillStyle = '#f0f0f0';
+    ctx.fillRect(4, 3, 8, 10);
+  } else {
+    ctx.fillRect(2, 2, 12, 12);
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fillRect(2, 12, 12, 2);
+    ctx.fillRect(12, 2, 2, 12);
+  }
   return p.cv;
 }
 
 export function initAtlas() {
   const keys = Object.keys(BASE);
   const cv = document.createElement('canvas');
-  const len = keys.length;
-  cv.width = T * len; 
+  cv.width = T * keys.length; 
   cv.height = T;
   const ctx = cv.getContext('2d');
   ctx.clearRect(0, 0, cv.width, cv.height);
@@ -140,7 +163,7 @@ export function initAtlas() {
       sub.ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
       sub.ctx.fillRect(2, 14 - s * 3, 12, s * 3 + 1);
     } else if (ITEMS.has(k)) {
-      sub = itemPix(c);
+      sub = itemPix(k, c);
     } else {
       sub = newPix();
       sub.ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
