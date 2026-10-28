@@ -22,14 +22,16 @@ const HARD = {
   12: [0.05, null, 0], 13: [3, 'axe', 0], 14: [0.3, null, 0], 16: [1.2, null, 0], 32: [1, null, 0],
   34: [60, 'pick', 4], 35: [65, 'pick', 4],
   36: [3, 'pick', 1], 37: [3.5, 'pick', 2], 38: [3.5, 'pick', 3], 39: [4, 'pick', 3], 81: [3.5, 'pick', 1],
-  40: [0.05, null, 0], 41: [0.05, null, 0], 42: [0.05, null, 0], 43: [0.05, null, 0], 44: [0.05, null, 0], 45: [0.05, null, 0],
+  40: [0.05, null, 0], 41: [0.05, null, 0], 42: [0.05, null, 0], 43: [0.05, null, 0], 44: [0.05, null, 0], 45: [0.05, null, 0], 47: [0.05, null, 0],
   70: [2, 'axe', 0], 72: [2.5, 'axe', 0], 76: [0.6, 'shovel', 0],
   77: [0.05, null, 0], 78: [0.05, null, 0], 79: [0.05, null, 0], 80: [0.05, null, 0],
   106: [0.05, null, 0]   // uzun ot
 };
+HARD[186] = [5, 'pick', 2]; HARD[187] = [5, 'pick', 3]; HARD[188] = [0.05, null, 0];
+for (let i = 210; i <= 221; i++) HARD[i] = [0.05, null, 0];
 for (let i = 180; i <= 182; i++) HARD[i] = [0.3, 'shovel', 0];
 for (let i = 130; i <= 149; i++) HARD[i] = [0.05, null, 0];   // sebze ekinleri
-for (let i = 120; i <= 125; i++) HARD[i] = [1.2, null, 0];    // renkli yün
+for (let i = 120; i <= 127; i++) HARD[i] = [1.2, null, 0];    // renkli yün
 
 // Blok sertliği (aletin aşınıp aşınmayacağına karar vermek için)
 export const hardTime = t => (HARD[t] || [1])[0];
