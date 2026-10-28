@@ -1,6 +1,6 @@
+import { eco, startPriceTicker } from './game/economy.js';
 import { generate, initRender, rebuild, updateTarget, isWater, updateChunks, chunksReady } from './world/world.js';
 import { P, updatePlayer, jump } from './entities/player.js';
-import { eco, startPriceTicker } from './game/economy.js';
 import { initInput } from './ui/input.js';
 import { drawHud, drawMarket, toggleMarket, isMarketOpen, hooks, MARKET_ON } from './ui/ui.js';
 import { toggleBag, isBagOpen } from './ui/bag.js';
@@ -30,6 +30,8 @@ import { tickVitals } from './entities/vitals.js';
 import { initPack } from './world/texturepack.js';
 import './game/looks.js';
 import './game/modes.js';
+import './game/content.js'; // İçerik tanımlarının erkenden yüklenmesini sağlar
+
 
 const $ = id => document.getElementById(id);
 
