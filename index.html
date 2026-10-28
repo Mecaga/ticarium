@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>BlokDiyar</title>
-<link rel="stylesheet" href="css/style.css?v=38">
+<link rel="stylesheet" href="css/style.css?v=39">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
 <script src="js/dbg.js?v=52"></script>
 </head>
@@ -99,7 +99,7 @@
     </div>
     <div id="mErr"></div>
     <div id="mAuth"></div>
-    <div id="mVer" style="font-size:11px;opacity:.55;text-align:center;margin-top:4px">Sürüm 38</div>
+    <div id="mVer" style="font-size:11px;opacity:.55;text-align:center;margin-top:4px">Sürüm 39</div>
   </div>
 </div>
 
@@ -129,8 +129,14 @@ var missing = ids.filter(function (i) { return !document.getElementById(i); });
 if (missing.length) {
   showErr('Eksik elemanlar: ' + missing.join(', '));
 } else {
-  // Modüllerin çakışmasını engellemek için doğrudan main.js'i güvenli import ediyoruz
-  import('./js/main.js?v=38').catch(function (e) {
+  // Yeni nesil dünya üretim modüllerini (flat, sky, normal) önceden tetikleyip cache'liyoruz
+  Promise.all([
+    import('./js/world/gen/flat.js?v=39').catch(function(){}),
+    import('./js/world/gen/sky.js?v=39').catch(function(){}),
+    import('./js/world/gen/normal.js?v=39').catch(function(){})
+  ]).then(function() {
+    return import('./js/main.js?v=39');
+  }).catch(function (e) {
     showErr('Yükleme hatası: ' + (e.message || e));
   });
 }
