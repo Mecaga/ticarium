@@ -617,4 +617,4 @@ export function iconURL(t) {
   const u = c.toDataURL();
   icons.set(t, u);
   return u;
-  }
+}
