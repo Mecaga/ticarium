@@ -303,6 +303,8 @@ function genChunk(c) {
     }
   }
 
+  for (let i = 0; i < b.length; i++) if (b[i] === 35) b[i] = 0;   // eski netherit bloklar silinir
+
   const flows = [];
   const m = mods.get(ck(c.cx, c.cz));
   if (m) {
