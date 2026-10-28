@@ -22,11 +22,25 @@ TILE_NAMES.push('potato', 'carrot', 'tomato', 'pepper', 'onion', 'cigkofte');
 TILE_NAMES.push('doorC', 'doorO', 'disc', 'shears', 'bedFoot', 'bedHead', 'bedSide', 'jukeTop', 'jukeSide', 'bprint', 'book');
 TILE_NAMES.push('chestTop', 'chestSide');
 TILE_NAMES.push('egg0', 'egg1', 'egg2');
+TILE_NAMES.push('dye6', 'dye7', 'wc6', 'wc7', 'ironB', 'diamB', 'tulipw', 'eggI', 'milkB', 'dough', 'cake', 'lettuce', 'beet', 'cucumber', 'saladC', 'saladL', 'soupB', 'soupT', 'soupV', 'fries');
+for (let k = 5; k < 8; k++) for (let s = 0; s < 4; s++) TILE_NAMES.push('cr' + k + '_' + s);
 
 const FLOWERS = new Set(['lavender', 'daisy', 'poppy', 'bpoppy', 'tulipo', 'tulipp']);
 const ITEMS = new Set(['seeds', 'wheatI', 'bread', 'stick', 'coal', 'ingotI', 'ingotG', 'gem', 'cooked',
   'potato', 'carrot', 'tomato', 'pepper', 'onion', 'cigkofte', 'disc', 'shears', 'book']);
 ['egg0', 'egg1', 'egg2'].forEach(n => ITEMS.add(n));
+
+const NI = {
+  eggI: [[245, 240, 225], 'egg'], milkB: [[245, 245, 250], 'bucket'], dough: [[235, 215, 170], 'blob'], cake: [[240, 200, 210], 'cake'],
+  lettuce: [[120, 200, 80], 'leaf'], beet: [[150, 30, 70], 'root'], cucumber: [[60, 150, 60], 'long'],
+  saladC: [[210, 60, 50], 'bowl'], saladL: [[130, 200, 90], 'bowl'], soupB: [[150, 30, 70], 'bowl'],
+  soupT: [[215, 70, 40], 'bowl'], soupV: [[230, 150, 50], 'bowl'], fries: [[235, 190, 70], 'fries']
+};
+for (const n in NI) { BASE[n] = NI[n][0]; ITEMS.add(n); }
+BASE.dye6 = [60, 160, 60]; BASE.dye7 = [240, 240, 240]; BASE.wc6 = [60, 160, 60]; BASE.wc7 = [240, 240, 240];
+BASE.ironB = [215, 215, 222]; BASE.diamB = [80, 225, 215]; BASE.tulipw = [245, 245, 245];
+for (let k = 5; k < 8; k++) for (let s = 0; s < 4; s++) BASE['cr' + k + '_' + s] = [80, 160, 60];
+FLOWERS.add('tulipw');
 
 const WOOD = [176, 136, 72], STONE = [150, 150, 150], IRON = [222, 222, 228], DIAM = [80, 225, 215], NETH = [92, 76, 88];
 const TOOL = {
@@ -90,15 +104,34 @@ export const FACE_TILES = {
   156: same('book'),
   157: same('egg0'), 158: same('egg1'), 159: same('egg2')
 };
-for (let i = 0; i < 6; i++) { FACE_TILES[110 + i] = same('dye' + i); FACE_TILES[120 + i] = same('wc' + i); }
-for (let k = 0; k < 5; k++) for (let s = 0; s < 4; s++) FACE_TILES[130 + k * 4 + s] = same('cr' + k + '_' + s);
+FACE_TILES[160] = same('ironB');
+FACE_TILES[161] = same('diamB');
+FACE_TILES[47] = same('tulipw');
+for (let i = 0; i < 8; i++) { FACE_TILES[110 + i] = same('dye' + i); FACE_TILES[120 + i] = same('wc' + i); }
+for (let k = 0; k < 8; k++) for (let s = 0; s < 4; s++) FACE_TILES[130 + k * 4 + s] = same('cr' + k + '_' + s);
+FACE_TILES[190] = same('beet');
+FACE_TILES[191] = same('lettuce');
+FACE_TILES[192] = same('cucumber');
+FACE_TILES[178] = same('milkB');
+FACE_TILES[177] = same('dough');
+FACE_TILES[174] = same('cake');
+FACE_TILES[170] = same('saladC');
+FACE_TILES[171] = same('saladL');
+FACE_TILES[172] = same('soupB');
+FACE_TILES[173] = same('soupT');
+FACE_TILES[175] = same('soupV');
+FACE_TILES[176] = same('fries');
+FACE_TILES[230] = same('eggI');
 
 // Düz sprite olarak görünen eşyalar (ikonda ve yerde)
 const FLAT = new Set([12, 15, 30, 31, 33, 40, 41, 42, 43, 44, 45, 46, 71, 73, 74, 75, 77, 78, 79, 80, 87, 88, 102, 103, 104, 105, 106, 108, 109, 156, 157, 158, 159]);
 for (let i = 50; i <= 68; i++) FLAT.add(i);
 for (const i of [69, 82, 83, 84, 85, 86, 89, 91, 92, 93, 94, 95, 96, 97, 98]) FLAT.add(i);
-for (let i = 110; i <= 115; i++) FLAT.add(i);
-for (let i = 130; i <= 155; i++) FLAT.add(i);
+for (let i = 110; i <= 117; i++) FLAT.add(i);
+for (let i = 130; i <= 161; i++) FLAT.add(i);
+for (let i = 170; i <= 178; i++) FLAT.add(i);
+for (let i = 190; i <= 192; i++) FLAT.add(i);
+for (let i = 210; i <= 232; i++) FLAT.add(i);
 export const isFlat = t => FLAT.has(t);
 export const addFlat = (...a) => a.forEach(i => FLAT.add(i));
 
@@ -133,8 +166,8 @@ for (const n in TOOL) BASE[n] = TOOL[n][1];
 for (const n in ARM) BASE[n] = ARM[n][1];
 BASE.egg0 = [150, 100, 60]; BASE.egg1 = [235, 235, 235]; BASE.egg2 = [240, 200, 90];
 
-for (let i = 0; i < 6; i++) { BASE['dye' + i] = DYE_RGB[i]; BASE['wc' + i] = DYE_RGB[i]; }
-for (let k = 0; k < 5; k++) for (let s = 0; s < 4; s++) BASE['cr' + k + '_' + s] = [80, 160, 60];
+for (let i = 0; i < 8; i++) { BASE['dye' + i] = DYE_RGB[i]; BASE['wc' + i] = DYE_RGB[i]; }
+for (let k = 0; k < 8; k++) for (let s = 0; s < 4; s++) BASE['cr' + k + '_' + s] = [80, 160, 60];
 
 const SEEDS = Array.from({ length: 8 }, (_, i) => [hash(i, 1, 50) * 16, hash(i, 2, 50) * 16]);
 function cobble(x, y) {
@@ -155,6 +188,10 @@ function plantPix(name, x, y) {
     const r = Math.hypot((x - 7.5) * 0.95, y - 9.5);
     if (r < 5.2) return (x === 5 && y === 7) ? [250, 150, 150] : [200, 30, 30];
     return null;
+  }
+  if (name === 'tulipw') {
+    const e = Math.pow((x - 7.5) / 2.8, 2) + Math.pow((y - 5.5) / 3.2, 2);
+    return (e < 1 || ((x === 6 || x === 9) && y === 2)) ? [245, 245, 245] : null;
   }
   const stem = (x === 7 || x === 8) && y >= 8;
   const leaf = (y === 11 && (x === 6 || x === 9)) || (y === 12 && (x === 5 || x === 10));
@@ -194,6 +231,8 @@ function dyePix(col, x, y) {
 
 const CROPC = [[[70, 150, 60], [196, 160, 96]], [[84, 170, 70], [240, 130, 30]], [[60, 140, 55], [220, 50, 40]],
   [[55, 135, 60], [225, 70, 40]], [[110, 170, 70], [235, 225, 235]]];
+CROPC.push([[110, 200, 80], [130, 210, 90]], [[60, 130, 60], [150, 30, 70]], [[50, 130, 50], [60, 150, 60]]);
+
 function cropPix(k, s, x, y) {
   const h = [3, 6, 9, 12][s], lc = CROPC[k][0], fc = CROPC[k][1];
   for (const c of [2, 5, 8, 11, 14]) {
@@ -227,7 +266,35 @@ function ingotPix(col, x, y) {
   return y <= 7 ? col.map(v => Math.min(255, v + 30)) : col;
 }
 
+function newPix(name, x, y) {
+  const [c, sh] = NI[name], el = (a, b, cx, cy) => Math.pow((x - cx) / a, 2) + Math.pow((y - cy) / b, 2) < 1;
+  if (sh === 'egg') return el(3.8, 5, 7.5, 9) ? c : null;
+  if (sh === 'blob') return el(6, 4, 7.5, 9) ? c : null;
+  if (sh === 'long') return el(6.5, 2.8, 7.5, 8.5) ? (x < 4 ? [120, 190, 100] : c) : null;
+  if (sh === 'leaf') return Math.hypot(x - 7.5, y - 9) < 5.5 ? (x === 7 || x === 8 ? [80, 150, 55] : c) : null;
+  if (sh === 'root') {
+    if (y >= 2 && y <= 5 && x >= 7 && x <= 8) return [70, 150, 60];
+    return Math.hypot(x - 7.5, y - 10) < 4.5 ? c : null;
+  }
+  if (sh === 'bucket') {
+    if (y < 4 || y > 13 || Math.abs(x - 7.5) > (y < 8 ? 5 : 4)) return null;
+    return y <= 6 ? c : [150, 155, 165];
+  }
+  if (sh === 'cake') {
+    if (y === 4 && x >= 7 && x <= 8) return [210, 40, 50];
+    if (y >= 5 && y <= 7 && x >= 2 && x <= 13) return c;
+    return (y >= 8 && y <= 13 && x >= 2 && x <= 13) ? [200, 150, 90] : null;
+  }
+  if (sh === 'bowl') {
+    if (y < 8 || !el(6, 5, 7.5, 8)) return null;
+    return y <= 9 ? c : [190, 190, 200];
+  }
+  if (sh === 'fries') return ([4, 6, 8, 10].includes(x) && y >= 4 + (x % 3) && y <= 13) ? c : null;
+  return null;
+}
+
 function itemPix(name, x, y) {
+  if (NI[name]) return newPix(name, x, y);
   if (/^egg[0-2]$/.test(name)) {
     const e = Math.pow((x - 7.5) / 4.6, 2) + Math.pow((y - 8.5) / 6, 2);
     if (e >= 1) return null;
@@ -383,7 +450,7 @@ function buildAtlas() {
         const c = grassPix(x, y);
         if (!c) continue;
         [r, g, b] = c; k = 0.92 + hash(x, y, i) * 0.16;
-      } else if (/^dye[0-5]$/.test(name)) {
+      } else if (/^dye[0-7]$/.test(name)) {
         const c = dyePix([r, g, b], x, y);
         if (!c) continue;
         [r, g, b] = c; k = 0.95 + hash(x, y, i) * 0.1;
@@ -507,7 +574,7 @@ function buildAtlas() {
             k = 0.93 + hash(x, y, 62) * 0.1;
             if ((x + y) % 4 === 0) k *= 0.95;
             break;
-          case 'wc0': case 'wc1': case 'wc2': case 'wc3': case 'wc4': case 'wc5':
+          case 'wc0': case 'wc1': case 'wc2': case 'wc3': case 'wc4': case 'wc5': case 'wc6': case 'wc7':
             k = 0.93 + hash(x, y, 62 + i) * 0.1;
             if ((x + y) % 4 === 0) k *= 0.95;
             break;
@@ -581,6 +648,10 @@ function buildAtlas() {
             k = 0.9 + hash(x, y, 146) * 0.2;
             if (x % 5 === 0) k *= 0.8;
             if (y >= 5 && y <= 6 && x >= 4 && x <= 11) { r = 20; g = 20; b = 24; k = 1; }
+            break;
+          case 'ironB': case 'diamB':
+            k = 0.92 + hash(x, y, 160) * 0.16;
+            if (x % 8 === 0 || y % 8 === 0) k *= 0.75;
             break;
           case 'bprint':
             k = 0.95 + hash(x, y, 147) * 0.08;
