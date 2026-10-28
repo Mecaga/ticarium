@@ -11,7 +11,6 @@ function reg(id, name, color, base, tile, cat) {
   eco.inv[id] = 0; eco.raw[id] = base; eco.trend[id] = 0;
   if (cat != null) CATS[cat][1].push(id);
 }
-
 reg(186, 'Demir blok', 0xd8d8de, 150, 'ironB', 0);
 reg(187, 'Elmas blok', 0x50e1d7, 500, 'diamB', 0);
 reg(188, 'Beyaz lale', 0xf5f5f5, 8, 'tulipw', 1);
@@ -36,7 +35,6 @@ reg(201, 'Patates kızartması', 0xebbe46, 30, 'fries', 2);
 // Yeni ekinlerin büyüme aşamaları (marul 210-213, pancar 214-217, salatalık 218-221)
 for (let k = 5; k < 8; k++) for (let s = 0; s < 4; s++) FACE_TILES[210 + (k - 5) * 4 + s] = same('cr' + k + '_' + s);
 for (let i = 6; i < 8; i++) { FACE_TILES[110 + i] = same('dye' + i); FACE_TILES[120 + i] = same('wc' + i); }
-
 addFlat(116, 117);
 for (let i = 188; i <= 201; i++) addFlat(i);
 for (let i = 210; i <= 221; i++) addFlat(i);
