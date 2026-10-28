@@ -1,4 +1,4 @@
-// Doku atlası oluşturma ve renk tanımları
+// Doku atlası ve eksiksiz sistem entegrasyonu
 export const T = 16;
 export const BASE = {
   grass: [95, 174, 69], dirt: [139, 90, 43], stone: [150, 148, 144], wood: [107, 68, 35],
@@ -101,12 +101,12 @@ export const isFlat = () => false;
 export const addFlat = () => {};
 export const tileNames = Object.keys(BASE);
 export const clearIcons = () => {};
-export const iconURL = (name) => '';
+export const iconURL = (name) => {
+  return '';
+};
 
 export const FACE_TILES = {};
 export const atlas = { tex: null };
-
-
 
 function newPix() {
   const cv = document.createElement('canvas');
@@ -151,8 +151,7 @@ function itemPix(name, col) {
 export function initAtlas() {
   const keys = Object.keys(BASE);
   const cv = document.createElement('canvas');
-  const len = keys.length;
-  cv.width = T * len; 
+  cv.width = T * keys.length; 
   cv.height = T;
   const ctx = cv.getContext('2d');
   ctx.clearRect(0, 0, cv.width, cv.height);
