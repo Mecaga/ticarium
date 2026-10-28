@@ -92,7 +92,6 @@ for (let k = 5; k < 8; k++) for (let s = 0; s < 4; s++) BASE['cr' + k + '_' + s]
 export const CROPC = [];
 for (let k = 5; k < 8; k++) for (let s = 0; s < 4; s++) CROPC.push('cr' + k + '_' + s);
 
-// --- DİĞER DOSYALARIN İSTEDİĞİ EKSİK FONKSİYON VE DEĞİŞKENLER ---
 export function hash(x, z, s = 1) {
   let v = Math.sin(x * 12.9898 + z * 78.233 + s * 37.719) * 43758.5453123;
   return v - Math.floor(v);
@@ -103,60 +102,44 @@ export const addFlat = () => {};
 export const iconURL = () => '';
 export const tileNames = [];
 export const clearIcons = () => {};
-// ----------------------------------------------------------------
 
 export const FACE_TILES = {};
 export const atlas = { tex: null };
-
-function newPix() {
-  const cv = document.createElement('canvas');
-  cv.width = T; cv.height = T;
-  return { cv: cv, ctx: cv.getContext('2d') };
-}
-
-function itemPix(col) {
-  const p = newPix(), ctx = p.ctx;
-  ctx.fillStyle = `rgb(${col[0]},${col[1]},${col[2]})`;
-  ctx.fillRect(2, 2, 12, 12);
-  ctx.fillStyle = 'rgba(0,0,0,0.25)';
-  ctx.fillRect(2, 12, 12, 2);
-  ctx.fillRect(12, 2, 2, 12);
-  return p.cv;
-}
 
 export function initAtlas() {
   const keys = Object.keys(BASE);
   const cv = document.createElement('canvas');
   const len = keys.length;
-  cv.width = T * len; cv.height = T;
+  cv.width = T * len; 
+  cv.height = T;
   const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
 
   keys.forEach((k, i) => {
     const c = BASE[k] || [255, 255, 255];
-    let sub;
+    ctx.save();
+    ctx.translate(i * T, 0);
+
     if (k.startsWith('cr')) {
-      sub = newPix();
+      ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
       const s = parseInt(k.slice(-1)) || 0;
-      sub.ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
-      sub.ctx.fillRect(2, 14 - s * 3, 12, s * 3 + 1);
+      ctx.fillRect(2, 14 - s * 3, 12, s * 3 + 1);
     } else if (ITEMS.has(k)) {
-      sub = newPix();
-      sub.ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
-      sub.ctx.fillRect(2, 2, 12, 12);
-      sub.ctx.fillStyle = 'rgba(0,0,0,0.3)';
-      sub.ctx.fillRect(2, 12, 12, 2);
-      sub.ctx.fillRect(12, 2, 2, 12);
+      // Item Çerçevesi ve İç Dolgusu
+      ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
+      ctx.fillRect(2, 2, 12, 12);
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.fillRect(2, 12, 12, 2);
+      ctx.fillRect(12, 2, 2, 12);
     } else {
-      sub = newPix();
-      sub.ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
-      sub.ctx.fillRect(0, 0, T, T);
-      sub.ctx.fillStyle = 'rgba(0,0,0,0.15)';
-      sub.ctx.fillRect(0, 0, T, 2);
-      sub.ctx.fillRect(0, 0, 2, T);
+      // Blok Yüzeyi Detayı
+      ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
+      ctx.fillRect(0, 0, T, T);
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      ctx.fillRect(0, 0, T, 2);
+      ctx.fillRect(0, 0, 2, T);
     }
-    if (sub && sub.cv) {
-      ctx.drawImage(sub.cv, i * T, 0);
-    }
+    ctx.restore();
     FACE_TILES[k] = [i, i, i];
   });
 
@@ -168,6 +151,7 @@ export function initAtlas() {
   tex.magFilter = THREE.NearestFilter;
   tex.minFilter = THREE.NearestFilter;
   tex.generateMipmaps = false;
+  tex.needsUpdate = true;
   atlas.tex = tex;
 }
 
