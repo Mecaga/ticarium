@@ -121,7 +121,6 @@ bindBtn('bPlayers', togglePlayers);
 bindBtn('bDrop', () => { if (!isDead()) dropFromInventory(eco.sel, 1); });
 
 initMenu(enterGame);
-initPack();
 showMenu();
 applyRoomUI();
 if (MARKET_ON) startPriceTicker(() => { if (isMarketOpen()) drawMarket(); });
