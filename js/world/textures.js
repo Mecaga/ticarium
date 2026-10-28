@@ -38,7 +38,6 @@ const ARM = { helm: 4, chest: 4, leg: 4, boot: 4 };
 for (const k in TOOL) {
   const baseCol = BASE[k + 'W'];
   for (let i = 0; i < TOOL[k]; i++) {
-    const suf = ['S', 'I', 'D'][i];
     const key = k + ['S', 'I', 'D'][i];
     if (BASE[key]) {
       const mult = i === 0 ? 0.9 : i === 1 ? 1.1 : 1.3;
@@ -50,7 +49,6 @@ for (const k in TOOL) {
 for (const k in ARM) {
   const baseCol = BASE[k + 'I'];
   for (let i = 0; i < ARM[k]; i++) {
-    const suf = ['I', 'D'][i];
     const key = k + ['I', 'D'][i];
     if (BASE[key]) {
       const mult = i === 0 ? 1.0 : 1.3;
@@ -71,7 +69,6 @@ for (const n in NI) { BASE[n] = NI[n][0]; ITEMS.add(n); }
 BASE.dye6 = [60, 160, 60]; BASE.dye7 = [240, 240, 240]; BASE.wc6 = [60, 160, 60]; BASE.wc7 = [240, 240, 240];
 BASE.ironB = [215, 215, 222]; BASE.diamB = [80, 225, 215]; BASE.tulipw = [245, 245, 245];
 for (let k = 5; k < 8; k++) for (let s = 0; s < 4; s++) BASE['cr' + k + '_' + s] = [80, 160, 60];
-FLOWERS.add('tulipw');
 
 export const FLOWERS = new Set(['lavender', 'daisy', 'poppy', 'blueP', 'orangeT', 'pinkT', 'whiteT', 'tulipw']);
 export const ITEMS = new Set([
@@ -90,6 +87,19 @@ for (let i = 0; i < 8; i++) ITEMS.add('wc' + i);
 
 export const CROPC = [];
 for (let k = 5; k < 8; k++) for (let s = 0; s < 4; s++) CROPC.push('cr' + k + '_' + s);
+
+// --- DİĞER DOSYALARIN İSTEDİĞİ EKSİK FONKSİYON VE DEĞİŞKENLER ---
+export function hash(x, z, s = 1) {
+  let v = Math.sin(x * 12.9898 + z * 78.233 + s * 37.719) * 43758.5453123;
+  return v - Math.floor(v);
+}
+
+export const isFlat = () => false;
+export const addFlat = () => {};
+export const iconURL = () => '';
+export const tileNames = [];
+export const clearIcons = () => {};
+// ----------------------------------------------------------------
 
 export const FACE_TILES = {};
 export const atlas = { tex: null };
