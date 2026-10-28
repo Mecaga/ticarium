@@ -30,15 +30,20 @@ import { useJuke, JUKE, isDisc, useShears, SHEARS, useBlueprint, BPRINT } from '
 import { placeDoor, toggleDoor, placeBed, pairFix, EXTRA_DROPS, DOOR, isDoorBlock, BEDH } from './doors.js';
 import { openChest, chestBroken, isChestOpen, CHEST } from './chests.js';
 import { openBook, isBook } from './library.js';
+import { FOODX, NOPX } from './content.js';
 
 // Açlık puanları: et, elma, ekmek, pişmiş et, patates, havuç, domates, biber, soğan, çiğköfte
 const FOOD = { 15: 6, 46: 4, 75: 5, 86: 10, 150: 3, 151: 4, 152: 3, 153: 2, 154: 2, 155: 14 };
+Object.assign(FOOD, FOODX);
+
 const NOPLACE = new Set([STICK, WHEAT, COAL, INGOT_I, INGOT_G, GEM]);
+NOPX.forEach(i => NOPLACE.add(i));
+
 const MOB_DMG = 3, PVP_DMG = 4;
 const D6 = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
 let lastAtk = 0;
 
-// Ekilebilen ürünler: eşya -> ilk büyüme aşaması bloğu (tohum ve 5 sebze)
+// Ekilebilen ürünler: eşya -> ilk büyüme aşaması bloğu (tohum ve sebzeler)
 const CROPS = { [SEEDS]: CROP_MIN };
 VEG.forEach(([b, it]) => { CROPS[it] = b; });
 
@@ -74,6 +79,7 @@ function afterWear(t, amt) {
 
 // Blok kırılınca düşen eşyalar [[eşya, adet], ...]
 function dropsOf(t) {
+  if (t === 35) return []; // Eski netherit bloklar
   if (t >= 180 && t <= 182) return [[8, 1]];
   if (EXTRA_DROPS[t]) return EXTRA_DROPS[t];
   if (t === FARM) return [[2, 1]];
@@ -81,13 +87,11 @@ function dropsOf(t) {
   if (t === DIAMOND_ORE) return [[GEM, 1]];
   if (t === TALL) {   // uzun ot: %30 tohum, %4 rastgele sebze
     const r = Math.random();
-    if (r < 0.04) return [[VEG[Math.floor(Math.random() * 5)][1], 1]];
+    if (r < 0.04) return [[VEG[Math.floor(Math.random() * VEG.length)][1], 1]];
     return r < 0.34 ? [[SEEDS, 1]] : [];
   }
-  if (t >= VCROP_MIN && t <= VCROP_MAX) {   // sebze: olgunsa 1-3 ürün, değilse ekilen ürün geri gelir
-    const k = (t - VCROP_MIN) >> 2, s = (t - VCROP_MIN) & 3, it = VEG[k][1];
-    return s < 3 ? [[it, 1]] : [[it, 1 + Math.floor(Math.random() * 3)]];
-  }
+  const vg = VEG.find(([b]) => t >= b && t < b + 4);
+  if (vg) { const s = t - vg[0]; return s < 3 ? [[vg[1], 1]] : [[vg[1], 1 + Math.floor(Math.random() * 3)]]; }
   if (isCrop(t)) {
     if (t < CROP_MAX) return [[SEEDS, 1]];
     return [[WHEAT, 1], [SEEDS, 1 + Math.floor(Math.random() * 2)]];
@@ -113,16 +117,16 @@ function popPlant(x, y, z) {
   if (!isCreative()) dropAt(dropsOf(a), x, y, z);
 }
 
-// Su ya da lav bir bitkinin üstüne akınca bitki kırılır, eşyası düşer (sadece oda yönetimi olan cihazda)
+// Su ya da lav bir bitkinin üstüne akınca bitki kırılır, eşyası düşer
 ph.fn = (x, y, z, old) => {
   const r = G.room;
   if (!r || !r.sim) return;
   dropAt(dropsOf(old), x, y, z);
 };
 
-// ---- Büyüme: fidanlar, buğday ve sebzeler (yüklü chunk'lar taranır, sadece oda yönetimi olan cihazda) ----
+// ---- Büyüme: fidanlar, buğday ve sebzeler ----
 const GROW = [SAPLING, 77, 78, 79];
-for (let k = 0; k < 5; k++) for (let s = 0; s < 3; s++) GROW.push(VCROP_MIN + k * 4 + s);
+VEG.forEach(([b]) => { for (let s = 0; s < 3; s++) GROW.push(b + s); });
 
 function wetNear(x, y, z) {   // 4 blok yarıçapında su var mı
   for (let dx = -4; dx <= 4; dx++) for (let dz = -4; dz <= 4; dz++) {
@@ -154,7 +158,7 @@ export function initActions() {
   setInterval(growTick, 3000);
 }
 
-// ---- Yapraklar: gövde bitince zamanla çürür ----
+// ---- Yapraklar ----
 function leafDrop(x, y, z, t) {
   const r = Math.random(), arr = [];
   if (r < 0.09) arr.push([SAPLING, 1]);
@@ -228,8 +232,29 @@ export function breakBlock(canDrop = true) {
   rebuild(); drawHud();
 }
 
+let milking = 0;
+function lookMob() {
+  const cp = Math.cos(P.pitch);
+  return findMob(P.x, P.y + 1.6, P.z, -Math.sin(P.yaw) * cp, Math.sin(P.pitch), -Math.cos(P.yaw) * cp, 4.5);
+}
+function milkCow(id) {
+  if (milking) return;
+  milking = 1;
+  toast('🥛 Sağılıyor... ineğe bakmaya devam et');
+  setTimeout(() => {
+    milking = 0;
+    const m = lookMob();
+    if (!m || m.id !== id) return toast('Sağma yarıda kaldı');
+    if (eco.inv[BUCKET] < 1) return;
+    take(BUCKET); give(178); sfx.splash(); drawHud();
+    toast('🥛 Süt kovası doldu');
+  }, 1500);
+}
+
 function useBucket() {
   if (eco.inv[BUCKET] < 1) return toast('Kova yok.');
+  const cm = lookMob();
+  if (cm && mobKind(cm.id) === 'cow') return milkCow(cm.id);
   if (!wtarget) return toast('Bir su ya da lav kaynağına bak (akan sıvı alınamaz)');
   const [x, y, z] = wtarget;
   const t = get(x, y, z);
@@ -313,10 +338,13 @@ function plantCrop(item) {
   if (eco.inv[item] < 1) return false;
   if (target) {
     const [tx, ty, tz] = target;
-    if (get(tx, ty, tz) === first + 3 && get(tx, ty - 1, tz) === FARM) {
-      for (const [it, n] of dropsOf(first + 3)) give(it, n);
-      set(tx, ty, tz, first);
-      commit(tx, ty, tz, first);
+    const vg = VEG.find(([b, it]) => it === item && get(tx, ty, tz) === b + 3 && get(tx, ty - 1, tz) === FARM);
+    if (vg || (item === SEEDS && get(tx, ty, tz) === CROP_MAX && get(tx, ty - 1, tz) === FARM)) {
+      const targetBlock = get(tx, ty, tz);
+      for (const [it, n] of dropsOf(targetBlock)) give(it, n);
+      const newBlock = vg ? vg[0] : CROP_MIN;
+      set(tx, ty, tz, newBlock);
+      commit(tx, ty, tz, newBlock);
       take(item);
       sfx.breakB();
       toast('🌾 Hasat edildi, yeniden ekildi');
@@ -402,7 +430,7 @@ export function placeBlock() {
   const [x, y, z] = pc;
   if (!inBounds(x, y, z)) return toast(y >= H ? 'Yükseklik sınırı (' + H + ')' : 'Dünya sınırı');
   const old = get(x, y, z);
-  if (isPlant(old) && old !== TALL && !(old >= 40 && old <= 45)) return toast('Burada ekin var');
+  if (isPlant(old) && old !== TALL && !(old >= 40 && old <= 45) && old !== 47) return toast('Burada ekin var');
   if (isPlant(t)) {
     if (old !== 0 && old !== TALL) return;
     const g = get(x, y - 1, z);
