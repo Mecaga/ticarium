@@ -94,6 +94,7 @@ function craft() {
   if (!canAdd(out[0], out[1])) return toast('🎒 Çanta dolu');
   cells = cells.map(c => (c && c.n > 1 ? { t: c.t, n: c.n - 1 } : null));
   addItem(out[0], out[1]);
+  if (out[2]) addItem(out[2], 1);   // boş kova geri gelir
   sfx.place();
   drawHud();
   draw();
