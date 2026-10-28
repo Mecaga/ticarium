@@ -1,3 +1,5 @@
+window.BASE = window.BASE || 10;
+
 import { hash, atlas, FACE_TILES, T, initAtlas, tileOf } from './textures.js';
 import {
   BEDROCK, SAPLING, BIRCH_LOG, BIRCH_LEAF, WATER, GLASS, WATER_MAX, LAVA, LAVA_MAX, OBSIDIAN,
