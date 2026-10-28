@@ -5,9 +5,13 @@ import { P } from './player.js';
 // send/remove: online.js doldurur (sadece oda yönetimi sende olan cihaz hayvanları yönetir)
 export const mhooks = { send: null, remove: null };
 
-const KIND = { cow: { drop: 15, dmin: 1, dmax: 3 }, sheep: { drop: 16, dmin: 1, dmax: 2 } };
-const want = () => (worldKind() === 'sky' ? { cow: 1, sheep: 1 } : { cow: 3, sheep: 3 });
-const kindOf = id => (id.indexOf('sheep') === 0 ? 'sheep' : 'cow');
+const KIND = {
+  cow: { drop: 15, dmin: 1, dmax: 3 },
+  sheep: { drop: 16, dmin: 1, dmax: 2 },
+  chicken: { drop: 15, dmin: 1, dmax: 1 }
+};
+const want = () => (worldKind() === 'sky' ? { cow: 1, sheep: 1, chicken: 1 } : { cow: 3, sheep: 3, chicken: 3 });
+const kindOf = id => (id.indexOf('sheep') === 0 ? 'sheep' : id.indexOf('chicken') === 0 ? 'chicken' : 'cow');
 const shadeHex = (c, k) => (((c >> 16 & 255) * k) << 16) | (((c >> 8 & 255) * k) << 8) | ((c & 255) * k);
 
 let group = null, sendT = 0, respT = 15;
@@ -57,6 +61,16 @@ function makeMob(kind) {
     box(0.08, 0.08, 0.04, dark, -0.13, 1.34, -1.11);
     box(0.08, 0.08, 0.04, dark, 0.13, 1.34, -1.11);
     addLegs(leg, null, 0.3, 0.42, 0.55, 0.55);
+  } else if (kind === 'chicken') {
+    const w = M(0xf5f5f0), red = M(0xd02828), beak = M(0xf0a020), dark = M(0x2a2a2a), leg = M(0xe0a030);
+    box(0.4, 0.35, 0.55, w, 0, 0.5, 0);
+    box(0.22, 0.26, 0.22, w, 0, 0.82, -0.3);
+    box(0.06, 0.08, 0.1, red, 0, 1.0, -0.3);
+    box(0.1, 0.07, 0.12, beak, 0, 0.8, -0.46);
+    box(0.05, 0.05, 0.03, dark, -0.07, 0.86, -0.42);
+    box(0.05, 0.05, 0.03, dark, 0.07, 0.86, -0.42);
+    box(0.3, 0.22, 0.12, w, 0, 0.55, 0.32);
+    addLegs(leg, null, 0.1, 0.05, 0.32, 0.32);
   } else {
     const white = M(0xf3f3f3), dark = M(0x2a2a2a), pink = M(0xe8a0a0), tan = M(0xd9c9a0);
     box(0.9, 0.7, 1.4, white, 0, 0.95, 0);
@@ -89,7 +103,7 @@ function createMob(id, x, y, z, f, col) {
     x, y, z, yaw: Math.random() * 6.28, vy: 0, grounded: false,
     tx: x, ty: y, tz: z, tyaw: 0,
     dir: Math.random() * 6.28, timer: Math.random() * 3, moving: false, speed: 0, phase: 0,
-    hp: 6, kx: 0, kz: 0, panic: 0, f: f || 0, ft: 0, alive: true, lavaT: 0
+    hp: 6, egg: 60 + Math.random() * 60, kx: 0, kz: 0, panic: 0, f: f || 0, ft: 0, alive: true, lavaT: 0
   };
   if (col >= 0) setColor(m, col);
   mm.mesh.position.set(x, y, z);
@@ -217,7 +231,7 @@ function killMob(m) {
   m.alive = false;
   const k = KIND[m.kind];
   const n = k.dmin + Math.floor(Math.random() * (k.dmax - k.dmin + 1));
-  const dropT = (m.kind === 'sheep' && m.col >= 0) ? WOOLC_MIN + m.col : k.drop;   // boyalı koyun: o renkte yün
+  const dropT = (m.kind === 'sheep' && m.col >= 0) ? WOOLC_MIN + m.col : k.drop;
   const arr = [];
   for (let i = 0; i < n; i++) {
     arr.push({ t: dropT, c: 1, x: m.x, y: m.y + 0.8, z: m.z, vx: rnd(3), vy: 3 + Math.random() * 2, vz: rnd(3) });
@@ -226,7 +240,6 @@ function killMob(m) {
   dropMob(m);
 }
 
-// d < 0: boyama isteği (renk = -d - 1). Başka oyuncuların boyama ve vuruşları oda yönetimi olan cihaza bu yolla gelir.
 export function hurtMob(id, d, fx, fz) {
   if (d < 0) return dyeMob(id, -d - 1);
   const m = mobs.get(id);
@@ -243,7 +256,14 @@ export function hurtMob(id, d, fx, fz) {
 
 function sim(m, dt) {
   const fx0 = Math.floor(m.x), fz0 = Math.floor(m.z);
-  if (!isLoaded(fx0, fz0)) { m.speed = 0; return; }   // chunk yüklü değilse bekler
+  if (!isLoaded(fx0, fz0)) { m.speed = 0; return; }
+  if (m.kind === 'chicken') {
+    m.egg -= dt;
+    if (m.egg <= 0) {
+      m.egg = 60 + Math.random() * 60;
+      dropItems([{ t: 189, c: 1, x: m.x, y: m.y + 0.4, z: m.z, vx: 0, vy: 1.5, vz: 0 }]);
+    }
+  }
   const dec = Math.pow(0.02, dt);
   m.kx *= dec; m.kz *= dec;
   if (m.panic > 0) m.panic -= dt;
@@ -255,7 +275,7 @@ function sim(m, dt) {
   }
   const inW = get(fx0, Math.floor(m.y + 0.3), fz0) === WATER;
   const inL = get(fx0, Math.floor(m.y + 0.3), fz0) === LAVA;
-  if (inL) {   // lavda kaldıkça hasar alır
+  if (inL) {
     m.hp -= dt * 2.5; m.lavaT += dt;
     if (m.lavaT > 0.5) { m.lavaT = 0; m.f++; flashMob(m); }
     if (m.hp <= 0) { killMob(m); return; }
