@@ -27,6 +27,21 @@ export const BASE = {
   salatalik: [60, 150, 60]
 };
 
+export const FLOWERS = new Set(['lavender', 'daisy', 'poppy', 'blueP', 'orangeT', 'pinkT', 'whiteT', 'tulipw']);
+export const ITEMS = new Set([
+  'meat', 'apple', 'pickW', 'pickS', 'pickI', 'pickD', 'axeI', 'shovI', 'axeW', 'axeS',
+  'shovW', 'shovS', 'hoeW', 'hoeS', 'hoeI', 'hoeD', 'swdW', 'swdS', 'swdI', 'swdD',
+  'axeD', 'stick', 'seed', 'wheat', 'bread', 'coal', 'ironI', 'goldI', 'diamI',
+  'cook', 'shovD', 'helmI', 'chestI', 'legI', 'bootI', 'helmD', 'chestD', 'legD',
+  'bootD', 'potato', 'carrot', 'tomato', 'pepper', 'onion', 'cig', 'salad',
+  'maruls', 'pancars', 'doms', 'kek', 'sebzes', 'patatesk', 'hamur', 'sut',
+  'pancar', 'marul', 'salatalik', 'patatez', 'havucz', 'domatez', 'biberz', 'onione',
+  'marulz', 'salatalikz', 'pancarz'
+]);
+
+for (let i = 0; i < 8; i++) ITEMS.add('dye' + i);
+for (let i = 0; i < 8; i++) ITEMS.add('wc' + i);
+
 const DYE_RGB = [
   [154, 95, 208], [242, 201, 30], [208, 34, 40], [48, 80, 205],
   [243, 134, 31], [240, 120, 172], [60, 160, 60], [240, 240, 240]
@@ -59,23 +74,6 @@ for (const k in ARM) {
 
 for (let i = 0; i < 6; i++) { BASE['dye' + i] = DYE_RGB[i]; BASE['wc' + i] = DYE_RGB[i]; }
 
-// ÖNCE ITEMS VE FLOWERS TANIMLANIYOR (Hata bu yüzden çıkıyordu)
-export const FLOWERS = new Set(['lavender', 'daisy', 'poppy', 'blueP', 'orangeT', 'pinkT', 'whiteT', 'tulipw']);
-export const ITEMS = new Set([
-  'meat', 'apple', 'pickW', 'pickS', 'pickI', 'pickD', 'axeI', 'shovI', 'axeW', 'axeS',
-  'shovW', 'shovS', 'hoeW', 'hoeS', 'hoeI', 'hoeD', 'swdW', 'swdS', 'swdI', 'swdD',
-  'axeD', 'stick', 'seed', 'wheat', 'bread', 'coal', 'ironI', 'goldI', 'diamI',
-  'cook', 'shovD', 'helmI', 'chestI', 'legI', 'bootI', 'helmD', 'chestD', 'legD',
-  'bootD', 'potato', 'carrot', 'tomato', 'pepper', 'onion', 'cig', 'salad',
-  'maruls', 'pancars', 'doms', 'kek', 'sebzes', 'patatesk', 'hamur', 'sut',
-  'pancar', 'marul', 'salatalik', 'patatez', 'havucz', 'domatez', 'biberz', 'onione',
-  'marulz', 'salatalikz', 'pancarz'
-]);
-
-for (let i = 0; i < 8; i++) ITEMS.add('dye' + i);
-for (let i = 0; i < 8; i++) ITEMS.add('wc' + i);
-
-// ŞİMDİ ITEMS KULLANILAN NI DÖNGÜSÜ ÇALIŞABİLİR
 const NI = {
   patatez: [196, 160, 96], havucz: [240, 130, 30], domatez: [220, 50, 40],
   biberz: [60, 170, 60], onione: [235, 225, 235], marulz: [80, 180, 80],
@@ -130,11 +128,11 @@ export function initAtlas() {
   const ctx = cv.getContext('2d');
 
   keys.forEach((k, i) => {
-    const c = BASE[k];
+    const c = BASE[k] || [255, 255, 255];
     let sub;
     if (k.startsWith('cr')) {
       sub = newPix();
-      const s = parseInt(k.slice(-1));
+      const s = parseInt(k.slice(-1)) || 0;
       sub.ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
       sub.ctx.fillRect(2, 14 - s * 3, 12, s * 3 + 1);
     } else if (ITEMS.has(k)) {
@@ -147,7 +145,9 @@ export function initAtlas() {
       sub.ctx.fillRect(0, 0, T, 2);
       sub.ctx.fillRect(0, 0, 2, T);
     }
-    ctx.drawImage(sub.cv, i * T, 0);
+    if (sub && sub.cv) {
+      ctx.drawImage(sub.cv, i * T, 0);
+    }
     FACE_TILES[k] = [i, i, i];
   });
 
