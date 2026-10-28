@@ -5,7 +5,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const DOMAIN = '@blokdiyar.app';
-// Giriş yapmış oyuncunun kimliği. Eski misafir (anonim) oturum burada "giriş yok" sayılır.
+
 export let uid = null;
 export let userName = '';
 
@@ -13,18 +13,38 @@ function setUser(u) {
   if (u && !u.isAnonymous && u.email && u.email.slice(-DOMAIN.length) === DOMAIN) {
     uid = u.uid;
     userName = u.email.slice(0, -DOMAIN.length);
-  } else { uid = null; userName = ''; }
+  } else { 
+    uid = null; 
+    userName = ''; 
+  }
 }
 
-const ready0 = new Promise(res => { onAuthStateChanged(auth, u => { setUser(u); res(); }); });
+// Güvenli auth hazır olma promisi (zaman aşımı korumalı)
+let authResolve;
+const ready0 = new Promise(res => { authResolve = res; });
+
+if (auth) {
+  onAuthStateChanged(auth, u => {
+    setUser(u);
+    authResolve();
+  }, () => {
+    authResolve(); // Hata alsa bile oyunun kilitlenmesini önler
+  });
+} else {
+  authResolve();
+}
+
 export const authReady = () => ready0;
 export const isLoggedIn = () => !!uid;
-export const isLegacyAnon = () => !!(auth.currentUser && auth.currentUser.isAnonymous);
+export const isLegacyAnon = () => !!(auth && auth.currentUser && auth.currentUser.isAnonymous);
 
-// cloud.js ve rooms.js kullanır: giriş yoksa hata verir
 export async function login() {
   await ready0;
-  if (!uid) { const e = new Error('Önce giriş yapmalısın'); e.code = 'login-required'; throw e; }
+  if (!uid) { 
+    const e = new Error('Önce giriş yapmalısın'); 
+    e.code = 'login-required'; 
+    throw e; 
+  }
   return uid;
 }
 
@@ -38,8 +58,13 @@ function emailOf(name) {
   }
   return n + DOMAIN;
 }
+
 function checkPass(p) {
-  if (String(p || '').length < 6) { const e = new Error('Şifre en az 6 karakter olmalı'); e.code = 'auth/weak-password'; throw e; }
+  if (String(p || '').length < 6) { 
+    const e = new Error('Şifre en az 6 karakter olmalı'); 
+    e.code = 'auth/weak-password'; 
+    throw e; 
+  }
 }
 
 export async function doLogin(name, pass) {
@@ -49,18 +74,20 @@ export async function doLogin(name, pass) {
   setUser(auth.currentUser);
 }
 
-// Eski misafir hesabı varsa dönüştürür (dünyalar korunur), yoksa yeni hesap açar
 export async function doRegister(name, pass) {
   const email = emailOf(name);
   checkPass(pass);
   const cur = auth.currentUser;
-  if (cur && cur.isAnonymous) await linkWithCredential(cur, EmailAuthProvider.credential(email, pass));
-  else await createUserWithEmailAndPassword(auth, email, pass);
+  if (cur && cur.isAnonymous) {
+    await linkWithCredential(cur, EmailAuthProvider.credential(email, pass));
+  } else {
+    await createUserWithEmailAndPassword(auth, email, pass);
+  }
   setUser(auth.currentUser);
 }
 
 export async function doLogout() {
-  await signOut(auth);
+  if (auth) await signOut(auth);
   setUser(null);
 }
 
@@ -74,7 +101,8 @@ const MSG = {
   'auth/weak-password': 'Şifre en az 6 karakter olmalı',
   'auth/too-many-requests': 'Çok fazla deneme, biraz bekle',
   'auth/network-request-failed': 'İnternet bağlantısı yok',
-  'auth/operation-not-allowed': 'Firebase\'de Email/Password girişi kapalı: Authentication → Sign-in method → Email/Password → Enable',
-  'auth/admin-restricted-operation': 'Firebase\'de kayıt kapalı: Authentication → Settings → User actions → Enable create (sign-up)'
+  'auth/operation-not-allowed': 'Firebase\'de Email/Password girişi kapalı',
+  'auth/admin-restricted-operation': 'Firebase\'de kayıt kapalı'
 };
+
 export const authError = e => MSG[e && e.code] || (e && e.message) || 'Bilinmeyen hata';
