@@ -30,6 +30,7 @@ import { useJuke, JUKE, isDisc, useShears, SHEARS, useBlueprint, BPRINT } from '
 import { placeDoor, toggleDoor, placeBed, pairFix, EXTRA_DROPS, DOOR, isDoorBlock, BEDH } from './doors.js';
 import { openChest, chestBroken, isChestOpen, CHEST } from './chests.js';
 import { openBook, isBook } from './library.js';
+import { isEgg, useEgg } from './eggs.js';
 import * as content from './content.js';
 
 // Açlık puanları: et, elma, ekmek, pişmiş et, patates, havuç, domates, biber, soğan, çiğköfte vb.
@@ -384,6 +385,7 @@ export function placeBlock() {
   if (isDead() || uiOpen() || P.ghost) return;
   const t = eco.sel;
   if (isBook(t)) return openBook(t);
+  if (isEgg(t)) return useEgg(t);
   if (target) {
     const tb = get(target[0], target[1], target[2]);
     if (tb === CRAFT) return openCraft(3);
