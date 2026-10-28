@@ -59,17 +59,7 @@ for (const k in ARM) {
 
 for (let i = 0; i < 6; i++) { BASE['dye' + i] = DYE_RGB[i]; BASE['wc' + i] = DYE_RGB[i]; }
 
-const NI = {
-  patatez: [196, 160, 96], havucz: [240, 130, 30], domatez: [220, 50, 40],
-  biberz: [60, 170, 60], onione: [235, 225, 235], marulz: [80, 180, 80],
-  salatalikz: [60, 150, 60], pancarz: [220, 50, 80]
-};
-
-for (const n in NI) { BASE[n] = NI[n][0]; ITEMS.add(n); }
-BASE.dye6 = [60, 160, 60]; BASE.dye7 = [240, 240, 240]; BASE.wc6 = [60, 160, 60]; BASE.wc7 = [240, 240, 240];
-BASE.ironB = [215, 215, 222]; BASE.diamB = [80, 225, 215]; BASE.tulipw = [245, 245, 245];
-for (let k = 5; k < 8; k++) for (let s = 0; s < 4; s++) BASE['cr' + k + '_' + s] = [80, 160, 60];
-
+// ÖNCE ITEMS VE FLOWERS TANIMLANIYOR (Hata bu yüzden çıkıyordu)
 export const FLOWERS = new Set(['lavender', 'daisy', 'poppy', 'blueP', 'orangeT', 'pinkT', 'whiteT', 'tulipw']);
 export const ITEMS = new Set([
   'meat', 'apple', 'pickW', 'pickS', 'pickI', 'pickD', 'axeI', 'shovI', 'axeW', 'axeS',
@@ -84,6 +74,18 @@ export const ITEMS = new Set([
 
 for (let i = 0; i < 8; i++) ITEMS.add('dye' + i);
 for (let i = 0; i < 8; i++) ITEMS.add('wc' + i);
+
+// ŞİMDİ ITEMS KULLANILAN NI DÖNGÜSÜ ÇALIŞABİLİR
+const NI = {
+  patatez: [196, 160, 96], havucz: [240, 130, 30], domatez: [220, 50, 40],
+  biberz: [60, 170, 60], onione: [235, 225, 235], marulz: [80, 180, 80],
+  salatalikz: [60, 150, 60], pancarz: [220, 50, 80]
+};
+
+for (const n in NI) { BASE[n] = NI[n][0]; ITEMS.add(n); }
+BASE.dye6 = [60, 160, 60]; BASE.dye7 = [240, 240, 240]; BASE.wc6 = [60, 160, 60]; BASE.wc7 = [240, 240, 240];
+BASE.ironB = [215, 215, 222]; BASE.diamB = [80, 225, 215]; BASE.tulipw = [245, 245, 245];
+for (let k = 5; k < 8; k++) for (let s = 0; s < 4; s++) BASE['cr' + k + '_' + s] = [80, 160, 60];
 
 export const CROPC = [];
 for (let k = 5; k < 8; k++) for (let s = 0; s < 4; s++) CROPC.push('cr' + k + '_' + s);
