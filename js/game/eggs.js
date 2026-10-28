@@ -15,8 +15,9 @@ E.forEach(([id, , name, color, ing], i) => {
   eco.inv[id] = 0; eco.raw[id] = 30; eco.trend[id] = 0;
   CATS[4][1].push(id);
   addFlat(id);
-  RECIPES.push({ out: [id, 1], shapeless: [189, ing] });   // yumurta + et / yün / tohum
+  RECIPES.push({ out: [id, 1], shapeless: [189, ing] });
 });
+
 export const isEgg = t => t >= 230 && t <= 232;
 
 export function useEgg(t) {
