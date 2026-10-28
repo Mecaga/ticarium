@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BlokDiyar Kod Tarayıcı</title>
+<style>
+  body { font-family: monospace; background: #121212; color: #fff; padding: 20px; }
+  input, button { padding: 10px; font-size: 16px; margin: 5px 0; }
+  input { width: 100%; box-sizing: border-box; background: #222; color: #fff; border: 1px solid #444; }
+  button { background: #4CAF50; color: white; border: none; cursor: pointer; }
+  pre { background: #1e1e1e; padding: 10px; border-radius: 5px; overflow-x: auto; }
+  .match { color: #ff5252; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<h2>BlokDiyar - Kod İçinde Kelime/Kod Arama Aracı</h2>
+<p>Projedeki tüm JS dosyalarında aramak istediğin kelimeyi (örn: <b>BASE</b>) yaz:</p>
+<input type="text" id="keyword" value="BASE" placeholder="Aranacak kelime...">
+<button onclick="startSearch()">Aramayı Başlat</button>
+
+<div id="results"></div>
+
+<script>
+// Projendeki taranacak tüm dosya listesi
+var filesToSearch = [
+  'js/main.js', 'js/core/state.js', 'js/core/save.js', 'js/core/firebase.js', 'js/core/sound.js', 'js/core/auth.js',
+  'js/world/world.js', 'js/world/textures.js', 'js/world/texturepack.js', 'js/world/fluids.js', 'js/world/gravity.js', 'js/world/sky.js', 'js/world/paints.js',
+  'js/entities/player.js', 'js/entities/mobs.js', 'js/entities/avatars.js', 'js/entities/items.js', 'js/entities/health.js',
+  'js/entities/hunger.js', 'js/entities/vitals.js',
+  'js/net/cloud.js', 'js/net/rooms.js', 'js/net/online.js',
+  'js/ui/menu.js', 'js/ui/menu-lists.js', 'js/ui/menu-worlds.js', 'js/ui/dialog.js', 'js/ui/panels.js', 'js/ui/chat.js',
+  'js/ui/bag.js', 'js/ui/draw.js', 'js/ui/ui.js', 'js/ui/input.js', 'js/ui/craft.js', 'js/ui/furnace.js',
+  'js/game/actions.js', 'js/game/mining.js', 'js/game/session.js', 'js/game/progress.js', 'js/game/death.js',
+  'js/game/creative.js', 'js/game/commands.js', 'js/game/economy.js', 'js/game/inventory.js', 'js/game/gear.js',
+  'js/game/recipes.js', 'js/game/armor.js', 'js/game/doors.js', 'js/game/looks.js', 'js/game/chests.js',
+  'js/game/store.js', 'js/game/library.js', 'js/game/modes.js', 'js/entities/armorvis.js', 'js/game/content.js', 'js/defs.js'
+];
+
+async function startSearch() {
+  var kw = document.getElementById('keyword').value.trim();
+  var resDiv = document.getElementById('results');
+  resDiv.innerHTML = '🔄 Aranıyor, lütfen bekleyin...';
+  
+  if (!kw) {
+    resDiv.innerHTML = '❌ Lütfen aranacak bir kelime yazın.';
+    return;
+  }
+
+  var foundCount = 0;
+  var html = '<h3>Arama Sonuçları ("' + kw + '"):</h3>';
+
+  for (var i = 0; i < filesToSearch.length; i++) {
+    var file = filesToSearch[i];
+    try {
+      var response = await fetch(file, { cache: 'no-cache' });
+      if (!response.ok) continue;
+      var text = await response.text();
+      var lines = text.split('\n');
+
+      for (var j = 0; j < lines.length; j++) {
+        if (lines[j].includes(kw)) {
+          foundCount++;
+          html += '<p>📁 <b>' + file + '</b> (Satır: <b>' + (j + 1) + '</b>)<br>' +
+                  '<pre>' + escapeHtml(lines[j]) + '</pre></p>';
+        }
+      }
+    } catch (err) {
+      // Dosya bulunamazsa atla
+    }
+  }
+
+  if (foundCount === 0) {
+    html += '<p>❌ Hiçbir dosyada bu kelime bulunamadı.</p>';
+  } else {
+    html += '<p>✅ Toplam <b>' + foundCount + '</b> eşleşme bulundu.</p>';
+  }
+
+  resDiv.innerHTML = html;
+}
+
+function escapeHtml(text) {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+</script>
+
+</body>
+</html>
