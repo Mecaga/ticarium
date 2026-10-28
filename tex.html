@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="tr"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Doku listesi</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>body{font-family:system-ui;background:#1d2330;color:#fff;padding:12px;font-size:13px}
+h3{margin:14px 0 4px;color:#8cf}.g{display:flex;flex-wrap:wrap;gap:6px}
+.c{width:76px;text-align:center;background:#0004;border-radius:6px;padding:4px;word-break:break-all}
+canvas{width:48px;height:48px;image-rendering:pixelated}</style></head><body>
+<h2>🎨 Doku adları</h2><small>PNG: 16x16, yol: textures/&lt;klasör&gt;/&lt;ad&gt;.png</small><div id="o"></div>
+<script type="module">
+import { initAtlas, atlas, tileNames, tileOf } from './js/world/textures.js';
+import { categoryOf, CAT_NAMES } from './js/world/tex/categories.js';
+initAtlas();
+const g = {};
+tileNames.forEach(n => (g[categoryOf(n)] = g[categoryOf(n)] || []).push(n));
+const o = document.getElementById('o');
+for (const c in g) {
+  o.insertAdjacentHTML('beforeend', '<h3>' + (CAT_NAMES[c] || c) + ' <small>(textures/' + c + '/) · ' + g[c].length + ' adet</small></h3><div class="g" id="g_' + c.replace('/', '_') + '"></div>');
+  const box = document.getElementById('g_' + c.replace('/', '_'));
+  g[c].forEach(n => {
+    const cv = document.createElement('canvas'); cv.width = cv.height = 16;
+    cv.getContext('2d').drawImage(atlas.cv, tileOf(n) * 16, 0, 16, 16, 0, 0, 16, 16);
+    const d = document.createElement('div'); d.className = 'c'; d.appendChild(cv); d.append(n);
+    box.appendChild(d);
+  });
+}
+</script></body></html>
