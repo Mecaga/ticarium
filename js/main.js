@@ -177,3 +177,6 @@ function loop(now) {
   renderer.render(scene, camera);
 }
 requestAnimationFrame(loop);
+
+// Debug panel için global atamalar
+window.P = P; window.eco = eco; window.G = G;
