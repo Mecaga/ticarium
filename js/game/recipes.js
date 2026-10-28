@@ -24,14 +24,14 @@ export const RECIPES = [
   { out: [171, 1], shapeless: [191, ONION] },                      // marul salatası: marul + soğan
   { out: [172, 1], shapeless: [190, 31] },                         // pancar çorbası: pancar
   { out: [173, 1], shapeless: [152, 31] },                         // domates çorbası: domates
-  { out: [174, 1], shapeless: [178, 177, 'eggI'] },                // kek: süt + hamur + yumurta
+  { out: [174, 1], shapeless: [178, 177, 189] },                   // kek: süt (178) + hamur (177) + yumurta (189)
   { out: [175, 1], shapeless: [151, ONION, POTATO] },              // sebze çorbası: havuç + soğan + patates
   { out: [176, 1], shapeless: [POTATO] }                           // patates kızartması (fırında pişince çıkar)
 ];
 
-// Çiçek → 2 boya; boya + yün → renkli yün (lavanta, papatya, gelincik, mavi gelincik, turuncu lale, pembe lale, yeşil, beyaz lale)
+// Çiçek → 2 boya; boya + yün → renkli yün
 for (let i = 0; i < 8; i++) {
-  RECIPES.push({ out: [110 + i, i === 7 ? 2 : 2], shapeless: [40 + i] }); // Beyaz lale (47) veya diğerleri 2 boya verir
+  RECIPES.push({ out: [110 + i, 2], shapeless: [40 + i] });
   RECIPES.push({ out: [120 + i, 1], shapeless: [110 + i, WOOLANY] });
 }
 
