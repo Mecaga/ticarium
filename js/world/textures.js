@@ -101,12 +101,26 @@ export const isFlat = () => false;
 export const addFlat = () => {};
 export const tileNames = Object.keys(BASE);
 export const clearIcons = () => {};
-export const iconURL = (name) => {
-  return '';
-};
+export const iconURL = (name) => '';
 
 export const FACE_TILES = {};
 export const atlas = { tex: null };
+
+function newPix() {
+  const cv = document.createElement('canvas');
+  cv.width = T; cv.height = T;
+  return { cv: cv, ctx: cv.getContext('2d') };
+}
+
+function itemPix(col) {
+  const p = newPix(), ctx = p.ctx;
+  ctx.fillStyle = `rgb(${col[0]},${col[1]},${col[2]})`;
+  ctx.fillRect(2, 2, 12, 12);
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.fillRect(2, 12, 12, 2);
+  ctx.fillRect(12, 2, 2, 12);
+  return p.cv;
+}
 
 export function initAtlas() {
   const keys = Object.keys(BASE);
@@ -119,27 +133,26 @@ export function initAtlas() {
 
   keys.forEach((k, i) => {
     const c = BASE[k] || [255, 255, 255];
-    ctx.save();
-    ctx.translate(i * T, 0);
-
+    let sub;
     if (k.startsWith('cr')) {
-      ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
+      sub = newPix();
       const s = parseInt(k.slice(-1)) || 0;
-      ctx.fillRect(2, 14 - s * 3, 12, s * 3 + 1);
+      sub.ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
+      sub.ctx.fillRect(2, 14 - s * 3, 12, s * 3 + 1);
     } else if (ITEMS.has(k)) {
-      ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
-      ctx.fillRect(2, 2, 12, 12);
-      ctx.fillStyle = 'rgba(0,0,0,0.3)';
-      ctx.fillRect(2, 12, 12, 2);
-      ctx.fillRect(12, 2, 2, 12);
+      sub = itemPix(c);
     } else {
-      ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
-      ctx.fillRect(0, 0, T, T);
-      ctx.fillStyle = 'rgba(0,0,0,0.18)';
-      ctx.fillRect(0, 0, T, 2);
-      ctx.fillRect(0, 0, 2, T);
+      sub = newPix();
+      sub.ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
+      sub.ctx.fillRect(0, 0, T, T);
+      sub.ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      sub.ctx.fillRect(0, 0, T, 2);
+      sub.ctx.fillRect(0, 0, 2, T);
     }
-    ctx.restore();
+    
+    if (sub && sub.cv) {
+      ctx.drawImage(sub.cv, i * T, 0);
+    }
     FACE_TILES[k] = [i, i, i];
   });
 
@@ -158,7 +171,6 @@ export function initAtlas() {
   }
 }
 
-// Otomatik başlatma desteği
 try {
   if (typeof window !== 'undefined') {
     initAtlas();
