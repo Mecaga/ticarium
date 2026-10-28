@@ -30,14 +30,14 @@ import { useJuke, JUKE, isDisc, useShears, SHEARS, useBlueprint, BPRINT } from '
 import { placeDoor, toggleDoor, placeBed, pairFix, EXTRA_DROPS, DOOR, isDoorBlock, BEDH } from './doors.js';
 import { openChest, chestBroken, isChestOpen, CHEST } from './chests.js';
 import { openBook, isBook } from './library.js';
-import { FOODX, NOPX } from './content.js';
+import * as content from './content.js';
 
-// Açlık puanları: et, elma, ekmek, pişmiş et, patates, havuç, domates, biber, soğan, çiğköfte
+// Açlık puanları: et, elma, ekmek, pişmiş et, patates, havuç, domates, biber, soğan, çiğköfte vb.
 const FOOD = { 15: 6, 46: 4, 75: 5, 86: 10, 150: 3, 151: 4, 152: 3, 153: 2, 154: 2, 155: 14 };
-Object.assign(FOOD, FOODX);
+if (content.FOODX) Object.assign(FOOD, content.FOODX);
 
 const NOPLACE = new Set([STICK, WHEAT, COAL, INGOT_I, INGOT_G, GEM]);
-NOPX.forEach(i => NOPLACE.add(i));
+if (content.NOPX) content.NOPX.forEach(i => NOPLACE.add(i));
 
 const MOB_DMG = 3, PVP_DMG = 4;
 const D6 = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
@@ -108,7 +108,7 @@ function dropAt(arr, x, y, z) {
   })));
 }
 
-// Altındaki blok kırılınca üstteki bitki (çiçek, ot, fidan, ekin) yere düşer
+// Altındaki blok kırılınca üstteki bitki yere düşer
 function popPlant(x, y, z) {
   const a = get(x, y, z);
   if (!isPlant(a)) return;
@@ -117,7 +117,6 @@ function popPlant(x, y, z) {
   if (!isCreative()) dropAt(dropsOf(a), x, y, z);
 }
 
-// Su ya da lav bir bitkinin üstüne akınca bitki kırılır, eşyası düşer
 ph.fn = (x, y, z, old) => {
   const r = G.room;
   if (!r || !r.sim) return;
@@ -147,7 +146,7 @@ function growTick() {
       for (const b of plan) { set(b.x, b.y, b.z, b.t); commit(b.x, b.y, b.z, b.t); }
       return;
     }
-    if (get(x, y - 1, z) !== FARM) { popPlant(x, y, z); return; }   // toprak yoksa ekin düşer
+    if (get(x, y - 1, z) !== FARM) { popPlant(x, y, z); return; }
     if (Math.random() < (wetNear(x, y, z) ? 0.2 : 0.07)) { set(x, y, z, t + 1); commit(x, y, z, t + 1); }
   });
   rebuild();
@@ -246,7 +245,7 @@ function milkCow(id) {
     const m = lookMob();
     if (!m || m.id !== id) return toast('Sağma yarıda kaldı');
     if (eco.inv[BUCKET] < 1) return;
-    take(BUCKET); give(178); sfx.splash(); drawHud();
+    take(BUCKET); give(190); sfx.splash(); drawHud();
     toast('🥛 Süt kovası doldu');
   }, 1500);
 }
