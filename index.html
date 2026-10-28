@@ -6,6 +6,9 @@
 <title>BlokDiyar</title>
 <link rel="stylesheet" href="css/style.css?v=35">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
+<!-- Telefonda hata ayıklamak için konsol aracı -->
+<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+<script>eruda.init();</script>
 </head>
 <body>
 <div id="flash"></div>
@@ -98,7 +101,7 @@
     </div>
     <div id="mErr"></div>
     <div id="mAuth"></div>
-    <div id="mVer" style="font-size:11px;opacity:.55;text-align:center;margin-top:4px"></div>
+    <div id="mVer" style="font-size:11px;opacity:.55;text-align:center;margin-top:4px">Sürüm 35</div>
   </div>
 </div>
 
@@ -147,13 +150,10 @@ function refresh() {
 if (missing.length) {
   showErr('index.html eski, eksik elemanlar: ' + missing.join(', '));
 } else {
-  refresh().then(function () { return import('./js/main.js?v=35'); }).then(function () {
-    return import('./js/world/world.js');
-  }).then(function (m) {
-    var v = document.getElementById('mVer');
-    if (v) v.textContent = 'Sürüm 35 · kod ' + (m.BUILD || 'ESKİ: site verisini temizle');
+  refresh().then(function () {
+    return import('./js/main.js?v=35');
   }).catch(function (e) {
-    showErr('Yükleme hatası (bir js dosyası eski ya da eksik olabilir): ' + (e.message || e));
+    showErr('Yükleme hatası: ' + (e.message || e));
   });
 }
 </script>
