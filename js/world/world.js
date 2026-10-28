@@ -43,8 +43,10 @@ export const getRaw = (x, y, z) => {
 export const isWater = (x, y, z) => get(x, y, z) === WATER;
 export const isLava = (x, y, z) => get(x, y, z) === LAVA;
 export const BOXES = {};   // ince bloklar: id -> [x0,y0,z0,x1,y1,z1] (yatak, kapı)
-export const tgtOpts = { sneak: false };
-for (let i = 0; i < 3; i++) { BOXES[180 + i] = [0, 0, 0, 1, 0.25 * (i + 1), 1]; FACE_TILES[180 + i] = FACE_TILES[8]; }   // kar katmanları 1/4, 2/4, 3/4
+for (let i = 0; i < 3; i++) { 
+  BOXES[180 + i] = [0, 0, 0, 1, 0.25 * (i + 1), 1]; 
+  if (FACE_TILES) FACE_TILES[180 + i] = FACE_TILES[8] || [0,0,0]; 
+}   // kar katmanları 1/4, 2/4, 3/4
 
 export const solid = (x, y, z) => { const t = get(x, y, z); return t !== 0 && !BOXES[t] && !isPlant(t) && t !== WATER && t !== LAVA; };
 // Kesin nokta çarpışması (ince bloklar için)
@@ -144,7 +146,7 @@ function flowerAt(x, z) {
   const px = Math.floor(x / 8), pz = Math.floor(z / 8);
   if (hash(px, pz, _seed + 9) > 0.22 || hash(x, z, _seed + 10) > 0.45) return 0;
   const k = Math.floor(hash(px, pz, _seed + 11) * 7);
-  return k === 6 ? 47 : FLOWER_MIN + k; // 47: Beyaz lale
+  return k === 6 ? 47 : FLOWER_MIN + k;
 }
 function grassAt(x, z) {
   return hash(x >> 1, z >> 1, _seed + 21) < 0.3 && hash(x, z, _seed + 22) < 0.65;
@@ -303,7 +305,7 @@ function genChunk(c) {
     }
   }
 
-  for (let i = 0; i < b.length; i++) if (b[i] === 35) b[i] = 0;   // eski netherit bloklar silinir
+  for (let i = 0; i < b.length; i++) if (b[i] === 35) b[i] = 0;
 
   const flows = [];
   const m = mods.get(ck(c.cx, c.cz));
@@ -465,7 +467,9 @@ function buildChunk(c) {
   const pos = [], uv = [], col = [], ind = [];
   const wS = sink(), lS = sink(), gS = sink();
   let vc = 0;
-  const WT = FACE_TILES[WATER][0], LT = FACE_TILES[LAVA][0], GE = tileOf('glassEdge');
+  const WT = FACE_TILES[WATER] ? FACE_TILES[WATER][0] : 0;
+  const LT = FACE_TILES[LAVA] ? FACE_TILES[LAVA][0] : 0;
+  const GE = tileOf('glassEdge');
   const mq = (tile, p, sh) => {
     for (let k = 0; k < 4; k++) {
       pos.push(p[k][0], p[k][1], p[k][2]);
@@ -603,6 +607,7 @@ export function rebuild(max = 2) {
 export let target = null, prev = null, wtarget = null, stgt = null;
 
 export function updateTarget(camera) {
+  if (!camera || !FACE_TILES) return;
   const d = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
   const o = camera.position;
   let lx = -1e9, ly = -1e9, lz = -1e9;
