@@ -141,7 +141,8 @@ function treeAt(x, z) {
 function flowerAt(x, z) {
   const px = Math.floor(x / 8), pz = Math.floor(z / 8);
   if (hash(px, pz, _seed + 9) > 0.22 || hash(x, z, _seed + 10) > 0.45) return 0;
-  return FLOWER_MIN + Math.floor(hash(px, pz, _seed + 11) * 6);
+  const k = Math.floor(hash(px, pz, _seed + 11) * 7);
+  return k === 6 ? 47 : FLOWER_MIN + k; // 47: Beyaz lale (defs.js içindeki karşılığına göre)
 }
 function grassAt(x, z) {
   return hash(x >> 1, z >> 1, _seed + 21) < 0.3 && hash(x, z, _seed + 22) < 0.65;
@@ -264,7 +265,6 @@ function genChunk(c) {
             const o = oreAt(x, y, z);
             if (o) t = o;
             else if (y <= 3 && hash(x * 5 + y, z * 3, _seed + 6) < 0.004) t = OBSIDIAN;
-            else if (y === 2 && hash(x, z, _seed + 18) < 0.0008) t = NETHERITE;
             else if (y === 3 && h >= 9 && hash(x >> 1, z >> 1, _seed + 5) < 0.012) t = LAVA;
           }
         }
