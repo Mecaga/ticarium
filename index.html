@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>BlokDiyar</title>
-<link rel="stylesheet" href="css/style.css?v=39">
+<link rel="stylesheet" href="css/style.css?v=41">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
 <script src="js/dbg.js?v=52"></script>
 </head>
@@ -99,7 +99,7 @@
     </div>
     <div id="mErr"></div>
     <div id="mAuth"></div>
-    <div id="mVer" style="font-size:11px;opacity:.55;text-align:center;margin-top:4px">Sürüm 39</div>
+    <div id="mVer" style="font-size:11px;opacity:.55;text-align:center;margin-top:4px">Sürüm 41</div>
   </div>
 </div>
 
@@ -129,13 +129,26 @@ var missing = ids.filter(function (i) { return !document.getElementById(i); });
 if (missing.length) {
   showErr('Eksik elemanlar: ' + missing.join(', '));
 } else {
-  // Yeni nesil dünya üretim modüllerini (flat, sky, normal) önceden tetikleyip cache'liyoruz
+  // Dünya üretim ve modüler doku kategorilerini güvenle önceden cache'liyoruz
   Promise.all([
-    import('./js/world/gen/flat.js?v=39').catch(function(){}),
-    import('./js/world/gen/sky.js?v=39').catch(function(){}),
-    import('./js/world/gen/normal.js?v=39').catch(function(){})
+    import('./js/world/gen/flat.js?v=41').catch(function(){}),
+    import('./js/world/gen/sky.js?v=41').catch(function(){}),
+    import('./js/world/gen/normal.js?v=41').catch(function(){}),
+    import('./js/world/textures/util.js?v=41').catch(function(){}),
+    import('./js/world/textures/base_blocks.js?v=41').catch(function(){}),
+    import('./js/world/textures/functional_blocks.js?v=41').catch(function(){}),
+    import('./js/world/textures/building_blocks.js?v=41').catch(function(){}),
+    import('./js/world/textures/minerals.js?v=41').catch(function(){}),
+    import('./js/world/textures/flora_dye.js?v=41').catch(function(){}),
+    import('./js/world/textures/mobs.js?v=41').catch(function(){}),
+    import('./js/world/textures/player.js?v=41').catch(function(){}),
+    import('./js/world/textures/tools.js?v=41').catch(function(){}),
+    import('./js/world/textures/foods.js?v=41').catch(function(){}),
+    import('./js/world/textures/crops.js?v=41').catch(function(){}),
+    import('./js/world/textures/armor.js?v=41').catch(function(){}),
+    import('./js/world/textures/ui_items.js?v=41').catch(function(){})
   ]).then(function() {
-    return import('./js/main.js?v=39');
+    return import('./js/main.js?v=41');
   }).catch(function (e) {
     showErr('Yükleme hatası: ' + (e.message || e));
   });
