@@ -27,7 +27,7 @@ const byId = Object.fromEntries(B.map(b => [b.id, b]));
 export const isBook = t => !!byId[t];
 
 const st = document.createElement('style');
-st.textContent = '#lbP{position:fixed;inset:0;background:#000b;z-index:27;display:none;align-items:center;justify-content:center}#lbB{background:#1d2330;color:#fff;border-radius:14px;padding:14px;width:min(94vw,430px);max-height:90vh;overflow:auto;box-sizing:border-box}.k2{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin:6px 0;padding:6px;background:#0004;border-radius:8px;font-size:13px}.k2 img{width:26px;height:26px;image-rendering:pixelated;vertical-align:middle}.k2 small{width:100%;opacity:.7}';
+st.textContent = '#lbP{position:fixed;inset:0;background:#000b;z-index:27;display:none;align-items:center;justify-content:center}#lbB{background:#1d2330;color:#fff;border-radius:14px;padding:14px;width:min(94vw,430px);max-height:90vh;overflow:auto;box-sizing:border-box}.k2{display:flex;align-items:center;justify-content:flex-start;gap:4px;flex-wrap:wrap;margin:6px 0;padding:6px;background:#0004;border-radius:8px;font-size:13px}.k2 > div{display:flex;flex-direction:column;align-items:flex-start}.k2 img{width:26px;height:26px;image-rendering:pixelated;vertical-align:middle}.k2 small{width:100%;opacity:.7}';
 document.head.appendChild(st);
 const el = document.createElement('div');
 el.id = 'lbP';
@@ -42,7 +42,7 @@ const row = r => {
 const inR = (o, a, b) => o >= a && o <= b;
 const isTool = o => inR(o, 50, 69) || o === 89 || o === 105;
 const isArm = o => inR(o, 91, 98);
-const isFood = o => o === 75 || o === 155;
+const isFood = o => o === 75 || o === 155 || o === 191 || o === 192 || (o >= 196 && o <= 201) || o === 189 || o === 190;
 
 function list(f) { return RECIPES.filter(r => !ids.includes(r.out[0]) && f(r.out[0])).map(row).join('') || '<div class="k2">Tarif yok</div>'; }
 function smelt() {
