@@ -113,3 +113,4 @@ export async function chestBroken(x, y, z) {
   }
   if (arr.length) dropItems(arr);
 }
+CATS.forEach(c => { c[1] = [...new Set(c[1])]; });
