@@ -1,4 +1,4 @@
-İmport { TYPES, CATS } from '../world/world.js';
+import { TYPES, CATS } from '../world/world.js';
 import { FACE_TILES, tileOf, addFlat } from '../world/textures.js';
 import { eco } from './economy.js';
 import { RECIPES, LOG, WOOLANY } from './recipes.js';
