@@ -66,3 +66,4 @@ export function openBook(t) {
     '<button style="width:100%;margin-top:8px;padding:11px;border:0;border-radius:8px;background:#b3261e;color:#fff;font-weight:700">Kapat</button></div>';
   el.querySelector('button').onclick = () => { el.style.display = 'none'; };
 }
+CATS.forEach(c => { c[1] = [...new Set(c[1])]; });
