@@ -36,7 +36,8 @@ document.body.appendChild(el);
 const ic = tok => (tok === 0 ? '<span style="display:inline-block;width:26px"></span>' : iconHTML(tok === LOG ? 4 : tok === WOOLANY ? 16 : tok));
 const row = r => {
   const left = r.pat ? r.pat.map(x => '<div>' + x.map(ic).join('') + '</div>').join('') : '<div>' + r.shapeless.map(ic).join('') + '</div>';
-  return '<div class="k2"><div>' + left + '</div> → ' + (r.out[1] > 1 ? r.out[1] + '× ' : '') + iconHTML(r.out[0]) + ' ' + TYPES[r.out[0]].name +
+  const itemName = TYPES[r.out[0]] ? TYPES[r.out[0]].name : 'Eşya #' + r.out[0];
+  return '<div class="k2"><div>' + left + '</div> → ' + (r.out[1] > 1 ? r.out[1] + '× ' : '') + iconHTML(r.out[0]) + ' ' + itemName +
     '<small>' + (r.pat ? 'Şekilli' : 'Şekilsiz (sıra önemsiz)') + '</small></div>';
 };
 const inR = (o, a, b) => o >= a && o <= b;
