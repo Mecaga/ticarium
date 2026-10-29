@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Oyun ID Düzeltme ve Temizleme Aracı</title>
+    <style>
+        body { font-family: monospace; background: #121212; color: #00ff66; padding: 20px; }
+        .box { background: #1e1e1e; padding: 15px; border: 1px solid #333; margin-bottom: 15px; border-radius: 5px; }
+        button { background: #00ff66; color: #000; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; border-radius: 3px; font-size: 16px; }
+        button:hover { background: #00cc52; }
+        pre { color: #fff; background: #0a0a0a; padding: 10px; border-radius: 4px; max-height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+
+    <div class="box">
+        <h2>🛠️ Oyun İçi ID Düzeltici ve Hayalet Item Temizleyici</h2>
+        <p>Bu araç, localStorage kayıtlarındaki bozuk, çakışan veya sandık/kapı gibi görünen hayalet item ID'lerini tarar ve temizler.</p>
+        <button onclick="runIdFixer()">Kayıtları Tara ve ID'leri Düzelt</button>
+    </div>
+
+    <div class="box">
+        <h3>İşlem Günlüğü:</h3>
+        <pre id="log">Hazır. Butona basarak taramayı başlatın...</pre>
+    </div>
+
+<script>
+function logMessage(msg) {
+    const logEl = document.getElementById('log');
+    logEl.innerHTML += '\n' + msg;
+    logEl.scrollTop = logEl.scrollHeight;
+}
+
+function runIdFixer() {
+    document.getElementById('log').innerHTML = "Tarama başlatılıyor...";
+    
+    // Tarayıcıdaki localStorage anahtarlarını kontrol et (oyununun kayıt key'i neyse onu yakalar)
+    let fixedAny = false;
+    let totalCleaned = 0;
+
+    // Geçerli resmi ID Listesi (Haritadaki tüm doğru ID'ler)
+    const validIDs = new Set([
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 25,
+        30, 31, 32, 33, 34, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
+        50, 51, 52, 53, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 71,
+        70, 72, 73, 74, 75, 76, 81, 82, 83, 84, 85, 86, 87, 88, 89, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 107, 108, 109,
+        176, 186, 187, 188
+    ]);
+    
+    for (let i = 110; i <= 117; i++) validIDs.add(i); // Boyalar
+    for (let i = 120; i <= 127; i++) validIDs.add(i); // Renkli yünler
+    for (let i = 130; i <= 149; i++) validIDs.add(i); // Ekinler
+    for (let i = 210; i <= 240; i++) validIDs.add(i); // Özel ekinler/diğer
+
+    // LocalStorage içindeki tüm anahtarları dön
+    for (let i = 0; i < localStorage.length; i++) {
+        let key = localStorage.key(i);
+        let rawData = localStorage.getItem(key);
+        
+        try {
+            let data = JSON.parse(rawData);
+            if (data && typeof data === 'object') {
+                let modified = false;
+
+                // Envanter kontrolü
+                let inv = data.inventory || data.player?.inventory;
+                if (Array.isArray(inv)) {
+                    for (let j = 0; j < inv.length; j++) {
+                        let item = inv[j];
+                        if (item && item.id !== undefined && item.id !== null) {
+                            if (!validIDs.has(Number(item.id))) {
+                                logMessage(`[!] Geçersiz ID bulundu ve silindi: Key [${key}] Slot [${j}] ID [${item.id}]`);
+                                inv[j] = null; // Hayalet item'ı temizle
+                                totalCleaned++;
+                                modified = true;
+                            }
+                        }
+                    }
+                }
+
+                // Sandıklar kontrolü
+                let chests = data.chests || data.worldChests;
+                if (chests && typeof chests === 'object') {
+                    for (let chestKey in chests) {
+                        let chest = chests[chestKey];
+                        if (chest && Array.isArray(chest.items)) {
+                            for (let k = 0; k < chest.items.length; k++) {
+                                let item = chest.items[k];
+                                if (item && item.id !== undefined && item.id !== null) {
+                                    if (!validIDs.has(Number(item.id))) {
+                                        logMessage(`[!] Sandıkta geçersiz ID temizlendi: Sandık [${chestKey}] Slot [${k}] ID [${item.id}]`);
+                                        chest.items[k] = null;
+                                        totalCleaned++;
+                                        modified = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Eğer değişiklik yapıldıysa localStorage'ı güncelle
+                if (modified) {
+                    localStorage.setItem(key, JSON.stringify(data));
+                    logMessage(`[✔] Kayıt güncellendi ve kaydedildi: ${key}`);
+                    fixedAny = true;
+                }
+            }
+        } catch (e) {
+            // JSON olmayan keyler atlanır
+        }
+    }
+
+    if (fixedAny) {
+        logMessage(`\n🎉 İşlem tamamlandı! Toplam ${totalCleaned} adet bozuk/kopya hayalet öğe temizlendi.`);
+        logMessage(`Artık oyununu açabilirsin, inatçı eşyalar ve sandık/kapı hataları düzelmiş olacak!`);
+    } else {
+        logMessage(`\nℹ️ Taranan kayıtlarda bozuk ID'ye rastlanmadı veya kayıt bulunamadı.`);
+    }
+}
+</script>
+
+</body>
+</html>
