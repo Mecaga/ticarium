@@ -16,6 +16,10 @@
   var oe = console.error, ow = console.warn;
   console.error = function () { add('err', [].slice.call(arguments).map(fmt).join(' ')); oe.apply(console, arguments); };
   console.warn = function () { add('warn', [].slice.call(arguments).map(fmt).join(' ')); ow.apply(console, arguments); };
+  
+  var olog = console.log;
+  console.log = function () { add('log', [].slice.call(arguments).map(fmt).join(' ')); olog.apply(console, arguments); };
+
   window.addEventListener('error', function (e) {
     var t = e.target;
     if (t && t !== window && (t.src || t.href)) { add('err', 'Dosya yüklenemedi: ' + short(t.src || t.href)); return; }
@@ -62,7 +66,12 @@
     inp.onkeydown = function (e) {
       if (e.key !== 'Enter' || !inp.value.trim()) return;
       var c = inp.value; inp.value = '';
-      try { add('log', '> ' + c + '\n' + fmt((0, eval)(c))); } catch (er) { add('err', '> ' + c + '\n' + er.message); }
+      try {
+        add('log', '> ' + c);
+        var r = (0, eval)(c);
+        if (r && r.then) r.then(function (v) { if (v !== undefined) add('log', fmt(v)); }, function (e2) { add('err', e2.message); });
+        else add('log', fmt(r));
+      } catch (er) { add('err', er.message); }
     };
     panel.appendChild(bar); panel.appendChild(list); panel.appendChild(inp);
     document.body.appendChild(panel);
