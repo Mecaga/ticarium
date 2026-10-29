@@ -15,8 +15,7 @@ export const DYE_MIN = 110, DYE_MAX = 117;
 export const WOOLC_MIN = 120, WOOLC_MAX = 127;
 export const VCROP_MIN = 130, VCROP_MAX = 149;
 export const POTATO = 150, CARROT = 151, TOMATO = 152, PEPPER = 153, ONION = 154, CIGKofte = 155;
-export const IRON_BLOCK = 160, DIAMOND_BLOCK = 161;
-export const SALAD = 170, LETTUCE_SALAD = 171, BEET_SOUP = 172, TOMATO_SOUP = 173, CAKE = 174, VEG_SOUP = 175, FRENCH_FRIES = 176, DOUGH = 177, MILK_BUCKET = 178;
+export const FRENCH_FRIES = 176, DOUGH = 177, MILK_BUCKET = 178;
 export const BEETROOT = 190, LETTUCE = 191, CUCUMBER = 192;
 
 export const VEG = [[130, POTATO], [134, CARROT], [138, TOMATO], [142, PEPPER], [146, ONION]];
@@ -59,7 +58,6 @@ export const TYPES = {
   44: { name: 'Turuncu lale', color: 0xf3861f, base: 8 },
   45: { name: 'Pembe lale', color: 0xf078ac, base: 8 },
   46: { name: 'Elma',   color: 0xc81e1e, base: 12 },
-  47: { name: 'Beyaz lale', color: 0xf0f0f0, base: 8 },
   50: { name: 'Ahşap kazma', color: 0xb08850, base: 20 },
   51: { name: 'Taş kazma', color: 0x9a9a9a, base: 30 },
   52: { name: 'Demir kazma', color: 0xd8d8d8, base: 60 },
@@ -122,14 +120,6 @@ export const TYPES = {
   153: { name: 'Biber', color: 0x3caa3c, base: 8 },
   154: { name: 'Soğan', color: 0xebe1eb, base: 6 },
   155: { name: 'Çiğköfte', color: 0xa83a20, base: 40 },
-  160: { name: 'Demir blok', color: 0xd8d8e0, base: 180 },
-  161: { name: 'Elmas blok', color: 0x50e1f0, base: 450 },
-  170: { name: 'Salatalık', color: 0xdc5032, base: 12 },
-  171: { name: 'Marul salatası', color: 0x50c850, base: 14 },
-  172: { name: 'Pancar çorbası', color: 0xb43250, base: 18 },
-  173: { name: 'Domates çorbası', color: 0xdc3228, base: 16 },
-  174: { name: 'Kek', color: 0xf0d0a0, base: 35 },
-  175: { name: 'Sebze çorbası', color: 0xd2a050, base: 20 },
   176: { name: 'Patates kızartması', color: 0xf0c850, base: 15 },
   177: { name: 'Hamur', color: 0xf5e1aa, base: 10 },
   178: { name: 'Süt kovası', color: 0xffffff, base: 50 },
@@ -139,9 +129,9 @@ export const TYPES = {
 };
 
 export const CATS = [
-  ['🧱 Bloklar', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 16, 120, 121, 122, 123, 124, 125, 126, 127, 34, 36, 37, 38, 39, 70, 72, 81, 160, 161]],
-  ['🌱 Fidan ve çiçekler', [12, 40, 41, 42, 43, 44, 45, 47, 73, 190, 191, 192]],
-  ['🍎 Yiyecek', [15, 46, 74, 75, 86, 150, 151, 152, 153, 154, 155, 170, 171, 172, 173, 174, 175, 176]],
+  ['🧱 Bloklar', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 16, 120, 121, 122, 123, 124, 125, 126, 127, 34, 36, 37, 38, 39, 70, 72, 81]],
+  ['🌱 Fidan ve çiçekler', [12, 40, 41, 42, 43, 44, 45, 73, 190, 191, 192]],
+  ['🍎 Yiyecek', [15, 46, 74, 75, 86, 150, 151, 152, 153, 154, 155, 176]],
   ['🪣 Aletler', [30, 31, 33, 32, 178, 50, 51, 52, 53, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 89, 91, 92, 93, 94, 95, 96, 97, 98]],
   ['💎 Malzemeler', [71, 82, 83, 84, 85, 110, 111, 112, 113, 114, 115, 116, 117, 177]]
 ];
