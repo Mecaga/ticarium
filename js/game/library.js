@@ -1,4 +1,4 @@
-import { TYPES, CATS } from '../world/world.js';
+İmport { TYPES, CATS } from '../world/world.js';
 import { FACE_TILES, tileOf, addFlat } from '../world/textures.js';
 import { eco } from './economy.js';
 import { RECIPES, LOG, WOOLANY } from './recipes.js';
@@ -42,9 +42,7 @@ const row = r => {
 const inR = (o, a, b) => o >= a && o <= b;
 const isTool = o => inR(o, 50, 69) || o === 89 || o === 105;
 const isArm = o => inR(o, 91, 98);
-
-// Yeni eklenen tüm yemekler (salatalar, çorbalar, kek, hamur, patates kızartması, süt vb.) buraya dahil edildi:
-const isFood = o => o === 75 || o === 155 || o === 191 || o === 192 || o === 189 || o === 190 || (o >= 170 && o <= 178) || (o >= 196 && o <= 201);
+const isFood = o => o === 75 || o === 155 || o === 191 || o === 192 || (o >= 196 && o <= 201) || o === 189 || o === 190;
 
 function list(f) { return RECIPES.filter(r => !ids.includes(r.out[0]) && f(r.out[0])).map(row).join('') || '<div class="k2">Tarif yok</div>'; }
 function smelt() {
