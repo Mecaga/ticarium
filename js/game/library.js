@@ -45,7 +45,7 @@ const inR = (o, a, b) => o >= a && o <= b;
 const isTool = o => inR(o, 50, 69) || o === 89 || o === 105;
 const isArm = o => inR(o, 91, 98);
 
-// Kitapların kendisinin yemek listesinde veya craft listesinde görünmesini kesin olarak engelliyoruz:
+// Kitapların çıkış ID'lerini kesinlikle yemek olarak kabul etmiyoruz ve süzüyoruz
 const isFood = o => {
   if (ids.includes(o)) return false; 
   if (o === 75 || o === 155) return true;
@@ -53,25 +53,32 @@ const isFood = o => {
   return false;
 };
 
-// Boyalar (110-117) ve Renkli Yünler (120-127) - Kitapları hariç tutuyoruz
+// Boyalar ve renkli yünler (kitaplar hariç)
 const isColorOrWool = o => {
   if (ids.includes(o)) return false;
   return inR(o, 110, 117) || inR(o, 120, 127);
 };
 
-function list(f) { return RECIPES.filter(r => !ids.includes(r.out[0]) && f(r.out[0])).map(row).join('') || '<div class="k2">Tarif yok</div>'; }
+// Listeleme yapılırken kitaplar (ids) ASLA araya giremez
+function list(f) { 
+  return RECIPES.filter(r => !ids.includes(r.out[0]) && f(r.out[0])).map(row).join('') || '<div class="k2">Tarif yok</div>'; 
+}
+
 function smelt() {
   return Object.keys(SMELT).map(i => '<div class="k2">' + iconHTML(+i) + ' ' + TYPES[i].name + ' → ' + iconHTML(SMELT[i]) + ' ' + TYPES[SMELT[i]].name + '</div>').join('') +
     '<div class="k2"><b>Yakıtlar</b><small>Kömür 8 eşya · odun, tahta 1,5 · çubuk 0,5. Eşya başına 3 sn. Ocak kapalıyken de çalışır.</small></div>';
 }
+
 function food() {
   return list(isFood) +
     '<div class="k2"><b>Doğrudan yenenler</b><small>Et +6 · Elma +4 · Havuç +4 · Patates +3 · Domates +3 · Biber +2 · Soğan +2 · Ekmek +5 · Çiğköfte +14</small></div>';
 }
+
 function colorBook() {
   return list(isColorOrWool) + 
     '<div class="k2"><b>Bilgi</b><small>Boyalar çiçeklerden elde edilir; yünler boyalarla renklendirilir.</small></div>';
 }
+
 function guide() {
   return B.filter(b => b.id !== 185).map(b => row({ shapeless: b.r, out: [b.id, 1] }).replace('<small>', '<small>' + b.d + ' · ')).join('') +
     row({ shapeless: [2], out: [185, 1] }).replace('<small>', '<small>Bu kitap: 1 toprak yeter · ');
