@@ -45,8 +45,11 @@ export const NOPX = [189, 190, 191];
 SMELT[150] = 201;   // çiğ patates -> patates kızartması
 
 const R = (out, shapeless) => RECIPES.push({ out, shapeless });
-R([186, 1], [83, 83, 83, 83, 83, 83, 83, 83, 83]);
-R([187, 1], [85, 85, 85, 85, 85, 85, 85, 85, 85]);
+
+// Demir ve elmas bloklar için 3x3 şekilli matris tarifleri
+RECIPES.push({ out: [186, 1], pat: [[83, 83, 83], [83, 83, 83], [83, 83, 83]] });
+RECIPES.push({ out: [187, 1], pat: [[85, 85, 85], [85, 85, 85], [85, 85, 85]] });
+
 R([83, 9], [186]);
 R([85, 9], [187]);
 R([117, 2], [188]);                 // beyaz lale -> 2 beyaz boya
