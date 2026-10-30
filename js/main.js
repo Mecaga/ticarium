@@ -31,6 +31,8 @@ import { initPack } from './world/texturepack.js';
 import './game/looks.js';
 import './game/modes.js';
 import './game/content.js'; // İçerik tanımlarının erkenden yüklenmesini sağlar
+import './world/ids.js';
+
 
 
 const $ = id => document.getElementById(id);
