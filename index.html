@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>BlokDiyar</title>
-<link rel="stylesheet" href="css/style.css?v=45">
+<link rel="stylesheet" href="css/style.css?v=46">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
-<script src="js/dbg.js?v=45"></script>
+<script src="js/dbg.js?v=46"></script>
 </head>
 <body>
 <div id="flash"></div>
@@ -99,7 +99,7 @@
     </div>
     <div id="mErr"></div>
     <div id="mAuth"></div>
-    <div id="mVer" style="font-size:11px;opacity:.55;text-align:center;margin-top:4px">Sürüm 45</div>
+    <div id="mVer" style="font-size:11px;opacity:.55;text-align:center;margin-top:4px">Sürüm 46</div>
   </div>
 </div>
 
@@ -131,26 +131,26 @@ if (missing.length) {
 } else {
   // Dünya üretim ve modüler doku kategorilerini, idtable modülünü ve ids modülünü güvenle önceden cache'liyoruz
   Promise.all([
-    import('./js/world/gen/flat.js?v=45').catch(function(){}),
-    import('./js/world/gen/sky.js?v=45').catch(function(){}),
-    import('./js/world/gen/normal.js?v=45').catch(function(){}),
-    import('./js/world/idtable.js?v=45').catch(function(){}),
-    import('./js/world/ids.js?v=45').catch(function(){}),
-    import('./js/world/textures/util.js?v=45').catch(function(){}),
-    import('./js/world/textures/base_blocks.js?v=45').catch(function(){}),
-    import('./js/world/textures/functional_blocks.js?v=45').catch(function(){}),
-    import('./js/world/textures/building_blocks.js?v=45').catch(function(){}),
-    import('./js/world/textures/minerals.js?v=45').catch(function(){}),
-    import('./js/world/textures/flora_dye.js?v=45').catch(function(){}),
-    import('./js/world/textures/mobs.js?v=45').catch(function(){}),
-    import('./js/world/textures/player.js?v=45').catch(function(){}),
-    import('./js/world/textures/tools.js?v=45').catch(function(){}),
-    import('./js/world/textures/foods.js?v=45').catch(function(){}),
-    import('./js/world/textures/crops.js?v=45').catch(function(){}),
-    import('./js/world/textures/armor.js?v=45').catch(function(){}),
-    import('./js/world/textures/ui_items.js?v=45').catch(function(){})
+    import('./js/world/gen/flat.js?v=46').catch(function(){}),
+    import('./js/world/gen/sky.js?v=46').catch(function(){}),
+    import('./js/world/gen/normal.js?v=46').catch(function(){}),
+    import('./js/world/idtable.js?v=46').catch(function(){}),
+    import('./js/world/ids.js?v=46').catch(function(){}),
+    import('./js/world/textures/util.js?v=46').catch(function(){}),
+    import('./js/world/textures/base_blocks.js?v=46').catch(function(){}),
+    import('./js/world/textures/functional_blocks.js?v=46').catch(function(){}),
+    import('./js/world/textures/building_blocks.js?v=46').catch(function(){}),
+    import('./js/world/textures/minerals.js?v=46').catch(function(){}),
+    import('./js/world/textures/flora_dye.js?v=46').catch(function(){}),
+    import('./js/world/textures/mobs.js?v=46').catch(function(){}),
+    import('./js/world/textures/player.js?v=46').catch(function(){}),
+    import('./js/world/textures/tools.js?v=46').catch(function(){}),
+    import('./js/world/textures/foods.js?v=46').catch(function(){}),
+    import('./js/world/textures/crops.js?v=46').catch(function(){}),
+    import('./js/world/textures/armor.js?v=46').catch(function(){}),
+    import('./js/world/textures/ui_items.js?v=46').catch(function(){})
   ]).then(function() {
-    return import('./js/main.js?v=45');
+    return import('./js/main.js?v=46');
   }).catch(function (e) {
     showErr('Yükleme hatası: ' + (e.message || e));
   });
