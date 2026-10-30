@@ -7,10 +7,11 @@ import { SMELT } from '../ui/furnace.js';
 
 const B = [
   { id: 177, n: 'Yemek kitabı', r: [LOG, LOG, WOOLANY], d: 'Yemek tarifleri' },
-  { id: 178, n: 'Craft kitabı', r: [70, 70, WOOLANY], d: 'Eşya ve blok tarifleri (yemek, alet, zırh hariç)' },
+  { id: 178, n: 'Craft kitabı', r: [70, 70, WOOLANY], d: 'Eşya ve blok tarifleri (yemek, alet, zırh, boya/yün hariç)' },
   { id: 183, n: 'Alet kitabı', r: [70, 70, 71], d: 'Kazma, balta, kürek, çapa, kılıç, makas' },
   { id: 184, n: 'Zırh kitabı', r: [70, 70, 83], d: 'Bütün zırh tarifleri' },
   { id: 179, n: 'Fırın kitabı', r: [LOG, LOG, 82], d: 'Fırında eriyenler ve yakıtlar' },
+  { id: 999, n: 'Renk ve Boya Kitabı', r: [110, 111, 112], d: 'Bütün boyalar ve renkli yün craft tarifleri' },
   { id: 185, n: 'Rehber kitabı', r: [2], d: 'Bütün kitapların tarifi ve içeriği' }
 ];
 B.forEach((b, i) => {
@@ -43,7 +44,20 @@ const row = r => {
 const inR = (o, a, b) => o >= a && o <= b;
 const isTool = o => inR(o, 50, 69) || o === 89 || o === 105;
 const isArm = o => inR(o, 91, 98);
-const isFood = o => o === 75 || o === 155 || inR(o, 191, 201);
+
+// Kitapların kendisinin yemek listesinde veya craft listesinde görünmesini kesin olarak engelliyoruz:
+const isFood = o => {
+  if (ids.includes(o)) return false; 
+  if (o === 75 || o === 155) return true;
+  if (inR(o, 191, 201)) return true;
+  return false;
+};
+
+// Boyalar (110-117) ve Renkli Yünler (120-127) - Kitapları hariç tutuyoruz
+const isColorOrWool = o => {
+  if (ids.includes(o)) return false;
+  return inR(o, 110, 117) || inR(o, 120, 127);
+};
 
 function list(f) { return RECIPES.filter(r => !ids.includes(r.out[0]) && f(r.out[0])).map(row).join('') || '<div class="k2">Tarif yok</div>'; }
 function smelt() {
@@ -54,6 +68,10 @@ function food() {
   return list(isFood) +
     '<div class="k2"><b>Doğrudan yenenler</b><small>Et +6 · Elma +4 · Havuç +4 · Patates +3 · Domates +3 · Biber +2 · Soğan +2 · Ekmek +5 · Çiğköfte +14</small></div>';
 }
+function colorBook() {
+  return list(isColorOrWool) + 
+    '<div class="k2"><b>Bilgi</b><small>Boyalar çiçeklerden elde edilir; yünler boyalarla renklendirilir.</small></div>';
+}
 function guide() {
   return B.filter(b => b.id !== 185).map(b => row({ shapeless: b.r, out: [b.id, 1] }).replace('<small>', '<small>' + b.d + ' · ')).join('') +
     row({ shapeless: [2], out: [185, 1] }).replace('<small>', '<small>Bu kitap: 1 toprak yeter · ');
@@ -61,7 +79,7 @@ function guide() {
 
 export function openBook(t) {
   const b = byId[t];
-  const body = t === 177 ? food() : t === 178 ? list(o => !isFood(o) && !isTool(o) && !isArm(o)) : t === 183 ? list(isTool) : t === 184 ? list(isArm) : t === 179 ? smelt() : guide();
+  const body = t === 177 ? food() : t === 178 ? list(o => !isFood(o) && !isTool(o) && !isArm(o) && !isColorOrWool(o)) : t === 183 ? list(isTool) : t === 184 ? list(isArm) : t === 179 ? smelt() : t === 999 ? colorBook() : guide();
   el.style.display = 'flex';
   el.innerHTML = '<div id="lbB"><h3 style="margin:0 0 6px">📖 ' + b.n + '</h3>' + body +
     '<button style="width:100%;margin-top:8px;padding:11px;border:0;border-radius:8px;background:#b3261e;color:#fff;font-weight:700">Kapat</button></div>';
