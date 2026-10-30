@@ -1,9 +1,9 @@
 import { TYPES, CATS } from './world.js';
 import { FACE_TILES } from './textures.js';
 import { RECIPES } from '../game/recipes.js';
-import { N, ESKI } from './idtable.js';
+import { N, ESKI, BLOK } from './idtable.js';
 
-export { N, ESKI };
+export { N, ESKI, BLOK };
 
 export function ID(ad) {
   const k = String(ad).toLowerCase();
@@ -39,6 +39,7 @@ export function denetle() {
   });
   // numara tablosu (idtable.js) ile gerçek kayıt uyuşuyor mu
   const kul = {};
+  for (const ad in BLOK) kul[BLOK[ad]] = ad;
   for (const ad in N) {
     if (kul[N[ad]]) sorun.push('TABLODA ÇAKIŞMA: ' + ad + ' ve ' + kul[N[ad]] + ' aynı numara ' + N[ad]);
     kul[N[ad]] = ad;
