@@ -43,7 +43,7 @@ const row = r => {
 const inR = (o, a, b) => o >= a && o <= b;
 const isTool = o => inR(o, 50, 69) || o === 89 || o === 105;
 const isArm = o => inR(o, 91, 98);
-// Tüm yemeklerin ID aralığı ve özel yemekler (ekmek=75, çiğköfte=155, hamur=191, kek=192, salatalık salatası vb. 196-201)
+// Yemekler: ekmek(75), çiğköfte(155), hamur(191), kek(192), salatalar/çorbalar/kızartma(196-201)
 const isFood = o => o === 75 || o === 155 || inR(o, 191, 201);
 
 function list(f) { return RECIPES.filter(r => !ids.includes(r.out[0]) && f(r.out[0])).map(row).join('') || '<div class="k2">Tarif yok</div>'; }
@@ -52,7 +52,7 @@ function smelt() {
     '<div class="k2"><b>Yakıtlar</b><small>Kömür 8 eşya · odun, tahta 1,5 · çubuk 0,5. Eşya başına 3 sn. Ocak kapalıyken de çalışır.</small></div>';
 }
 function food() {
-  return list(isFood) + '<div class="k2">' + iconHTML(15) + ' Et → pişmiş et<small>Ocakta pişer. +10 açlık</small></div>' +
+  return list(isFood) + '<div class="k2">' + iconHTML(15) + ' Et → ' + iconHTML(86) + ' Pişmiş et<small>Ocakta pişer. +10 açlık</small></div>' +
     '<div class="k2"><b>Doğrudan yenenler</b><small>Et +6 · Elma +4 · Havuç +4 · Patates +3 · Domates +3 · Biber +2 · Soğan +2 · Ekmek +5 · Çiğköfte +14</small></div>';
 }
 function guide() {
