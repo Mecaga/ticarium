@@ -43,7 +43,8 @@ const row = r => {
 const inR = (o, a, b) => o >= a && o <= b;
 const isTool = o => inR(o, 50, 69) || o === 89 || o === 105;
 const isArm = o => inR(o, 91, 98);
-const isFood = o => o === 75 || o === 155;
+// Tüm yemeklerin ID aralığı ve özel yemekler (ekmek=75, çiğköfte=155, hamur=191, kek=192, salatalık salatası vb. 196-201)
+const isFood = o => o === 75 || o === 155 || inR(o, 191, 201);
 
 function list(f) { return RECIPES.filter(r => !ids.includes(r.out[0]) && f(r.out[0])).map(row).join('') || '<div class="k2">Tarif yok</div>'; }
 function smelt() {
