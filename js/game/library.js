@@ -6,7 +6,7 @@ import { iconHTML } from '../ui/ui.js';
 import { SMELT } from '../ui/furnace.js';
 
 const B = [
-  { id: 177, n: 'Yemek kitabı', r: [LOG, LOG, WOOLANY], d: 'Yemek tarifleri' },
+  { id: 186, n: 'Yemek kitabı', r: [LOG, LOG, WOOLANY], d: 'Yemek tarifleri' },
   { id: 178, n: 'Craft kitabı', r: [70, 70, WOOLANY], d: 'Eşya ve blok tarifleri (yemek, alet, zırh hariç)' },
   { id: 183, n: 'Alet kitabı', r: [70, 70, 71], d: 'Kazma, balta, kürek, çapa, kılıç, makas' },
   { id: 184, n: 'Zırh kitabı', r: [70, 70, 83], d: 'Bütün zırh tarifleri' },
@@ -66,7 +66,7 @@ function guide() {
 
 export function openBook(t) {
   const b = byId[t];
-  const body = t === 177 ? food() : t === 178 ? list(o => !isFood(o) && !isTool(o) && !isArm(o)) : t === 183 ? list(isTool) : t === 184 ? list(isArm) : t === 179 ? smelt() : guide();
+  const body = t === 186 ? food() : t === 178 ? list(o => !isFood(o) && !isTool(o) && !isArm(o)) : t === 183 ? list(isTool) : t === 184 ? list(isArm) : t === 179 ? smelt() : guide();
   el.style.display = 'flex';
   el.innerHTML = '<div id="lbB"><h3 style="margin:0 0 6px">📖 ' + b.n + '</h3>' + body +
     '<button style="width:100%;margin-top:8px;padding:11px;border:0;border-radius:8px;background:#b3261e;color:#fff;font-weight:700">Kapat</button></div>';
