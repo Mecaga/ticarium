@@ -19,7 +19,7 @@ export const RECIPES = [
   { out: [161, 1], pat: [[GEM, GEM, GEM], [GEM, GEM, GEM], [GEM, GEM, GEM]] },         // elmas blok (9 elmas)
   { out: [85, 9], shapeless: [161] },                              // elmas blok → 9 elmas
   { out: [155, 2], shapeless: [W, W, TOMATO, PEPPER, ONION] },      // çiğköfte: 2 buğday + domates + biber + soğan
-  { out: [177, 1], shapeless: [W, W, W, 31] },                     // hamur: 3 buğday + su kovası (su kovası kullandıktan sonra boş kova geri döner)
+  { out: [191, 1], shapeless: [W, W, W, 31] },                     // hamur: 3 buğday + su kovası (su kovası kullandıktan sonra boş kova geri döner)
   { out: [170, 1], shapeless: [152, 192] },                        // salatalık: domates + salatalık
   { out: [171, 1], shapeless: [191, ONION] },                      // marul salatası: marul + soğan
   { out: [172, 1], shapeless: [190, 31] },                         // pancar çorbası: pancar
