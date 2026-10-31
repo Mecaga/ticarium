@@ -13,6 +13,7 @@ const B = [
   { id: 179, n: 'Fırın kitabı', r: [LOG, LOG, 82], d: 'Fırında eriyenler ve yakıtlar' },
   { id: 185, n: 'Rehber kitabı', r: [2], d: 'Bütün kitapların tarifi ve içeriği' }
 ];
+
 B.forEach((b, i) => {
   TYPES[b.id] = { name: b.n, color: 0x7846a0, base: 40 };
   const t = tileOf('book' + i);
@@ -20,8 +21,12 @@ B.forEach((b, i) => {
   eco.inv[b.id] = 0; eco.raw[b.id] = 40; eco.trend[b.id] = 0;
   CATS[4][1].push(b.id);
   addFlat(b.id);
-  RECIPES.push({ out: [b.id, 1], shapeless: b.r });
+  // Çakışmayı önlemek için kitap tariflerini güvenli ekliyoruz
+  if (!RECIPES.some(r => r.out[0] === b.id)) {
+    RECIPES.push({ out: [b.id, 1], shapeless: b.r });
+  }
 });
+
 const ids = B.map(b => b.id);
 const byId = Object.fromEntries(B.map(b => [b.id, b]));
 export const isBook = t => !!byId[t];
@@ -40,6 +45,7 @@ const row = r => {
   return '<div class="k2"><div>' + left + '</div> → ' + (r.out[1] > 1 ? r.out[1] + '× ' : '') + iconHTML(r.out[0]) + ' ' + itemName +
     '<small>' + (r.pat ? 'Şekilli' : 'Şekilsiz (sıra önemsiz)') + '</small></div>';
 };
+
 const inR = (o, a, b) => o >= a && o <= b;
 const isTool = o => inR(o, 50, 69) || o === 89 || o === 105;
 const isArm = o => inR(o, 91, 98);
