@@ -63,6 +63,7 @@ for (const [m, helm, chest, legs, boots] of [[IRON, 91, 92, 93, 94], [GEM, 95, 9
 }
 
 const ok = (tok, t) => {
+  if (tok === undefined) return false;
   if (tok === 0) return t === 0;
   if (tok === LOG) return t === 4 || t === 13;
   if (tok === WOOLANY) return t === 16 || (t >= 120 && t <= 127);
