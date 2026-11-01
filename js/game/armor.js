@@ -1,3 +1,4 @@
+import { N } from '../world/idtable.js';
 import { eco } from './economy.js';
 import { TYPES } from '../world/world.js';
 import { takeInstance } from './gear.js';
@@ -7,8 +8,8 @@ import { isCreative } from './creative.js';
 
 // tür: [yuva, savunma puanı]
 export const ARMOR = {
-  91: ['head', 2], 92: ['chest', 6], 93: ['legs', 5], 94: ['feet', 2],
-  95: ['head', 3], 96: ['chest', 8], 97: ['legs', 6], 98: ['feet', 3]
+  [N.DEMIR_MIGFER]: ['head', 2], [N.DEMIR_ZIRH]: ['chest', 6], [N.DEMIR_PANTOLON]: ['legs', 5], [N.DEMIR_BOT]: ['feet', 2],
+  [N.ELMAS_MIGFER]: ['head', 3], [N.ELMAS_ZIRH]: ['chest', 8], [N.ELMAS_PANTOLON]: ['legs', 6], [N.ELMAS_BOT]: ['feet', 3]
 };
 export const SLOTS4 = ['head', 'chest', 'legs', 'feet'];
 export const isArmor = t => !!ARMOR[t];
