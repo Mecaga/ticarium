@@ -1,3 +1,4 @@
+import { N } from '../idtable.js';
 import { hash, ell } from './util.js';
 export const DYE_RGB = [[154, 95, 208], [242, 201, 30], [208, 34, 40], [48, 80, 205], [243, 134, 31], [240, 120, 172], [60, 160, 60], [240, 240, 240]];
 const stemLeaf = (x, y) => ((x === 7 || x === 8) && y >= 8) || (y === 11 && (x === 6 || x === 9)) || (y === 12 && (x === 5 || x === 10));
@@ -30,6 +31,20 @@ for (let i = 0; i < 8; i++) {
     return null;
   } };
 }
-export const faces = { 12: 'sapling', 40: 'lavender', 41: 'daisy', 42: 'poppy', 43: 'bpoppy', 44: 'tulipo', 45: 'tulipp', 47: 'tulipw', 106: 'tallGrass', 188: 'tulipw' };
-for (let i = 0; i < 8; i++) faces[110 + i] = 'dye' + i;
-export const flat = [12, 40, 41, 42, 43, 44, 45, 47, 106, 188, 110, 111, 112, 113, 114, 115, 116, 117];
+export const faces = {
+  [N.FIDAN]: 'sapling', 
+  [N.LAVANTA]: 'lavender', 
+  [N.PAPATYA]: 'daisy', 
+  [N.GELINCIK]: 'poppy', 
+  [N.MAVI_GELINCIK]: 'bpoppy',
+  [N.TURUNCU_LALE]: 'tulipo', 
+  [N.PEMBE_LALE]: 'tulipp', 
+  [N.BEYAZ_LALE]: 'tulipw', 
+  76: 'tallGrass'
+};
+const fl = [N.FIDAN, N.LAVANTA, N.PAPATYA, N.GELINCIK, N.MAVI_GELINCIK, N.TURUNCU_LALE, N.PEMBE_LALE, N.BEYAZ_LALE, 76];
+for (let i = 0; i < 8; i++) { 
+  faces[N.MOR_BOYA + i] = 'dye' + i; 
+  fl.push(N.MOR_BOYA + i); 
+}
+export const flat = fl;
