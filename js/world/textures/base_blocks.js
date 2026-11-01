@@ -1,3 +1,4 @@
+import { N } from '../idtable.js';
 import { hash, cobble } from './util.js';
 const ring = (x, y) => Math.max(Math.abs(x - 7.5), Math.abs(y - 7.5));
 export const tiles = {
@@ -39,8 +40,8 @@ export const tiles = {
   birchLeaf: { c: [132, 184, 84], px: (x, y, i, k) => [132, 184, 84, hash(x, y, 43) < 0.25 ? k * 0.7 : k] }
 };
 export const faces = {
-  1: ['grassTop', 'grassSide', 'dirt'], 2: 'dirt', 3: 'stone', 4: ['woodTop', 'woodSide', 'woodTop'],
-  5: 'leaves', 6: 'sand', 8: 'snow', 11: 'bedrock', 13: ['birchTop', 'birchSide', 'birchTop'],
-  14: 'birchLeaf', 17: 'water', 25: 'lava'
+  [N.CIM]: ['grassTop', 'grassSide', 'dirt'], [N.TOPRAK]: 'dirt', [N.TAS]: 'stone', [N.ODUN]: ['woodTop', 'woodSide', 'woodTop'],
+  [N.YAPRAK]: 'leaves', [N.KUM]: 'sand', [N.KAR]: 'snow', [N.KATMAN_KAYASI]: 'bedrock', [N.HUS_ODUN]: ['birchTop', 'birchSide', 'birchTop'],
+  [N.HUS_YAPRAK]: 'birchLeaf', [N.SU]: 'water', [N.LAV]: 'lava'
 };
 export const flat = [];
