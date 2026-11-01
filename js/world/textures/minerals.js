@@ -1,3 +1,4 @@
+import { N } from '../idtable.js';
 import { hash, cobble, ell } from './util.js';
 const ore = col => ({ c: [150, 148, 144], px: (x, y, i) => {
   const c = cobble(x, y);
@@ -33,7 +34,17 @@ export const tiles = {
   } }
 };
 export const faces = {
-  10: 'gold', 34: 'obsidian', 36: 'coalOre', 37: 'ironOre', 38: 'goldOre', 39: 'diamondOre',
-  82: 'coal', 83: 'ingotI', 84: 'ingotG', 85: 'gem', 186: 'ironB', 187: 'diamB'
+  [N.ALTIN_BLOK]: 'gold', 
+  [N.OBSIDIYEN]: 'obsidian', 
+  [N.KOMUR_CEVHERI]: 'coalOre', 
+  [N.DEMIR_CEVHERI]: 'ironOre',
+  [N.ALTIN_CEVHERI]: 'goldOre', 
+  [N.ELMAS_CEVHERI]: 'diamondOre',
+  [N.KOMUR]: 'coal', 
+  [N.DEMIR_KULCE]: 'ingotI', 
+  [N.ALTIN_KULCE]: 'ingotG', 
+  [N.ELMAS]: 'gem',
+  [N.DEMIR_BLOK]: 'ironB', 
+  [N.ELMAS_BLOK]: 'diamB'
 };
-export const flat = [82, 83, 84, 85];
+export const flat = [N.KOMUR, N.DEMIR_KULCE, N.ALTIN_KULCE, N.ELMAS];
