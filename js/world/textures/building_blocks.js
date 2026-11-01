@@ -1,3 +1,4 @@
+import { N } from '../idtable.js';
 import { hash } from './util.js';
 import { DYE_RGB } from './flora_dye.js';
 export const tiles = {
@@ -22,6 +23,11 @@ export const tiles = {
 for (let i = 0; i < 8; i++) {
   tiles['wc' + i] = { c: DYE_RGB[i], px: (x, y) => [DYE_RGB[i][0], DYE_RGB[i][1], DYE_RGB[i][2], (0.93 + hash(x, y, 62 + i) * 0.1) * ((x + y) % 4 === 0 ? 0.95 : 1)] };
 }
-export const faces = { 7: 'brick', 9: 'glass', 16: 'wool', 70: 'planks' };
-for (let i = 0; i < 8; i++) faces[120 + i] = 'wc' + i;
+export const faces = { 
+  [N.TUGLA]: 'brick', 
+  [N.CAM]: 'glass', 
+  [N.YUN]: 'wool', 
+  [N.TAHTA]: 'planks' 
+};
+for (let i = 0; i < 8; i++) faces[N.MOR_YUN + i] = 'wc' + i;
 export const flat = [];
