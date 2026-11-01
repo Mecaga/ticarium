@@ -1,8 +1,8 @@
-import { TYPES, CATS, get, set, rebuild, isLoaded, isPlant, target, prev, WOOLC_MIN } from '../world/world.js';
-import { FACE_TILES, tileOf, addFlat } from '../world/textures.js';
+import { N } from '../world/idtable.js';
+import { TYPES, CATS, get, set, rebuild, isLoaded, isPlant, target, prev } from '../world/world.js';
 import { eco } from './economy.js';
 import { RECIPES } from './recipes.js';
-import { MAXDUR, wear } from './gear.js';
+import { wear } from './gear.js';
 import { toast, drawHud } from '../ui/ui.js';
 import { P } from '../entities/player.js';
 import { dropItems } from '../entities/items.js';
@@ -13,33 +13,16 @@ import { recordChange } from './progress.js';
 import { sfx } from '../core/sound.js';
 import { addItem } from './inventory.js';
 
-export const JUKE = 101, DISC_MIN = 102, DISC_MAX = 104, SHEARS = 105, BPRINT = 107;
+export const JUKE = N.MUZIK_KUTUSU, DISC_MIN = N.DISK_1, DISC_MAX = N.DISK_3, SHEARS = N.MAKAS, BPRINT = N.SEMA_BLOGU;
 export const isDisc = t => t >= DISC_MIN && t <= DISC_MAX;
 
-function reg(id, name, color, base, top, side, bot, cat) {
-  TYPES[id] = { name, color, base };
-  FACE_TILES[id] = [tileOf(top), tileOf(side), tileOf(bot)];
-  eco.inv[id] = 0; eco.raw[id] = base; eco.trend[id] = 0;
-  if (cat != null) CATS[cat][1].push(id);
-}
-reg(JUKE, 'Müzik kutusu', 0x6b4423, 60, 'furnaceTop', 'planks', 'planks', 0);
-reg(102, 'Disk: Neşe', 0x222222, 40, 'obsidian', 'obsidian', 'obsidian', 4);
-reg(103, 'Disk: Gece', 0x6a2040, 50, 'netherite', 'netherite', 'netherite', 4);
-reg(104, 'Disk: Macera', 0xd4a020, 70, 'gold', 'gold', 'gold', 4);
-reg(SHEARS, 'Makas', 0xd8d8d8, 60, 'hoeI', 'hoeI', 'hoeI', 3);
-reg(BPRINT, 'Şema bloğu (ev)', 0x4a90e2, 50, 'craftTop', 'craftSide', 'planks', 0);
-MAXDUR[SHEARS] = 238;
-for (const d of [102, 103, 104]) FACE_TILES[d] = [tileOf('disc'), tileOf('disc'), tileOf('disc')];
-FACE_TILES[SHEARS] = [tileOf('shears'), tileOf('shears'), tileOf('shears')];
-addFlat(102, 103, 104, SHEARS);
-
-const C = 82;
-RECIPES.push({ out: [JUKE, 1], pat: [[70, 70, 70], [70, 85, 70], [70, 70, 70]] });
-RECIPES.push({ out: [102, 1], pat: [[C, C, C], [C, 83, C], [C, C, C]] });
-RECIPES.push({ out: [103, 1], pat: [[C, C, C], [C, 84, C], [C, C, C]] });
-RECIPES.push({ out: [104, 1], pat: [[C, C, C], [C, 85, C], [C, C, C]] });
-RECIPES.push({ out: [SHEARS, 1], pat: [[0, 83], [83, 0]] });
-RECIPES.push({ out: [BPRINT, 1], pat: [[70, 70, 70], [70, 71, 70], [70, 70, 70]] });
+const C = N.KOMUR;
+RECIPES.push({ out: [JUKE, 1], pat: [[N.TAHTA, N.TAHTA, N.TAHTA], [N.TAHTA, N.ELMAS, N.TAHTA], [N.TAHTA, N.TAHTA, N.TAHTA]] });
+RECIPES.push({ out: [N.DISK_1, 1], pat: [[C, C, C], [C, N.DEMIR_KULCE, C], [C, C, C]] });
+RECIPES.push({ out: [N.DISK_2, 1], pat: [[C, C, C], [C, N.ALTIN_KULCE, C], [C, C, C]] });
+RECIPES.push({ out: [N.DISK_3, 1], pat: [[C, C, C], [C, N.ELMAS, C], [C, C, C]] });
+RECIPES.push({ out: [SHEARS, 1], pat: [[0, N.DEMIR_KULCE], [N.DEMIR_KULCE, 0]] });
+RECIPES.push({ out: [BPRINT, 1], pat: [[N.TAHTA, N.TAHTA, N.TAHTA], [N.TAHTA, N.CUBUK, N.TAHTA], [N.TAHTA, N.TAHTA, N.TAHTA]] });
 
 const commit = (x, y, z, t) => { recordChange(x, y, z, t); if (G.online) G.online.sendBlock(x, y, z, t); };
 const give = (t, n) => dropItems([{ t, c: n, x: P.x, y: P.y + 1.3, z: P.z, vx: 0, vy: 2, vz: 0 }]);
@@ -54,7 +37,7 @@ export function useShears() {
   if (Date.now() - (cool.get(m.id) || 0) < 60000) return toast('Bu koyun yeni kırpıldı');
   cool.set(m.id, Date.now());
   const col = mobCol(m.id), n = 1 + Math.floor(Math.random() * 3);
-  dropItems([{ t: col >= 0 ? WOOLC_MIN + col : 16, c: n, x: P.x + 0, y: P.y + 1.3, z: P.z, vx: 0, vy: 2, vz: 0 }]);
+  dropItems([{ t: col >= 0 ? N.MOR_YUN + col : N.YUN, c: n, x: P.x + 0, y: P.y + 1.3, z: P.z, vx: 0, vy: 2, vz: 0 }]);
   sfx.hit();
   if (wear(SHEARS, 1)) toast('💥 Makas kırıldı!');
   drawHud();
@@ -62,9 +45,9 @@ export function useShears() {
 
 // ---------- Müzik kutusu ----------
 const TUNES = {
-  102: { bpm: 170, n: [72, 74, 76, 72, 76, 74, 72, 67, 72, 74, 76, 77, 76, 74, 72, 0] },
-  103: { bpm: 100, n: [57, 0, 60, 0, 64, 0, 60, 0, 55, 0, 59, 0, 62, 0, 59, 0] },
-  104: { bpm: 140, n: [60, 64, 67, 72, 71, 67, 64, 67, 62, 65, 69, 74, 72, 69, 65, 0] }
+  [N.DISK_1]: { bpm: 170, n: [72, 74, 76, 72, 76, 74, 72, 67, 72, 74, 76, 77, 76, 74, 72, 0] },
+  [N.DISK_2]: { bpm: 100, n: [57, 0, 60, 0, 64, 0, 60, 0, 55, 0, 59, 0, 62, 0, 59, 0] },
+  [N.DISK_3]: { bpm: 140, n: [60, 64, 67, 72, 71, 67, 64, 67, 62, 65, 69, 74, 72, 69, 65, 0] }
 };
 let ac = null;
 const plays = new Map();   // her müzik kutusu kendi diskiyle bağımsız çalar
@@ -123,10 +106,10 @@ for (let x = 0; x < 5; x++) for (let z = 0; z < 5; z++) {
     if (!edge) { cells.push([x, y, z, 0]); continue; }
     if (x === 2 && z === 0 && y < 2) { cells.push([x, y, z, 0]); continue; }   // kapı
     const win = y === 1 && ((x === 0 && z === 2) || (x === 4 && z === 2) || (x === 2 && z === 4));
-    cells.push([x, y, z, win ? 9 : 70]);
+    cells.push([x, y, z, win ? N.CAM : N.TAHTA]);
   }
-  cells.push([x, 3, z, 70]);   // çatı
-  cells.push([x, -1, z, 70]);   // zemin
+  cells.push([x, 3, z, N.TAHTA]);   // çatı
+  cells.push([x, -1, z, N.TAHTA]);   // zemin
 }
 export const BLUEPRINT = { name: 'Küçük Ahşap Ev', size: [5, 4, 5], cells };
 const REQ = {};
