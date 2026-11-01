@@ -1,3 +1,4 @@
+import { N } from '../world/idtable.js';
 import { H, spawnPos } from '../world/world.js';
 import { P, pHooks, collides } from '../entities/player.js';
 import { eco } from './economy.js';
