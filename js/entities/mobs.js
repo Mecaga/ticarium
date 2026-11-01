@@ -1,3 +1,4 @@
+import { N } from '../world/idtable.js';
 import { H, solid, get, WATER, LAVA, SEA, losBlocked, surfaceY, worldKind, isLoaded, skyTops, WOOLC_MIN, DYE_COL } from '../world/world.js';
 import { dropItems } from './items.js';
 import { P } from './player.js';
@@ -6,9 +7,9 @@ import { P } from './player.js';
 export const mhooks = { send: null, remove: null };
 
 const KIND = {
-  cow: { drop: 15, dmin: 1, dmax: 3 },
-  sheep: { drop: 16, dmin: 1, dmax: 2 },
-  chicken: { drop: 15, dmin: 1, dmax: 1 }
+  cow: { drop: N.ET, dmin: 1, dmax: 3 },
+  sheep: { drop: N.YUN, dmin: 1, dmax: 2 },
+  chicken: { drop: N.ET, dmin: 1, dmax: 1 }
 };
 const want = () => (worldKind() === 'sky' ? { cow: 1, sheep: 1, chicken: 1 } : { cow: 3, sheep: 3, chicken: 3 });
 const kindOf = id => (id.indexOf('sheep') === 0 ? 'sheep' : id.indexOf('chicken') === 0 ? 'chicken' : 'cow');
@@ -149,7 +150,7 @@ function landSpot() {
     const y = surfaceY(x, z);
     if (y < 0 || y >= H - 3) return null;
     const t = get(x, y, z);
-    if (t !== 1 && t !== 2 && t !== 6 && t !== 8) return null;
+    if (t !== N.CIM && t !== N.TOPRAK && t !== N.KUM && t !== N.KAR) return null;
     if (normal && y < SEA + 1) return null;
     const a = get(x, y + 1, z);
     if (solid(x, y + 1, z) || solid(x, y + 2, z) || a === WATER || a === LAVA) return null;
@@ -266,7 +267,7 @@ function sim(m, dt) {
     m.egg -= dt;
     if (m.egg <= 0) {
       m.egg = 60 + Math.random() * 60;
-      dropItems([{ t: 189, c: 1, x: m.x, y: m.y + 0.4, z: m.z, vx: 0, vy: 1.5, vz: 0 }]);
+      dropItems([{ t: N.YUMURTA, c: 1, x: m.x, y: m.y + 0.4, z: m.z, vx: 0, vy: 1.5, vz: 0 }]);
     }
   }
   const dec = Math.pow(0.02, dt);
