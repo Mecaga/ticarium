@@ -1,3 +1,4 @@
+import { N } from '../idtable.js';
 import { WOOD, STONE, IRON, DIAM } from './util.js';
 function toolPix(kind, col, x, y) {
   if (kind === 'axe') {
@@ -48,9 +49,30 @@ export const tiles = {
   } }
 };
 export const faces = {
-  30: 'bucket', 31: 'wbucket', 33: 'lbucket', 50: 'pickW', 51: 'pickS', 52: 'pickI', 53: 'pickD',
-  55: 'axe', 56: 'shovel', 57: 'axeW', 58: 'axeS', 59: 'shovelW', 60: 'shovelS',
-  61: 'hoeW', 62: 'hoeS', 63: 'hoeI', 64: 'hoeD', 65: 'swordW', 66: 'swordS', 67: 'swordI', 68: 'swordD',
-  69: 'axeD', 71: 'stick', 89: 'shovelD', 105: 'shears'
+  [N.KOVA]: 'bucket', 
+  [N.SU_KOVASI]: 'wbucket', 
+  [N.LAV_KOVASI]: 'lbucket', 
+  [N.CUBUK]: 'stick', 
+  [N.MAKAS]: 'shears',
+  [N.AHSAP_KAZMA]: 'pickW', 
+  [N.TAS_KAZMA]: 'pickS', 
+  [N.DEMIR_KAZMA]: 'pickI', 
+  [N.ELMAS_KAZMA]: 'pickD',
+  [N.AHSAP_BALTA]: 'axeW', 
+  [N.TAS_BALTA]: 'axeS', 
+  [N.DEMIR_BALTA]: 'axe', 
+  [N.ELMAS_BALTA]: 'axeD',
+  [N.AHSAP_KUREK]: 'shovelW', 
+  [N.TAS_KUREK]: 'shovelS', 
+  [N.DEMIR_KUREK]: 'shovel', 
+  [N.ELMAS_KUREK]: 'shovelD',
+  [N.AHSAP_CAPA]: 'hoeW', 
+  [N.TAS_CAPA]: 'hoeS', 
+  [N.DEMIR_CAPA]: 'hoeI', 
+  [N.ELMAS_CAPA]: 'hoeD',
+  [N.AHSAP_KILIC]: 'swordW', 
+  [N.TAS_KILIC]: 'swordS', 
+  [N.DEMIR_KILIC]: 'swordI', 
+  [N.ELMAS_KILIC]: 'swordD'
 };
-export const flat = [30, 31, 33, 50, 51, 52, 53, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 71, 89, 105];
+export const flat = Object.keys(faces).map(Number);
