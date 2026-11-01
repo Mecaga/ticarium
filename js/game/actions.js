@@ -1,3 +1,4 @@
+import { N } from '../world/idtable.js';
 import {
   get, set, rebuild, target, prev, wtarget, stgt, waterLvl, TYPES, H, inBounds, eachBlock, ph,
   BEDROCK, SAPLING, WATER, LAVA, BUCKET, WBUCKET, LBUCKET, CANVAS, APPLE, OBSIDIAN,
@@ -34,7 +35,10 @@ import { isEgg, useEgg } from './eggs.js';
 import * as content from './content.js';
 
 // Açlık puanları: et, elma, ekmek, pişmiş et, patates, havuç, domates, biber, soğan, çiğköfte vb.
-const FOOD = { 15: 6, 46: 4, 75: 5, 86: 10, 150: 3, 151: 4, 152: 3, 153: 2, 154: 2, 155: 14 };
+const FOOD = {
+  [N.ET]: 6, [N.ELMA]: 4, [N.EKMEK]: 5, [N.PISMIS_ET]: 10, [N.PATATES]: 3, [N.HAVUC]: 4,
+  [N.DOMATES]: 3, [N.BIBER]: 2, [N.SOGAN]: 2, [N.CIGKOFTE]: 14
+};
 if (content.FOODX) Object.assign(FOOD, content.FOODX);
 
 const NOPLACE = new Set([STICK, WHEAT, COAL, INGOT_I, INGOT_G, GEM]);
@@ -62,8 +66,8 @@ const give = (t, n = 1) => {
   }
 };
 const take = (t, n = 1) => { if (!isCreative()) eco.inv[t] -= n; };
-const isLog = t => t === 4 || t === 13;
-const isLeaf = t => t === 5 || t === 14;
+const isLog = t => t === N.ODUN || t === N.HUS_ODUN;
+const isLeaf = t => t === N.YAPRAK || t === N.HUS_YAPRAK;
 const uiOpen = () => isDrawOpen() || isCraftOpen() || isFurnaceOpen() || isChestOpen();
 
 function commit(x, y, z, t) {
@@ -80,10 +84,9 @@ function afterWear(t, amt) {
 
 // Blok kırılınca düşen eşyalar [[eşya, adet], ...]
 function dropsOf(t) {
-  if (t === 35) return []; // Eski netherit bloklar
-  if (t >= 180 && t <= 182) return [[8, 1]];
+  if (t >= N.KAR_1 && t <= N.KAR_3) return [[N.KAR, 1]];
   if (EXTRA_DROPS[t]) return EXTRA_DROPS[t];
-  if (t === FARM) return [[2, 1]];
+  if (t === FARM) return [[N.TOPRAK, 1]];
   if (t === COAL_ORE) return [[COAL, 1]];
   if (t === DIAMOND_ORE) return [[GEM, 1]];
   if (t === TALL) {   // uzun ot: %30 tohum, %4 rastgele sebze
@@ -97,7 +100,7 @@ function dropsOf(t) {
     if (t < CROP_MAX) return [[SEEDS, 1]];
     return [[WHEAT, 1], [SEEDS, 1 + Math.floor(Math.random() * 2)]];
   }
-  if (t === 1 && Math.random() < 0.12) return [[1, 1], [SEEDS, 1]];
+  if (t === N.CIM && Math.random() < 0.12) return [[N.CIM, 1], [SEEDS, 1]];
   return [[t, 1]];
 }
 
@@ -121,9 +124,9 @@ function popPlant(x, y, z) {
 // Kar katmanının düşmesi için eklenen fonksiyon
 function popSnow(x, y, z) {
   const a = get(x, y, z);
-  if (a < 180 || a > 182) return;
+  if (a < N.KAR_1 || a > N.KAR_3) return;
   set(x, y, z, 0); commit(x, y, z, 0);
-  if (!isCreative()) dropAt([[8, 1]], x, y, z);
+  if (!isCreative()) dropAt([[N.KAR, 1]], x, y, z);
 }
 
 ph.fn = (x, y, z, old) => {
@@ -133,7 +136,7 @@ ph.fn = (x, y, z, old) => {
 };
 
 // ---- Büyüme: fidanlar, buğday ve sebzeler ----
-const GROW = [SAPLING, 77, 78, 79];
+const GROW = [SAPLING, N.BUGDAY_0, N.BUGDAY_1, N.BUGDAY_2];
 VEG.forEach(([b]) => { for (let s = 0; s < 3; s++) GROW.push(b + s); });
 
 function wetNear(x, y, z) {   // 4 blok yarıçapında su var mı
@@ -149,7 +152,7 @@ function growTick() {
   eachBlock(GROW, (x, y, z, t) => {
     if (t === SAPLING) {
       if (Math.random() > 0.06) return;
-      if (![1, 2, 6, 8].includes(get(x, y - 1, z))) return;
+      if (![N.CIM, N.TOPRAK, N.KUM, N.KAR].includes(get(x, y - 1, z))) return;
       const plan = planTree(x, y, z, Math.random() < 0.35);
       if (!plan) return;
       for (const b of plan) { set(b.x, b.y, b.z, b.t); commit(b.x, b.y, b.z, b.t); }
@@ -170,7 +173,7 @@ export function initActions() {
 function leafDrop(x, y, z, t) {
   const r = Math.random(), arr = [];
   if (r < 0.09) arr.push([SAPLING, 1]);
-  else if (t === 5 && r < 0.16) arr.push([APPLE, 1]);
+  else if (t === N.YAPRAK && r < 0.16) arr.push([APPLE, 1]);
   dropAt(arr, x, y, z);
 }
 
@@ -285,7 +288,7 @@ function pour(item) {
   const c = get(x, y, z);
   if (c !== 0 && !isPlant(c) && c !== WATER && c !== LAVA) return;
   let res = fl;
-  if ((c === WATER || c === LAVA) && c !== fl) res = (c === LAVA && waterLvl(x, y, z) === 0) ? OBSIDIAN : 3;
+  if ((c === WATER || c === LAVA) && c !== fl) res = (c === LAVA && waterLvl(x, y, z) === 0) ? OBSIDIAN : N.TAS;
   set(x, y, z, res);
   commit(x, y, z, res);
   take(item); give(BUCKET);
@@ -328,7 +331,7 @@ function useHoe() {
   if (eco.inv[t] < 1) return toast('Çapa yok.');
   if (!stgt && !target) return toast('Çapayla çimen ya da toprak bloğuna bak');
   const [x, y, z] = stgt || target, b = get(x, y, z);
-  if (b !== 1 && b !== 2) return toast('Çapa, çimen ya da toprak bloğunu işler');
+  if (b !== N.CIM && b !== N.TOPRAK) return toast('Çapa, çimen ya da toprak bloğunu işler');
   const a = get(x, y + 1, z);
   if (a !== 0) {
     if (isCrop(a)) return toast('Burada ekin var');
@@ -440,12 +443,12 @@ export function placeBlock() {
   const [x, y, z] = pc;
   if (!inBounds(x, y, z)) return toast(y >= H ? 'Yükseklik sınırı (' + H + ')' : 'Dünya sınırı');
   const old = get(x, y, z);
-  if (isPlant(old) && old !== TALL && !(old >= 40 && old <= 45) && old !== 47) return toast('Burada ekin var');
+  if (isPlant(old) && old !== TALL && !(old >= N.LAVANTA && old <= N.AMBER) && old !== 47) return toast('Burada ekin var');
   if (isPlant(t)) {
     if (old !== 0 && old !== TALL) return;
     const g = get(x, y - 1, z);
-    if (t === SAPLING && ![1, 2, 6, 8].includes(g)) return toast('Fidan çimene, toprağa, kuma ya da kara dikilir');
-    if (t !== SAPLING && ![1, 2].includes(g)) return toast('Çiçek çimene ya da toprağa dikilir');
+    if (t === SAPLING && ![N.CIM, N.TOPRAK, N.KUM, N.KAR].includes(g)) return toast('Fidan çimene, toprağa, kuma ya da kara dikilir');
+    if (t !== SAPLING && ![N.CIM, N.TOPRAK].includes(g)) return toast('Çiçek çimene ya da toprağa dikilir');
   }
   set(x, y, z, t);
   if (collides(P.x, P.y, P.z)) { set(x, y, z, old); return; }
