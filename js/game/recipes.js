@@ -1,76 +1,57 @@
-export const LOG = 'log';       // 4 (meşe odun) ya da 13 (huş odun)
-export const WOOLANY = 'wool';  // beyaz ya da renkli yün
-const P = 70, S = 71, C = 3, W = 74, IRON = 83, GOLD = 84, GEM = 85;
-const POTATO = 150, TOMATO = 152, PEPPER = 153, ONION = 154;
+import { N } from '../world/idtable.js';
 
-// pat: şekilli tarif (0 = boş hücre), shapeless: şekilsiz (sıra önemli değil). out: [eşya, adet]
+export const LOG = 'log';
+export const WOOLANY = 'wool';
+const P = N.TAHTA, S = N.CUBUK, C = N.TAS, IRON = N.DEMIR_KULCE, GOLD = N.ALTIN_KULCE, GEM = N.ELMAS;
+
 export const RECIPES = [
-  { out: [70, 4], shapeless: [LOG] },                              // 1 kütük → 4 tahta
-  { out: [71, 4], pat: [[P], [P]] },                               // 2 tahta → 4 çubuk
-  { out: [72, 1], pat: [[P, P], [P, P]] },                         // çalışma masası
-  { out: [75, 1], pat: [[W, W, W]] },                              // ekmek
-  { out: [30, 1], pat: [[C, 0, C], [0, C, 0]] },                   // kova (3 taş, V şekli)
-  { out: [32, 1], pat: [[S, S, S], [S, 16, S], [S, S, S]] },       // tuval (çubuk + yün)
-  { out: [81, 1], pat: [[C, C, C], [C, 0, C], [C, C, C]] },        // ocak (8 taş)
-  { out: [10, 1], pat: [[GOLD, GOLD, GOLD], [GOLD, GOLD, GOLD], [GOLD, GOLD, GOLD]] },   // altın blok (9 külçe)
-  { out: [84, 9], shapeless: [10] },                               // altın blok → 9 külçe
-  { out: [160, 1], pat: [[IRON, IRON, IRON], [IRON, IRON, IRON], [IRON, IRON, IRON]] }, // demir blok (9 demir külçe)
-  { out: [83, 9], shapeless: [160] },                              // demir blok → 9 demir külçe
-  { out: [161, 1], pat: [[GEM, GEM, GEM], [GEM, GEM, GEM], [GEM, GEM, GEM]] },         // elmas blok (9 elmas)
-  { out: [85, 9], shapeless: [161] },                              // elmas blok → 9 elmas
-  { out: [155, 2], shapeless: [W, W, TOMATO, PEPPER, ONION] },      // çiğköfte: 2 buğday + domates + biber + soğan
-  { out: [191, 1], shapeless: [W, W, W, 31] },                     // hamur: 3 buğday + su kovası (su kovası kullandıktan sonra boş kova geri döner)
-  { out: [170, 1], shapeless: [152, 192] },                        // salatalık: domates + salatalık
-  { out: [171, 1], shapeless: [191, ONION] },                      // marul salatası: marul + soğan
-  { out: [172, 1], shapeless: [190, 31] },                         // pancar çorbası: pancar
-  { out: [173, 1], shapeless: [152, 31] },                         // domates çorbası: domates
-  { out: [174, 1], shapeless: [178, 177, 189] },                   // kek: süt (178) + hamur (177) + yumurta (189)
-  { out: [175, 1], shapeless: [151, ONION, POTATO] },              // sebze çorbası: havuç + soğan + patates
-  { out: [176, 1], shapeless: [POTATO] }                           // patates kızartması (fırında pişince çıkar)
+  { out: [P, 4], shapeless: [LOG] },
+  { out: [S, 4], pat: [[P], [P]] },
+  { out: [N.CALISMA_MASASI, 1], pat: [[P, P], [P, P]] },
+  { out: [N.EKMEK, 1], pat: [[N.BUGDAY, N.BUGDAY, N.BUGDAY]] },
+  { out: [N.KOVA, 1], pat: [[C, 0, C], [0, C, 0]] },
+  { out: [N.TUVAL, 1], pat: [[S, S, S], [S, N.YUN, S], [S, S, S]] },
+  { out: [N.OCAK, 1], pat: [[C, C, C], [C, 0, C], [C, C, C]] },
+  { out: [N.ALTIN_BLOK, 1], pat: [[GOLD, GOLD, GOLD], [GOLD, GOLD, GOLD], [GOLD, GOLD, GOLD]] },
+  { out: [GOLD, 9], shapeless: [N.ALTIN_BLOK] },
+  { out: [N.CIGKOFTE, 2], shapeless: [N.BUGDAY, N.BUGDAY, N.DOMATES, N.BIBER, N.SOGAN] }
 ];
 
-// Çiçek → 2 boya; boya + yün → renkli yün
-for (let i = 0; i < 8; i++) {
-  RECIPES.push({ out: [110 + i, 2], shapeless: [40 + i] });
-  RECIPES.push({ out: [120 + i, 1], shapeless: [110 + i, WOOLANY] });
-}
-
-// Renk karışımları (Craft boya birleşimleri)
-RECIPES.push(
-  { out: [116, 1], shapeless: [111, 113] }, // Sarı + Mavi = Yeşil boya
-  { out: [114, 1], shapeless: [111, 112] }, // Sarı + Kırmızı = Turuncu boya
-  { out: [110, 1], shapeless: [112, 113] }, // Kırmızı + Mavi = Mor boya
-  { out: [115, 1], shapeless: [117, 112] }  // Beyaz + Kırmızı = Pembe boya
-);
+// Çiçek -> 2 boya; boya + yün -> renkli yün
+for (let i = 0; i < 6; i++) RECIPES.push({ out: [N.MOR_BOYA + i, 2], shapeless: [N.LAVANTA + i] });
+for (let i = 0; i < 8; i++) RECIPES.push({ out: [N.MOR_YUN + i, 1], shapeless: [N.MOR_BOYA + i, WOOLANY] });
 
 // [malzeme, kazma, balta, kürek, çapa, kılıç]
-for (const [m, pick, axe, shovel, hoe, sword] of [
-  [P, 50, 57, 59, 61, 65], [C, 51, 58, 60, 62, 66], [IRON, 52, 55, 56, 63, 67], [GEM, 53, 69, 89, 64, 68]
+for (const [m, a, b, c, d, e] of [
+  [P, N.AHSAP_KAZMA, N.AHSAP_BALTA, N.AHSAP_KUREK, N.AHSAP_CAPA, N.AHSAP_KILIC],
+  [C, N.TAS_KAZMA, N.TAS_BALTA, N.TAS_KUREK, N.TAS_CAPA, N.TAS_KILIC],
+  [IRON, N.DEMIR_KAZMA, N.DEMIR_BALTA, N.DEMIR_KUREK, N.DEMIR_CAPA, N.DEMIR_KILIC],
+  [GEM, N.ELMAS_KAZMA, N.ELMAS_BALTA, N.ELMAS_KUREK, N.ELMAS_CAPA, N.ELMAS_KILIC]
 ]) {
-  RECIPES.push({ out: [pick, 1], pat: [[m, m, m], [0, S, 0], [0, S, 0]] });
-  RECIPES.push({ out: [axe, 1], pat: [[m, m], [m, S], [0, S]] });
-  RECIPES.push({ out: [shovel, 1], pat: [[m], [S], [S]] });
-  RECIPES.push({ out: [hoe, 1], pat: [[m, m], [0, S], [0, S]] });
-  RECIPES.push({ out: [sword, 1], pat: [[m], [m], [S]] });
+  RECIPES.push({ out: [a, 1], pat: [[m, m, m], [0, S, 0], [0, S, 0]] });
+  RECIPES.push({ out: [b, 1], pat: [[m, m], [m, S], [0, S]] });
+  RECIPES.push({ out: [c, 1], pat: [[m], [S], [S]] });
+  RECIPES.push({ out: [d, 1], pat: [[m, m], [0, S], [0, S]] });
+  RECIPES.push({ out: [e, 1], pat: [[m], [m], [S]] });
 }
-
-// [malzeme, miğfer, zırh, pantolon, bot]
-for (const [m, helm, chest, legs, boots] of [[IRON, 91, 92, 93, 94], [GEM, 95, 96, 97, 98]]) {
-  RECIPES.push({ out: [helm, 1], pat: [[m, m, m], [m, 0, m]] });
-  RECIPES.push({ out: [chest, 1], pat: [[m, 0, m], [m, m, m], [m, m, m]] });
-  RECIPES.push({ out: [legs, 1], pat: [[m, m, m], [m, 0, m], [m, 0, m]] });
-  RECIPES.push({ out: [boots, 1], pat: [[m, 0, m], [m, 0, m]] });
+for (const [m, h, c, l, b] of [
+  [IRON, N.DEMIR_MIGFER, N.DEMIR_ZIRH, N.DEMIR_PANTOLON, N.DEMIR_BOT],
+  [GEM, N.ELMAS_MIGFER, N.ELMAS_ZIRH, N.ELMAS_PANTOLON, N.ELMAS_BOT]
+]) {
+  RECIPES.push({ out: [h, 1], pat: [[m, m, m], [m, 0, m]] });
+  RECIPES.push({ out: [c, 1], pat: [[m, 0, m], [m, m, m], [m, m, m]] });
+  RECIPES.push({ out: [l, 1], pat: [[m, m, m], [m, 0, m], [m, 0, m]] });
+  RECIPES.push({ out: [b, 1], pat: [[m, 0, m], [m, 0, m]] });
 }
 
 const ok = (tok, t) => {
   if (tok === undefined) return false;
   if (tok === 0) return t === 0;
-  if (tok === LOG) return t === 4 || t === 13;
-  if (tok === WOOLANY) return t === 16 || (t >= 120 && t <= 127);
+  if (tok === LOG) return t === N.ODUN || t === N.HUS_ODUN;
+  if (tok === WOOLANY) return t === N.YUN || (t >= N.MOR_YUN && t <= N.BEYAZ_YUN);
   return tok === t;
 };
 
-// cells: size*size uzunluğunda tür dizisi (0 = boş). Dönüş: [eşya, adet] ya da null
 export function findRecipe(cells, size) {
   let r0 = size, r1 = -1, c0 = size, c1 = -1;
   for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) {
