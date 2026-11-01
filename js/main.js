@@ -33,7 +33,11 @@ import './game/modes.js';
 import './game/content.js'; // İçerik tanımlarının erkenden yüklenmesini sağlar
 import './world/ids.js';
 
-
+// Yeni eklenen içerik ve sistem modülleri (sıralı yükleme)
+import './game/content.js';
+import './game/eggs.js';
+import './game/library.js';
+import './game/chests.js';
 
 const $ = id => document.getElementById(id);
 
