@@ -1,3 +1,4 @@
+import { N } from '../world/idtable.js';
 import { eco } from '../game/economy.js';
 import { TYPES } from '../world/world.js';
 import { drawHud, iconHTML, toast } from './ui.js';
@@ -9,9 +10,9 @@ import { sfx } from '../core/sound.js';
 import { loadAt, saveAt, canStore } from '../game/store.js';
 
 // Eritilenler: girdi → çıktı
-export const SMELT = { 37: 83, 38: 84, 6: 9, 15: 86 };   // demir cevheri, altın cevheri, kum, et
+export const SMELT = {};   // content.js doldurur
 // Yakıt: kaç eşya eritir
-const FUEL = { 82: 8, 70: 1.5, 4: 1.5, 13: 1.5, 71: 0.5 };
+const FUEL = { [N.KOMUR]: 8, [N.TAHTA]: 1.5, [N.ODUN]: 1.5, [N.HUS_ODUN]: 1.5, [N.CUBUK]: 0.5 };
 const TIME = 3;   // eşya başına saniye
 
 const st = document.createElement('style');
