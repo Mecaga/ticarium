@@ -1,14 +1,17 @@
+import { N } from '../world/idtable.js';
 import { eco } from './economy.js';
 import { isCreative } from './creative.js';
 
 // Dayanıklılık (kaç kullanım). Aletler, kılıçlar ve zırhlar.
 export const MAXDUR = {
-  50: 59, 51: 131, 52: 250, 53: 1561,
-  55: 250, 56: 250, 57: 59, 58: 131, 59: 59, 60: 131, 69: 1561, 89: 1561,
-  61: 59, 62: 131, 63: 250, 64: 1561,
-  65: 59, 66: 131, 67: 250, 68: 1561,
-  91: 165, 92: 240, 93: 225, 94: 195,
-  95: 363, 96: 528, 97: 495, 98: 429
+  [N.AHSAP_KAZMA]: 59, [N.TAS_KAZMA]: 131, [N.DEMIR_KAZMA]: 250, [N.ELMAS_KAZMA]: 1561,
+  [N.AHSAP_BALTA]: 59, [N.TAS_BALTA]: 131, [N.DEMIR_BALTA]: 250, [N.ELMAS_BALTA]: 1561,
+  [N.AHSAP_KUREK]: 59, [N.TAS_KUREK]: 131, [N.DEMIR_KUREK]: 250, [N.ELMAS_KUREK]: 1561,
+  [N.AHSAP_CAPA]: 59, [N.TAS_CAPA]: 131, [N.DEMIR_CAPA]: 250, [N.ELMAS_CAPA]: 1561,
+  [N.AHSAP_KILIC]: 59, [N.TAS_KILIC]: 131, [N.DEMIR_KILIC]: 250, [N.ELMAS_KILIC]: 1561,
+  [N.DEMIR_MIGFER]: 165, [N.DEMIR_ZIRH]: 240, [N.DEMIR_PANTOLON]: 225, [N.DEMIR_BOT]: 195,
+  [N.ELMAS_MIGFER]: 363, [N.ELMAS_ZIRH]: 528, [N.ELMAS_PANTOLON]: 495, [N.ELMAS_BOT]: 429,
+  [N.MAKAS]: 238
 };
 export const isGear = t => !!MAXDUR[t];
 export const stackOf = t => (MAXDUR[t] ? 1 : 64);   // aletler üst üste dizilmez
