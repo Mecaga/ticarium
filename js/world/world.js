@@ -1,5 +1,6 @@
 Window.BASE = window.BASE || 10;
 
+import { N } from './idtable.js';
 import { hash, atlas, FACE_TILES, T, initAtlas, tileOf } from './textures.js';
 import {
   BEDROCK, SAPLING, BIRCH_LOG, BIRCH_LEAF, WATER, GLASS, WATER_MAX, LAVA, LAVA_MAX, OBSIDIAN,
@@ -49,8 +50,8 @@ export const isWater = (x, y, z) => get(x, y, z) === WATER;
 export const isLava = (x, y, z) => get(x, y, z) === LAVA;
 export const BOXES = {};   // ince bloklar: id -> [x0,y0,z0,x1,y1,z1] (yatak, kapı)
 for (let i = 0; i < 3; i++) { 
-  BOXES[180 + i] = [0, 0, 0, 1, 0.25 * (i + 1), 1]; 
-  if (FACE_TILES) FACE_TILES[180 + i] = FACE_TILES[8] || [0,0,0]; 
+  BOXES[N.KAR_1 + i] = [0, 0, 0, 1, 0.25 * (i + 1), 1]; 
+  if (FACE_TILES) FACE_TILES[N.KAR_1 + i] = FACE_TILES[N.KAR] || [0,0,0]; 
 }   // kar katmanları 1/4, 2/4, 3/4
 
 export const solid = (x, y, z) => { const t = get(x, y, z); return t !== 0 && !BOXES[t] && !isPlant(t) && t !== WATER && t !== LAVA; };
@@ -129,7 +130,7 @@ function oreAt(x, y, z) {
 }
 
 export function treeCells(x, y, z, birch) {
-  const th = birch ? 5 : 4, log = birch ? BIRCH_LOG : 4, leaf = birch ? BIRCH_LEAF : 5;
+  const th = birch ? 5 : 4, log = birch ? BIRCH_LOG : N.ODUN, leaf = birch ? BIRCH_LEAF : N.YAPRAK;
   const trunk = [], leaves = [];
   for (let i = 0; i < th; i++) trunk.push([x, y + i, z, log]);
   const top = y + th - 1;
@@ -150,8 +151,7 @@ function treeAt(x, z) {
 function flowerAt(x, z) {
   const px = Math.floor(x / 8), pz = Math.floor(z / 8);
   if (hash(px, pz, _seed + 9) > 0.22 || hash(x, z, _seed + 10) > 0.45) return 0;
-  const k = Math.floor(hash(px, pz, _seed + 11) * 7);
-  return k === 6 ? 47 : FLOWER_MIN + k;
+  return FLOWER_MIN + Math.floor(hash(px, pz, _seed + 11) * 7);
 }
 function grassAt(x, z) {
   return hash(x >> 1, z >> 1, _seed + 21) < 0.3 && hash(x, z, _seed + 22) < 0.65;
@@ -163,7 +163,7 @@ function ruinAt(rx, rz) {
   return (hc < SEA + 2 || hc >= SNOW_H) ? null : { x, z, hc };
 }
 function ruinCells(r, put) {
-  for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) put(r.x + dx, r.hc, r.z + dz, 7);
+  for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) put(r.x + dx, r.hc, r.z + dz, N.TUGLA);
   for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
     if (Math.max(Math.abs(dx), Math.abs(dz)) !== 2 || (dx === 0 && dz === 2)) continue;
     const x = r.x + dx, z = r.z + dz, hs = heightAt(x, z);
@@ -171,7 +171,7 @@ function ruinCells(r, put) {
     for (let y = hs + 1; y <= top; y++) {
       if (hash(x + y * 3, z, _seed + 16) < 0.12) continue;
       const win = y === r.hc + 2 && (dx === 0 || dz === 0) && hash(x, z + y, _seed + 19) < 0.6;
-      put(x, y, z, win ? 9 : 7);
+      put(x, y, z, win ? N.CAM : N.TUGLA);
     }
   }
 }
@@ -210,7 +210,7 @@ export function planTree(x, y, z, birch) {
   for (const [tx, ty, tz, t] of trunk) {
     if (ty >= H) return null;
     const c = get(tx, ty, tz);
-    if (c !== 0 && !isPlant(c) && c !== 5 && c !== BIRCH_LEAF) return null;
+    if (c !== 0 && !isPlant(c) && c !== N.YAPRAK && c !== BIRCH_LEAF) return null;
     out.push({ x: tx, y: ty, z: tz, t });
   }
   for (const [lx, ly, lz, t] of leaves) if (ly < H && get(lx, ly, lz) === 0) out.push({ x: lx, y: ly, z: lz, t });
@@ -252,8 +252,6 @@ function genChunk(c) {
   if (_kind === 'sky') genSky(c, X);
   else if (_kind === 'flat') genFlat(c, X);
   else genNormal(c, X);
-
-  for (let i = 0; i < b.length; i++) if (b[i] === 35) b[i] = 0;
 
   const flows = [];
   const m = mods.get(ck(c.cx, c.cz));
