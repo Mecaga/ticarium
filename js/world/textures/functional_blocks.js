@@ -1,3 +1,4 @@
+import { N } from '../idtable.js';
 import { hash, cobble } from './util.js';
 const inb = (x, y, a, b, c, d) => x >= a && x <= b && y >= c && y <= d;
 export const tiles = {
@@ -68,10 +69,14 @@ export const tiles = {
   } }
 };
 export const faces = {
-  32: 'paint', 72: ['craftTop', 'craftSide', 'planks'], 76: ['farmTop', 'dirt', 'dirt'],
-  81: ['furnaceTop', 'furnaceSide', 'stone'], 87: 'doorO', 88: 'doorO',
-  99: ['bedHead', 'bedSide', 'planks'], 100: ['bedFoot', 'bedSide', 'planks'],
-  101: ['jukeTop', 'jukeSide', 'jukeSide'], 108: 'doorC', 109: 'doorC',
-  176: ['chestTop', 'chestSide', 'chestTop']
+  [N.TUVAL]: 'paint',
+  [N.CALISMA_MASASI]: ['craftTop', 'craftSide', 'planks'],
+  75: ['farmTop', 'dirt', 'dirt'],
+  [N.OCAK]: ['furnaceTop', 'furnaceSide', 'stone'],
+  [N.YATAK_BASI]: ['bedHead', 'bedSide', 'planks'],
+  [N.YATAK_SONU]: ['bedFoot', 'bedSide', 'planks'],
+  [N.MUZIK_KUTUSU]: ['jukeTop', 'jukeSide', 'jukeSide'],
+  [N.SANDIK]: ['chestTop', 'chestSide', 'chestTop']
 };
-export const flat = [87, 88, 108, 109];
+for (let i = 0; i < 16; i++) faces[240 + i] = (i & 2) ? 'doorO' : 'doorC';
+export const flat = [];
