@@ -1,3 +1,4 @@
+import { N } from '../world/idtable.js';
 import { TYPES, CATS } from '../world/world.js';
 import { FACE_TILES, tileOf } from '../world/textures.js';
 import { eco } from './economy.js';
@@ -9,12 +10,8 @@ import { isGear, takeInstance } from './gear.js';
 import { canAdd, addItem } from './inventory.js';
 import { loadAt, saveAt, watchAt, canStore } from './store.js';
 
-export const CHEST = 176;
-TYPES[CHEST] = { name: 'Sandık', color: 0x9a6a30, base: 50 };
-FACE_TILES[CHEST] = [tileOf('chestTop'), tileOf('chestSide'), tileOf('chestTop')];
-eco.inv[CHEST] = 0; eco.raw[CHEST] = 50; eco.trend[CHEST] = 0;
-CATS[0][1].push(CHEST);
-RECIPES.push({ out: [CHEST, 1], pat: [[70, 70, 70], [70, 0, 70], [70, 70, 70]] });
+export const CHEST = N.SANDIK;
+RECIPES.push({ out: [CHEST, 1], pat: [[N.TAHTA, N.TAHTA, N.TAHTA], [N.TAHTA, 0, N.TAHTA], [N.TAHTA, N.TAHTA, N.TAHTA]] });
 
 const norm = d => { const o = {}; if (d) for (const t in d) { const v = d[t]; o[t] = typeof v === 'object' ? Object.values(v) : v; } return o; };
 const cnt = v => (Array.isArray(v) ? v.length : v);
