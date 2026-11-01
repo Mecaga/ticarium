@@ -1,3 +1,4 @@
+import { N } from '../idtable.js';
 import { hash, ell } from './util.js';
 const BOOKC = [[200, 50, 50], [60, 150, 80], [60, 120, 210], [160, 165, 180], [235, 125, 25], [140, 80, 190]];
 export const tiles = {
@@ -23,5 +24,26 @@ BOOKC.forEach((c, i) => {
     return (x === 5 && y >= 4 && y <= 8) ? [250, 230, 150] : c;
   } };
 });
-export const faces = { 102: 'disc', 103: 'disc', 104: 'disc', 107: 'bprint' };
-export const flat = [102, 103, 104];
+export const faces = {
+  [N.DISK_1]: 'disc', 
+  [N.DISK_2]: 'disc', 
+  [N.DISK_3]: 'disc', 
+  [N.SEMA_BLOGU]: 'bprint',
+  [N.YEMEK_KITABI]: 'book0', 
+  [N.CRAFT_KITABI]: 'book1', 
+  [N.ALET_KITABI]: 'book2', 
+  [N.ZIRH_KITABI]: 'book3',
+  [N.FIRIN_KITABI]: 'book4', 
+  [N.REHBER_KITABI]: 'book5'
+};
+export const flat = [
+  N.DISK_1, 
+  N.DISK_2, 
+  N.DISK_3, 
+  N.YEMEK_KITABI, 
+  N.CRAFT_KITABI, 
+  N.ALET_KITABI, 
+  N.ZIRH_KITABI, 
+  N.FIRIN_KITABI, 
+  N.REHBER_KITABI
+];
