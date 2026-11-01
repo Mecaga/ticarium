@@ -1,3 +1,4 @@
+import { N } from '../world/idtable.js';
 import { TYPES, CATS, get, isLoaded } from '../world/world.js';
 import { FACE_TILES, tileOf } from '../world/textures.js';
 import { eco } from './economy.js';
@@ -6,12 +7,8 @@ import { clock } from '../world/sky.js';
 import { toast } from '../ui/ui.js';
 import { G } from '../core/state.js';
 
-export const BED = 100;
-TYPES[BED] = { name: 'Yatak', color: 0xc03030, base: 60 };
-FACE_TILES[BED] = [tileOf('wc2'), tileOf('planks'), tileOf('planks')];
-CATS[0][1].push(BED);
-eco.inv[BED] = 0; eco.raw[BED] = 60; eco.trend[BED] = 0;
-RECIPES.push({ out: [BED, 1], pat: [[WOOLANY, WOOLANY, WOOLANY], [70, 70, 70]] });
+export const BED = N.YATAK_SONU;
+RECIPES.push({ out: [BED, 1], pat: [[WOOLANY, WOOLANY, WOOLANY], [N.TAHTA, N.TAHTA, N.TAHTA]] });
 
 const key = () => 'bd_bed_' + (G.room ? (G.room.wid || G.room.code || 'x') : 'x');
 
@@ -25,7 +22,8 @@ export function bedSpawnPos() {
   try { v = JSON.parse(localStorage.getItem(key())); } catch (e) {}
   if (!Array.isArray(v) || v.length !== 3) return null;
   const [x, y, z] = v;
-    if (isLoaded(x, z) && get(x, y, z) !== BED && get(x, y, z) !== 99) {    try { localStorage.removeItem(key()); } catch (e) {}
+  if (isLoaded(x, z) && get(x, y, z) !== BED && get(x, y, z) !== N.YATAK_BASI) {
+    try { localStorage.removeItem(key()); } catch (e) {}
     return null;
   }
   return { x: x + 0.5, y: y + 1.05, z: z + 0.5 };
