@@ -1,3 +1,4 @@
+import { N } from '../idtable.js';
 import { hash } from '../textures.js';
 import { BEDROCK, OBSIDIAN, LAVA, WATER, TALL } from '../defs.js';
 export function genNormal(c, X) {
@@ -10,10 +11,10 @@ export function genNormal(c, X) {
       let t;
       if (y === 0) t = BEDROCK;
       else if (y === 1 && hash(x, z, seed + 17) < 0.5) t = BEDROCK;
-      else if (y === h) t = h <= SEA ? 6 : h >= SNOW_H ? 8 : 1;
-      else if (y >= h - 2) t = h <= SEA ? 6 : 2;
+      else if (y === h) t = h <= SEA ? N.KUM : h >= SNOW_H ? N.KAR : N.CIM;
+      else if (y >= h - 2) t = h <= SEA ? N.KUM : N.TOPRAK;
       else {
-        t = 3;
+        t = N.TAS;
         if (y >= 2 && y <= h - 3) {
           const o = oreAt(x, y, z);
           if (o) t = o;
@@ -41,7 +42,7 @@ export function genNormal(c, X) {
     const h = hs[lz * CW + lx];
     if (h <= SEA || h >= SNOW_H || h + 1 >= H) continue;
     const ix = ((h + 1) * CW + lz) * CW + lx;
-    if (b[ix] !== 0 || b[(h * CW + lz) * CW + lx] !== 1) continue;
+    if (b[ix] !== 0 || b[(h * CW + lz) * CW + lx] !== N.CIM) continue;
     const f = flowerAt(x0 + lx, z0 + lz);
     if (f) b[ix] = f; else if (grassAt(x0 + lx, z0 + lz)) b[ix] = TALL;
   }
@@ -49,6 +50,6 @@ export function genNormal(c, X) {
     const h = hs[lz * CW + lx], d = h - SNOW_H;
     if (d < 0 || d > 2 || h + 1 >= H) continue;
     const ix = ((h + 1) * CW + lz) * CW + lx;
-    if (b[ix] === 0 && b[(h * CW + lz) * CW + lx] === 8) b[ix] = 180 + d;
+    if (b[ix] === 0 && b[(h * CW + lz) * CW + lx] === N.KAR) b[ix] = N.KAR_1 + d;
   }
 }
