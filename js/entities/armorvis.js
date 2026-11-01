@@ -1,6 +1,6 @@
 const MATS = {};
 const mat = c => MATS[c] || (MATS[c] = new THREE.MeshLambertMaterial({ color: c, polygonOffset: true, polygonOffsetFactor: -1 }));
-const colOf = id => (id >= 95 ? 0x50e1d7 : 0xd0d0da);
+const colOf = id => (id >= 292 ? 0x50e1d7 : 0xd0d0da);
 
 export function showArmor(o, arm) {
   const key = arm || '';
