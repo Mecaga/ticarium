@@ -1,3 +1,4 @@
+import { N } from '../idtable.js';
 import { IRON, DIAM } from './util.js';
 function armorPix(kind, col, x, y) {
   const dx = Math.abs(x - 7.5);
@@ -15,5 +16,14 @@ export const tiles = {
   helmI: A('helm', IRON), chestI: A('chest', IRON), legI: A('leg', IRON), bootI: A('boot', IRON),
   helmD: A('helm', DIAM), chestD: A('chest', DIAM), legD: A('leg', DIAM), bootD: A('boot', DIAM)
 };
-export const faces = { 91: 'helmI', 92: 'chestI', 93: 'legI', 94: 'bootI', 95: 'helmD', 96: 'chestD', 97: 'legD', 98: 'bootD' };
-export const flat = [91, 92, 93, 94, 95, 96, 97, 98];
+export const faces = {
+  [N.DEMIR_MIGFER]: 'helmI', 
+  [N.DEMIR_ZIRH]: 'chestI', 
+  [N.DEMIR_PANTOLON]: 'legI', 
+  [N.DEMIR_BOT]: 'bootI',
+  [N.ELMAS_MIGFER]: 'helmD', 
+  [N.ELMAS_ZIRH]: 'chestD', 
+  [N.ELMAS_PANTOLON]: 'legD', 
+  [N.ELMAS_BOT]: 'bootD'
+};
+export const flat = Object.keys(faces).map(Number);
