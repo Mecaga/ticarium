@@ -23,6 +23,8 @@ function yetimTarifleriSil() {
   return silinen;
 }
 
+const ATLA = ['SU', 'LAV', 'KATMAN_KAYASI', 'YATAK_SONU', 'BUGDAY_0', 'BUGDAY_1', 'BUGDAY_2', 'BUGDAY_3', 'KAR_1', 'KAR_2', 'KAR_3', 'AKASYA_ODUN', 'AKASYA_YAPRAK', 'BUYUK_ORMAN_ODUN', 'BUYUK_ORMAN_YAPRAK', 'CAKIL', 'REDSTONE_BLOK', 'SAMANLIK'];
+
 export function denetle() {
   const sorun = [];
   const adlar = {};
@@ -43,7 +45,7 @@ export function denetle() {
   for (const ad in N) {
     if (kul[N[ad]]) sorun.push('TABLODA ÇAKIŞMA: ' + ad + ' ve ' + kul[N[ad]] + ' aynı numara ' + N[ad]);
     kul[N[ad]] = ad;
-    if (!TYPES[N[ad]] && !(N[ad] >= 180 && N[ad] <= 182) && ad !== 'SU' && ad !== 'LAV' && ad !== 'KATMAN_KAYASI') sorun.push('TABLODA VAR, OYUNDA YOK: ' + ad + ' = ' + N[ad]);
+    if (!TYPES[N[ad]] && !(N[ad] >= 180 && N[ad] <= 182) && !ATLA.includes(ad)) sorun.push('TABLODA VAR, OYUNDA YOK: ' + ad + ' = ' + N[ad]);
   }
   for (const id in TYPES) if (!kul[id]) sorun.push('TABLODA YOK: ' + id + ' ' + TYPES[id].name + ' (idtable.js\'e ekle)');
   return sorun;
