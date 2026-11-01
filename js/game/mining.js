@@ -1,3 +1,4 @@
+import { N } from '../world/idtable.js';
 import { target, get, BEDROCK } from '../world/world.js';
 import { hash } from '../world/textures.js';
 import { eco } from './economy.js';
@@ -7,31 +8,31 @@ import { sfx } from '../core/sound.js';
 
 // Aletler: [tür, seviye, hız]  (seviye: 1 ahşap, 2 taş, 3 demir, 4 elmas)
 export const TOOLS = {
-  50: ['pick', 1, 2], 51: ['pick', 2, 4], 52: ['pick', 3, 6], 53: ['pick', 4, 8],
-  57: ['axe', 1, 2], 58: ['axe', 2, 4], 55: ['axe', 3, 6], 69: ['axe', 4, 8],
-  59: ['shovel', 1, 2], 60: ['shovel', 2, 4], 56: ['shovel', 3, 6], 89: ['shovel', 4, 8],
-  61: ['hoe', 1, 1], 62: ['hoe', 2, 1], 63: ['hoe', 3, 1], 64: ['hoe', 4, 1],
-  65: ['sword', 1, 1], 66: ['sword', 2, 1], 67: ['sword', 3, 1], 68: ['sword', 4, 1]
+  [N.AHSAP_KAZMA]: ['pick', 1, 2], [N.TAS_KAZMA]: ['pick', 2, 4], [N.DEMIR_KAZMA]: ['pick', 3, 6], [N.ELMAS_KAZMA]: ['pick', 4, 8],
+  [N.AHSAP_BALTA]: ['axe', 1, 2], [N.TAS_BALTA]: ['axe', 2, 4], [N.DEMIR_BALTA]: ['axe', 3, 6], [N.ELMAS_BALTA]: ['axe', 4, 8],
+  [N.AHSAP_KUREK]: ['shovel', 1, 2], [N.TAS_KUREK]: ['shovel', 2, 4], [N.DEMIR_KUREK]: ['shovel', 3, 6], [N.ELMAS_KUREK]: ['shovel', 4, 8],
+  [N.AHSAP_CAPA]: ['hoe', 1, 1], [N.TAS_CAPA]: ['hoe', 2, 1], [N.DEMIR_CAPA]: ['hoe', 3, 1], [N.ELMAS_CAPA]: ['hoe', 4, 1],
+  [N.AHSAP_KILIC]: ['sword', 1, 1], [N.TAS_KILIC]: ['sword', 2, 1], [N.DEMIR_KILIC]: ['sword', 3, 1], [N.ELMAS_KILIC]: ['sword', 4, 1]
 };
 export const isTool = t => !!TOOLS[t];
 
 // Blok sertliği: [eli boş süre (sn), uygun alet, gereken alet seviyesi]
 const HARD = {
-  1: [0.9, 'shovel', 0], 2: [0.8, 'shovel', 0], 3: [4, 'pick', 0], 4: [3, 'axe', 0], 5: [0.3, null, 0],
-  6: [0.8, 'shovel', 0], 7: [4.5, 'pick', 0], 8: [0.4, 'shovel', 0], 9: [0.5, null, 0], 10: [6, 'pick', 3],
-  12: [0.05, null, 0], 13: [3, 'axe', 0], 14: [0.3, null, 0], 16: [1.2, null, 0], 32: [1, null, 0],
-  34: [60, 'pick', 4],
-  36: [3, 'pick', 1], 37: [3.5, 'pick', 2], 38: [3.5, 'pick', 3], 39: [4, 'pick', 3], 81: [3.5, 'pick', 1],
-  40: [0.05, null, 0], 41: [0.05, null, 0], 42: [0.05, null, 0], 43: [0.05, null, 0], 44: [0.05, null, 0], 45: [0.05, null, 0], 47: [0.05, null, 0],
-  70: [2, 'axe', 0], 72: [2.5, 'axe', 0], 76: [0.6, 'shovel', 0],
-  77: [0.05, null, 0], 78: [0.05, null, 0], 79: [0.05, null, 0], 80: [0.05, null, 0],
-  106: [0.05, null, 0]   // uzun ot
+  [N.CIM]: [0.9, 'shovel', 0], [N.TOPRAK]: [0.8, 'shovel', 0], [N.TAS]: [4, 'pick', 0], [N.ODUN]: [3, 'axe', 0], [N.YAPRAK]: [0.3, null, 0],
+  [N.KUM]: [0.8, 'shovel', 0], [N.TUGLA]: [4.5, 'pick', 0], [N.KAR]: [0.4, 'shovel', 0], [N.CAM]: [0.5, null, 0],
+  [N.ALTIN_BLOK]: [6, 'pick', 3], [N.FIDAN]: [0.05, null, 0], [N.HUS_ODUN]: [3, 'axe', 0], [N.HUS_YAPRAK]: [0.3, null, 0],
+  [N.YUN]: [1.2, null, 0], [N.TUVAL]: [1, null, 0], [N.OBSIDIYEN]: [60, 'pick', 4],
+  [N.KOMUR_CEVHERI]: [3, 'pick', 1], [N.DEMIR_CEVHERI]: [3.5, 'pick', 2], [N.ALTIN_CEVHERI]: [3.5, 'pick', 3], [N.ELMAS_CEVHERI]: [4, 'pick', 3],
+  [N.OCAK]: [3.5, 'pick', 1], [N.TAHTA]: [2, 'axe', 0], [N.CALISMA_MASASI]: [2.5, 'axe', 0], [75]: [0.6, 'shovel', 0],
+  [N.DEMIR_BLOK]: [5, 'pick', 2], [N.ELMAS_BLOK]: [5, 'pick', 3], [76]: [0.05, null, 0],
+  [N.SANDIK]: [2.5, 'axe', 0], [N.MUZIK_KUTUSU]: [2.5, 'axe', 0], [N.SEMA_BLOGU]: [2.5, 'axe', 0], [N.YATAK_BASI]: [0.8, null, 0], [N.YATAK_SONU]: [0.8, null, 0]
 };
-HARD[186] = [5, 'pick', 2]; HARD[187] = [5, 'pick', 3]; HARD[188] = [0.05, null, 0];
-for (let i = 210; i <= 221; i++) HARD[i] = [0.05, null, 0];
-for (let i = 180; i <= 182; i++) HARD[i] = [0.3, 'shovel', 0];
-for (let i = 130; i <= 149; i++) HARD[i] = [0.05, null, 0];   // sebze ekinleri
-for (let i = 120; i <= 127; i++) HARD[i] = [1.2, null, 0];    // renkli yün
+for (let i = N.LAVANTA; i <= N.AMBER; i++) HARD[i] = [0.05, null, 0];
+for (let i = N.BUGDAY_0; i <= N.BUGDAY_3; i++) HARD[i] = [0.05, null, 0];
+for (let i = 204; i <= 235; i++) HARD[i] = [0.05, null, 0];
+for (let i = N.MOR_YUN; i <= N.BEYAZ_YUN; i++) HARD[i] = [1.2, null, 0];
+for (let i = 170; i <= 172; i++) HARD[i] = [0.3, 'shovel', 0];
+for (let i = 240; i <= 255; i++) HARD[i] = [1.5, 'axe', 0];
 
 // Blok sertliği (aletin aşınıp aşınmayacağına karar vermek için)
 export const hardTime = t => (HARD[t] || [1])[0];
