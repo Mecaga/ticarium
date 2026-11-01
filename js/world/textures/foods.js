@@ -1,3 +1,4 @@
+import { N } from '../idtable.js';
 import { hash, ell } from './util.js';
 const S = (c, px) => ({ c, spr: true, px });
 const el = (x, y, cx, cy, a, b) => ell(x, y, cx, cy, a, b) < 1;
@@ -64,5 +65,29 @@ export const tiles = {
   soupB: bowl([150, 30, 70]), soupT: bowl([215, 70, 40]), soupV: bowl([230, 150, 50]),
   fries: S([235, 190, 70], (x, y) => ([4, 6, 8, 10].includes(x) && y >= 4 + (x % 3) && y <= 13) ? [235, 190, 70] : null)
 };
-export const faces = { 15: 'meat', 46: 'apple', 75: 'bread', 86: 'cooked', 150: 'potato', 151: 'carrot', 152: 'tomato', 153: 'pepper', 154: 'onion', 155: 'cigkofte' };
-export const flat = [15, 46, 75, 86, 150, 151, 152, 153, 154, 155];
+export const faces = {
+  [N.ET]: 'meat', 
+  [N.ELMA]: 'apple', 
+  [N.EKMEK]: 'bread', 
+  [N.PISMIS_ET]: 'cooked', 
+  [N.PATATES]: 'potato', 
+  [N.HAVUC]: 'carrot',
+  [N.DOMATES]: 'tomato', 
+  [N.BIBER]: 'pepper', 
+  [N.SOGAN]: 'onion', 
+  [N.CIGKOFTE]: 'cigkofte', 
+  [N.YUMURTA]: 'eggI',
+  [N.SUT_KOVASI]: 'milkB', 
+  [N.HAMUR]: 'dough', 
+  [N.KEK]: 'cake', 
+  [N.MARUL]: 'lettuce', 
+  [N.PANCAR]: 'beet', 
+  [N.SALATALIK]: 'cucumber',
+  [N.SALATALIK_SALATASI]: 'saladC', 
+  [N.MARUL_SALATASI]: 'saladL', 
+  [N.PANCAR_CORBASI]: 'soupB', 
+  [N.DOMATES_CORBASI]: 'soupT',
+  [N.SEBZE_CORBASI]: 'soupV', 
+  [N.PATATES_KIZARTMASI]: 'fries'
+};
+export const flat = Object.keys(faces).map(Number);
