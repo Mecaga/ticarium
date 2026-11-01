@@ -1,3 +1,4 @@
+import { N, SEBZE_ILK } from '../idtable.js';
 const CROPC = [[[70, 150, 60], [196, 160, 96]], [[84, 170, 70], [240, 130, 30]], [[60, 140, 55], [220, 50, 40]],
   [[55, 135, 60], [225, 70, 40]], [[110, 170, 70], [235, 225, 235]], [[110, 200, 80], [130, 210, 90]],
   [[60, 130, 60], [150, 30, 70]], [[50, 130, 50], [60, 150, 60]]];
@@ -38,12 +39,19 @@ export const tiles = {
     return null;
   } }
 };
-export const faces = { 73: 'seeds', 74: 'wheatI' };
-const flatL = [73, 74];
-for (let s = 0; s < 4; s++) { tiles['wheat' + s] = { c: [96, 175, 70], spr: true, px: (x, y) => wheatPix(s, x, y) }; faces[77 + s] = 'wheat' + s; flatL.push(77 + s); }
+export const faces = { 
+  [N.BUGDAY_TOHUMU]: 'seeds', 
+  [N.BUGDAY]: 'wheatI' 
+};
+const flatL = [N.BUGDAY_TOHUMU, N.BUGDAY];
+for (let s = 0; s < 4; s++) { 
+  tiles['wheat' + s] = { c: [96, 175, 70], spr: true, px: (x, y) => wheatPix(s, x, y) }; 
+  faces[N.BUGDAY_0 + s] = 'wheat' + s; 
+  flatL.push(N.BUGDAY_0 + s); 
+}
 for (let k = 0; k < 8; k++) for (let s = 0; s < 4; s++) {
   tiles['cr' + k + '_' + s] = { c: [80, 160, 60], spr: true, px: (x, y) => cropPix(k, s, x, y) };
-  const id = k < 5 ? 130 + k * 4 + s : 210 + (k - 5) * 4 + s;
-  faces[id] = 'cr' + k + '_' + s; flatL.push(id);
+  faces[SEBZE_ILK + k * 4 + s] = 'cr' + k + '_' + s; 
+  flatL.push(SEBZE_ILK + k * 4 + s);
 }
 export const flat = flatL;
