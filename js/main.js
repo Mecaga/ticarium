@@ -38,7 +38,7 @@ import './world/ids.js';
 import './game/eggs.js';
 import './game/library.js';
 import './game/chests.js';
-import './game/spider.js'; // Paket 6a: Örümcek ve Uyku Senkronu
+import './game/spider.js';
 
 const $ = id => document.getElementById(id);
 
@@ -185,5 +185,4 @@ function loop(now) {
 }
 requestAnimationFrame(loop);
 
-// Debug panel için global atamalar
 window.P = P; window.eco = eco; window.G = G;
