@@ -8,7 +8,7 @@ import { toast } from '../ui/ui.js';
 import { G } from '../core/state.js';
 
 export const BED = N.YATAK_SONU;
-RECIPES.push({ out: [BED, 1], pat: [[WOOLANY, WOOLANY, WOOLANY], [N.TAHTA, N.TAHTA, N.TAHTA]] });
+RECIPES.push({ out: [N.YATAK_BASI, 1], pat: [[WOOLANY, WOOLANY, WOOLANY], [N.TAHTA, N.TAHTA, N.TAHTA]] });
 
 const key = () => 'bd_bed_' + (G.room ? (G.room.wid || G.room.code || 'x') : 'x');
 
@@ -40,7 +40,7 @@ function overlay() {
 }
 
 const isNight = () => {
-  const hr = ((((Date.now() / 1000 + clock.off) % 480) / 480) * 24 + 6) % 24;
+  const hr = ((((Date.Now() / 1000 + clock.off) % 480) / 480) * 24 + 6) % 24;
   return hr >= 18 || hr < 6;
 };
 
