@@ -34,8 +34,8 @@ export const N = {
   SANDIK: 140, MAKAS: 141, MUZIK_KUTUSU: 142, DISK_1: 143, DISK_2: 144, DISK_3: 145, SEMA_BLOGU: 146,
   DEMIR_BLOK: 147, ELMAS_BLOK: 148, YENILEYICI: 149, HUNI: 150, RAY: 151, VAGON: 152, SALTER: 153, TNT: 154, OLTA: 155,
   
-  // --- Yatak ve çanta 160-164 (yatak 2 blok) ---
-  YATAK_BASI: 160, YATAK_SONU: 161, CANTA_BOGCA: 164,
+  // --- Yatak ve çanta 160-165 (yatak 2 blok, kapı eşyası) ---
+  YATAK_BASI: 160, YATAK_SONU: 161, CANTA_BOGCA: 164, KAPI_BASI: 165,
   
   // --- Kar katmanları 170-172 ---
   KAR_1: 170, KAR_2: 171, KAR_3: 172,
