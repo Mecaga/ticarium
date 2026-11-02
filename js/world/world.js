@@ -567,7 +567,7 @@ export function updateTarget(camera) {
       if (!same && !wtarget && waterLvl(x, y, z) === 0) wtarget = [x, y, z];
     } else if (t) {
       if (isPlant(t)) {
-        if (tgtOpts.sneak && !target) { target = [x, y, z]; prev = lx === -1e9 ? null : [lx, ly, lz]; }
+        if (!target && (tgtOpts.sneak || !isCrop(t))) { target = [x, y, z]; prev = lx === -1e9 ? null : [lx, ly, lz]; }
       } else if (BOXES[t]) hit = pointHit(px, py, pz);
       else hit = true;
     }
