@@ -32,6 +32,7 @@ import { placeDoor, toggleDoor, placeBed, pairFix, EXTRA_DROPS, DOOR, isDoorBloc
 import { openChest, chestBroken, isChestOpen, CHEST } from './chests.js';
 import { openBook, isBook } from './library.js';
 import { isEgg, useEgg } from './eggs.js';
+import { hitSpider } from './spider.js';
 import * as content from './content.js';
 
 // Açlık puanları: et, elma, ekmek, pişmiş et, patates, havuç, domates, biber, soğan, çiğköfte vb.
@@ -475,6 +476,9 @@ export function attack() {
   const sel = eco.sel, tl = TOOLS[sel], has = (eco.inv[sel] || 0) > 0 || isCreative();
   const isSword = !!tl && tl[0] === 'sword' && has;
   const bonus = isSword ? tl[1] : 0;
+  
+  if (hitSpider(dx, dy, dz, MOB_DMG + bonus)) { sfx.hit(); if (isGear(sel) && has) afterWear(sel, isSword ? 1 : 2); return; }
+
   const m = findMob(ex, ey, ez, dx, dy, dz, 4.5);
   const p = (o && room.pvp) ? o.findPlayer(ex, ey, ez, dx, dy, dz, 4.5) : null;
   if (p && (!m || p.t <= m.t)) {
