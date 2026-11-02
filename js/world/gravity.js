@@ -1,7 +1,8 @@
 import { get, set, atlas, sideTile, inBounds, H, SAPLING, WATER } from './world.js';
 import { P, collides } from '../entities/player.js';
+import { N } from './idtable.js';
 
-const FALLING = new Set([6, 8]); // kum, kar
+const FALLING = new Set([6, 8, N.CAKIL]); // kum, kar ve çakıl
 export const isFalling = t => FALLING.has(t);
 
 // main/actions doldurur: blok değişince kaydet / online gönder
