@@ -37,6 +37,7 @@ import './world/ids.js';
 import './game/eggs.js';
 import './game/library.js';
 import './game/chests.js';
+import './game/spider.js'; // Paket 6a: Örümcek ve Uyku Senkronu
 
 const $ = id => document.getElementById(id);
 
