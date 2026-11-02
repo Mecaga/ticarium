@@ -22,8 +22,11 @@ function reg(id, name, color, base, tile, flat) {
 reg(N.IP, 'İp', 0xdddddd, 6, 'stick', true);
 reg(N.DERI, 'Deri', 0x8a5a2a, 10, 'meat', true);
 reg(N.CAKIL, 'Çakıl', 0x8a8a8a, 6, 'stone', false);
-CATS[4][1].push(N.IP, N.DERI);
-CATS[0][1].push(N.CAKIL);
+
+for (const [ci, id] of [[4, N.IP], [4, N.DERI], [0, N.CAKIL]]) {
+  if (!CATS[ci][1].includes(id)) CATS[ci][1].push(id);
+}
+
 RECIPES.push({ out: [N.YUN, 1], pat: [[N.IP, N.IP], [N.IP, N.IP]] });   // 4 ip = beyaz yün
 
 // ---- Örümcek ----
