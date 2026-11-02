@@ -12,10 +12,10 @@ import { toast } from '../ui/ui.js';
 import { db, ref, update, onValue } from '../core/firebase.js';
 import { uid } from '../core/auth.js';
 
-// ---- Yeni eşyalar (mevcut dokular ödünç) ----
+// ---- Yeni eşyalar ----
 function reg(id, name, color, base, tile, flat) {
   TYPES[id] = { name, color, base };
-  FACE_TILES[id] = [tileOf(tile), tileOf(tile), tileOf(tile)];
+  if (tile === 'stone') FACE_TILES[id] = [tileOf(tile), tileOf(tile), tileOf(tile)];
   eco.inv[id] = 0; eco.raw[id] = base; eco.trend[id] = 0;
   if (flat) addFlat(id);
 }
@@ -83,7 +83,7 @@ function tick(now) {
 }
 requestAnimationFrame(tick);
 
-// Örümceğe vurma: attack() bu fonksiyonu çağırır (actions.js'e aşağıdaki satır)
+// Örümceğe vurma
 export function hitSpider(dx, dy, dz, dmg) {
   let best = null, bt = 4.5;
   for (const s of spiders) {
@@ -102,7 +102,7 @@ export function hitSpider(dx, dy, dz, dmg) {
   return true;
 }
 
-// ---- Uyku senkronu: odadaki herkes uyuyunca zaman herkes için sabaha kayar ----
+// ---- Uyku senkronu ----
 export function sleepSync(sleeping) {
   const r = G.room;
   if (!r || r.solo || !r.code) return Promise.resolve(true);
