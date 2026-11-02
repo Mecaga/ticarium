@@ -11,6 +11,7 @@ import * as fod from './textures/foods.js';
 import * as crp from './textures/crops.js';
 import * as arm from './textures/armor.js';
 import * as ui from './textures/ui_items.js';
+import * as ext from './textures/extra_items.js';
 
 export { hash };
 // [klasör adı, Türkçe ad, modül]. PNG yolu: textures/<klasör>/<doku adı>.png
@@ -18,7 +19,8 @@ const MODS = [
   ['base_blocks', 'Temel bloklar', base], ['functional_blocks', 'İşleme giren bloklar', func],
   ['building_blocks', 'Yapı blokları', bld], ['minerals', 'Madenler', min], ['flora_dye', 'Çiçekler ve boyalar', flo],
   ['mobs', 'Mob görünümleri', mob], ['player', 'Oyuncu görünümü', ply], ['tools', 'Aletler ve ekipmanlar', tls],
-  ['foods', 'Yemekler', fod], ['crops', 'Tarla ürünleri', crp], ['armor', 'Zırhlar', arm], ['ui_items', 'Kitaplar ve arayüz', ui]
+  ['foods', 'Yemekler', fod], ['crops', 'Tarla ürünleri', crp], ['armor', 'Zırhlar', arm], ['ui_items', 'Kitaplar ve arayüz', ui],
+  ['extra_items', 'Ek eşyalar', ext]
 ];
 
 const TILE_NAMES = [], DEF = {}, CAT = {}, TI = {};
