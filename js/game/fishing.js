@@ -1,6 +1,5 @@
 import { N } from '../world/idtable.js';
 import { TYPES, CATS, get, set, rebuild, wtarget, target, prev, isLoaded } from '../world/world.js';
-import { FACE_TILES, tileOf, addFlat } from '../world/textures.js';
 import { eco } from './economy.js';
 import { RECIPES } from './recipes.js';
 import { SMELT } from '../ui/furnace.js';
@@ -15,23 +14,21 @@ import { sfx } from '../core/sound.js';
 import { MAXDUR } from './gear.js';
 import { FOODX } from './content.js';
 
-function reg(id, name, color, base, tile, flat, cat) {
+function reg(id, name, color, base, cat) {
   TYPES[id] = { name, color, base };
-  FACE_TILES[id] = [tileOf(tile), tileOf(tile), tileOf(tile)];
   eco.inv[id] = 0; eco.raw[id] = base; eco.trend[id] = 0;
-  if (flat) addFlat(id);
   if (cat != null) CATS[cat][1].push(id);
 }
-reg(N.OLTA, 'Olta', 0x8c6434, 40, 'stick', true, 3);
-reg(N.SOMON, 'Somon', 0xe8836a, 12, 'meat', true, 2);
-reg(N.HAMSI, 'Hamsi', 0xaab4c8, 8, 'meat', true, 2);
-reg(N.KIRPI_BALIGI, 'Kirpi balığı', 0xb89a50, 6, 'meat', true, 2);
-reg(N.BALON_BALIGI, 'Balon balığı', 0xd8d070, 10, 'meat', true, 2);
-reg(N.PISMIS_SOMON, 'Pişmiş somon', 0xc86a40, 24, 'cooked', true, 2);
-reg(N.PISMIS_HAMSI, 'Pişmiş hamsi', 0x8a8a98, 16, 'cooked', true, 2);
-reg(N.PISMIS_BALON_BALIGI, 'Pişmiş balon balığı', 0xb8b050, 20, 'cooked', true, 2);
-reg(N.CAKMAK_TASI, 'Çakmaktaşı', 0x444448, 20, 'coal', true, 4);
-reg(N.TNT, 'TNT', 0xd03030, 60, 'brick', false, 0);
+reg(N.OLTA, 'Olta', 0x8c6434, 40, 3);
+reg(N.SOMON, 'Somon', 0xe8836a, 12, 2);
+reg(N.HAMSI, 'Hamsi', 0xaab4c8, 8, 2);
+reg(N.KIRPI_BALIGI, 'Kirpi balığı', 0xb89a50, 6, 2);
+reg(N.BALON_BALIGI, 'Balon balığı', 0xd8d070, 10, 2);
+reg(N.PISMIS_SOMON, 'Pişmiş somon', 0xc86a40, 24, 2);
+reg(N.PISMIS_HAMSI, 'Pişmiş hamsi', 0x8a8a98, 16, 2);
+reg(N.PISMIS_BALON_BALIGI, 'Pişmiş balon balığı', 0xb8b050, 20, 2);
+reg(N.CAKMAK_TASI, 'Çakmaktaşı', 0x444448, 20, 4);
+reg(N.TNT, 'TNT', 0xd03030, 60, 0);
 MAXDUR[N.OLTA] = 64; MAXDUR[N.CAKMAK_TASI] = 64;
 
 Object.assign(FOODX, { [N.SOMON]: 3, [N.HAMSI]: 2, [N.BALON_BALIGI]: 2, [N.PISMIS_SOMON]: 9, [N.PISMIS_HAMSI]: 6, [N.PISMIS_BALON_BALIGI]: 7 });
@@ -59,7 +56,7 @@ export function useRod() {
   }, 3000);
 }
 
-// TNT: çakmaktaşıyla yakılır, 3 sn sonra patlar, yanındaki TNT'leri de tetikler
+// TNT: çakmaktaşıyla yakılır, 3 sn sonra patlar
 const commit = (x, y, z, t) => { recordChange(x, y, z, t); if (G.online) G.online.sendBlock(x, y, z, t); };
 function boom(x, y, z) {
   if (get(x, y, z) !== N.TNT) return;
@@ -83,4 +80,4 @@ export function useFlint(tb) {
   toast('💥 3 saniye!');
   fuse(tb[0], tb[1], tb[2], 3);
   return true;
-    }
+}
