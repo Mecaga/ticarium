@@ -33,6 +33,7 @@ import { openChest, chestBroken, isChestOpen, CHEST } from './chests.js';
 import { openBook, isBook } from './library.js';
 import { isEgg, useEgg } from './eggs.js';
 import { hitSpider } from './spider.js';
+import { useRod, useFlint } from './fishing.js';
 import * as content from './content.js';
 
 // Açlık puanları: et, elma, ekmek, pişmiş et, patates, havuç, domates, biber, soğan, çiğköfte vb.
@@ -42,7 +43,7 @@ const FOOD = {
 };
 if (content.FOODX) Object.assign(FOOD, content.FOODX);
 
-const NOPLACE = new Set([STICK, WHEAT, COAL, INGOT_I, INGOT_G, GEM]);
+const NOPLACE = new Set([STICK, WHEAT, COAL, INGOT_I, INGOT_G, GEM, N.OLTA, N.CAKMAK_TASI]);
 if (content.NOPX) content.NOPX.forEach(i => NOPLACE.add(i));
 
 const MOB_DMG = 3, PVP_DMG = 4;
@@ -409,6 +410,9 @@ export function placeBlock() {
     if (tb === JUKE) return useJuke(target, t);
     if (tb === BPRINT) return useBlueprint(target);
   }
+
+  if (t === N.OLTA) return useRod();
+  if (t === N.CAKMAK_TASI) { if (!useFlint(target)) toast('Çakmaktaşını TNT\'ye bakarak kullan'); return; }
 
   if (t === DOOR) return placeDoor();
   if (t === BED) return placeBed();
