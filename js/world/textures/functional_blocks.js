@@ -80,3 +80,6 @@ export const faces = {
 };
 for (let i = 0; i < 16; i++) faces[240 + i] = (i & 2) ? 'doorO' : 'doorC';
 export const flat = [];
+
+faces[N.KAPI_BASI] = 'doorC';
+flat.push(N.KAPI_BASI);
