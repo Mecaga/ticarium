@@ -11,6 +11,7 @@ import { clock, gamePhase } from '../world/sky.js';
 import { toast } from '../ui/ui.js';
 import { db, ref, update, onValue } from '../core/firebase.js';
 import { uid } from '../core/auth.js';
+import { isCreative } from './creative.js';
 
 // ---- Yeni eşyalar ----
 function reg(id, name, color, base, tile, flat) {
@@ -71,7 +72,7 @@ function tick(now) {
   import('../world/world.js').then(w => {
     for (const s of spiders) {
       const dx = P.x - s.x, dz = P.z - s.z, d = Math.hypot(dx, dz);
-      if (nt && d < 20 && d > 0.9) {   // gece: saldırır
+      if (nt && d < 20 && d > 0.9 && !P.ghost && !isCreative()) {   // gece ve yaratıcı/hayalet değilse: saldırır
         s.x += dx / d * 2.4 * dt; s.z += dz / d * 2.4 * dt;
         s.g.rotation.y = Math.atan2(-dx, -dz);
       }
@@ -79,7 +80,10 @@ function tick(now) {
       if (gy >= 0) s.y = gy + 1.05;
       s.g.position.set(s.x, s.y, s.z);
       s.cd -= dt;
-      if (nt && d < 1.4 && s.cd <= 0 && Math.abs(P.y - s.y) < 2) { s.cd = 1; hurt(2, { name: 'Örümcek' }); }
+      if (nt && d < 1.4 && s.cd <= 0 && Math.abs(P.y - s.y) < 2 && !P.ghost && !isCreative()) { 
+        s.cd = 1; 
+        hurt(2, { name: 'Örümcek' }); 
+      }
     }
     spiders = spiders.filter(s => Math.hypot(P.x - s.x, P.z - s.z) < 60 || (ob.remove(s.g), false));
   });
