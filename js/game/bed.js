@@ -49,15 +49,19 @@ export function useBed(t) {
   setSpawn(t[0], t[1], t[2]);
   if (!isNight()) return toast('🛏 Doğma noktası ayarlandı. Uyumak için gece olmalı');
   sleeping = true;
+  import('./spider.js').then(m => m.sleepSync(true));
   const o = overlay();
   o.style.pointerEvents = 'all';
   o.style.opacity = 1;
   setTimeout(() => {
-    const cur = Date.now() / 1000 + clock.off;
-    clock.off += 480 - (cur % 480);   // sabah 06:00
+    if (!G.room || G.room.solo) {
+      const cur = Date.now() / 1000 + clock.off;
+      clock.off += 480 - (cur % 480);   // solo dünyada hemen sabah 06:00
+    }
     o.style.opacity = 0;
     o.style.pointerEvents = 'none';
     sleeping = false;
+    import('./spider.js').then(m => m.sleepSync(false));
     toast('☀️ Günaydın! Doğma noktası ayarlandı');
   }, 2400);
 }
