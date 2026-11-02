@@ -398,6 +398,8 @@ function useDye(t) {
 export function placeBlock() {
   if (isDead() || uiOpen() || P.ghost) return;
   const t = eco.sel;
+  if (!isCreative() && (eco.inv[t] || 0) < 1 && t !== N.KOVA) return;
+
   if (isBook(t)) return openBook(t);
   if (isEgg(t)) return useEgg(t);
   if (target) {
@@ -471,13 +473,17 @@ export function attack() {
   if (now - lastAtk < 450) return;
   lastAtk = now;
 
+  const t = eco.sel;
+  if (!isCreative() && (eco.inv[t] || 0) < 1 && t !== N.KOVA) return;
+
   const cp = Math.cos(P.pitch);
   const ex = P.x, ey = P.y + 1.6, ez = P.z;
   const dx = -Math.sin(P.yaw) * cp, dy = Math.sin(P.pitch), dz = -Math.cos(P.yaw) * cp;
   const o = G.online;
   if (o) o.swing();
 
-  const sel = eco.sel, tl = TOOLS[sel], has = (eco.inv[sel] || 0) > 0 || isCreative();
+  const sel = (isCreative() || (eco.inv[eco.sel] || 0) > 0) ? eco.sel : 0;
+  const tl = TOOLS[sel], has = (eco.inv[sel] || 0) > 0 || isCreative();
   const isSword = !!tl && tl[0] === 'sword' && has;
   const bonus = isSword ? tl[1] : 0;
   
