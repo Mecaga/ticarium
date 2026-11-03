@@ -2,14 +2,13 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>BlokDiyar - Kesin Çözüm Admin Paneli</title>
+    <title>BlokDiyar - Admin ve Kanal Paneli</title>
     <style>
         body { background: #121212; color: #fff; font-family: Arial, sans-serif; padding: 20px; }
         .section { background: #1e1e1e; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
         button { background: #ff4444; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 4px; font-weight: bold; margin-right: 5px; margin-top: 5px; }
         button.green { background: #4CAF50; }
-        button.blue { background: #2196F3; }
-        button.orange { background: #ff9800; }
+        button.blue { background: #2196F3; button.orange { background: #ff9800; }
         button.purple { background: #9c27b0; }
         ul { list-style: none; padding: 0; }
         li { background: #2a2a2a; margin: 8px 0; padding: 12px; border-radius: 6px; }
@@ -22,12 +21,20 @@
 </head>
 <body>
 
-    <h1>🛡️ BlokDiyar Tam Donanımlı Yönetici Paneli</h1>
+    <h1>🛡️ BlokDiyar Admin & Kanal Yönetim Paneli</h1>
     <div id="auth-status">Giriş kontrol ediliyor...</div>
 
     <div id="admin-content" style="display:none;">
+        
+        <!-- ADMINİN KENDİ AÇIK ODALARI VE KANALLARI -->
+        <div class="section" style="border: 2px solid #4CAF50;">
+            <h2>🌟 Admin (mecaga5354) Açık Odalarım ve Kanallarım</h2>
+            <ul id="admin-public-rooms"></ul>
+        </div>
+
+        <!-- TÜM KULLANICILAR VE DÜNYALARI -->
         <div class="section">
-            <h2>👥 Kullanıcılar, Hesaplar ve Dünyaları</h2>
+            <h2>👥 Tüm Kullanıcılar ve Dünyaları</h2>
             <ul id="user-list"></ul>
         </div>
     </div>
@@ -68,6 +75,10 @@
         });
 
         function loadAdminData() {
+            // 1. Adminin ve genel sistemin açık odalarını / kanallarını yükle
+            loadAdminPublicRooms();
+
+            // 2. Tüm kullanıcıları yükle
             const userRef = ref(db, 'users');
             get(userRef).then((snapshot) => {
                 const userListUl = document.getElementById('user-list');
@@ -80,14 +91,14 @@
                     const uid = childSnapshot.key;
                     const userData = childSnapshot.val() || {};
                     const profile = userData.profile || {};
-                    const userEmail = profile.email || "E-posta bulunamadı (Sahte/Bilinmiyor)";
+                    const userEmail = profile.email || "E-posta bulunamadı";
                     
                     let li = document.createElement('li');
                     li.innerHTML = `
                         <div class="user-row">
                             <span><b>Kullanıcı:</b> ${profile.username || profile.name || 'İsimsiz'} <br><small style="color:#aaa;">E-posta: ${userEmail}</small><br><small style="color:#888;">UID: ${uid}</small></span>
                             <div>
-                                <button class="purple" onclick="window.sendResetEmail('${userEmail}')">Şifre Sıfırla (Mail Gönder)</button>
+                                <button class="purple" onclick="window.sendResetEmail('${userEmail}')">Şifre Sıfırla</button>
                                 <button class="orange" onclick="window.toggleUserWorlds('${uid}')">Dünyalarını Gör</button>
                                 <button onclick="window.deleteUser('${uid}')">Hesabı Sil</button>
                             </div>
@@ -101,10 +112,37 @@
             });
         }
 
+        // Adminin açık odalarını / kanallarını listeleyen fonksiyon
+        function loadAdminPublicRooms() {
+            const publicRef = ref(db, 'publicRooms');
+            get(publicRef).then((snapshot) => {
+                const container = document.getElementById('admin-public-rooms');
+                container.innerHTML = '';
+                if (!snapshot.exists()) {
+                    container.innerHTML = '<li>Henüz herkese açık oda/kanal bulunmuyor.</li>';
+                    return;
+                }
+                snapshot.forEach((childSnapshot) => {
+                    const roomId = childSnapshot.key;
+                    const roomData = childSnapshot.val();
+
+                    let li = document.createElement('li');
+                    li.innerHTML = `
+                        <span><b>Kanal / Oda ID:</b> <span style="color:#4CAF50;">${roomId}</span></span>
+                        <div>
+                            <button class="orange" onclick="window.makeWorldPrivate('${roomId}')">Özel Yap (Kapat)</button>
+                            <button onclick="window.deleteGlobalRoom('${roomId}')">Tamamen Sil</button>
+                        </div>
+                    `;
+                    container.appendChild(li);
+                });
+            });
+        }
+
         // Şifre Sıfırlama E-postası Gönderme
         window.sendResetEmail = function(email) {
             if (!email || email.includes("Bulunamadı")) {
-                alert("Bu kullanıcının geçerli bir e-posta adresi veritabanında kayıtlı değil (sahte mail). Bu yüzden otomatik şifre sıfırlama maili atılamaz. Hesabı silip yeniden oluşturabilirsiniz.");
+                alert("Bu kullanıcının geçerli bir e-posta adresi kayıtlı değil. Hesabı silip yeniden oluşturabilirsiniz.");
                 return;
             }
             sendPasswordResetEmail(auth, email).then(() => {
@@ -140,14 +178,14 @@
                     let worldData = data[key];
 
                     html += `
-                        <div class="world-card" id="world-card-${uid}-${key}">
+                        <div class="world-card">
                             <b>Oda / Dünya ID:</b> <span style="color:#2196F3;">${key}</span><br><br>
                             <label>Özellikler / Ayarlar:</label><br>
                             <input type="text" id="input-${uid}-${key}" value='${JSON.stringify(worldData)}'><br>
                             
-                            <button class="green" onclick="window.saveWorldSettings('${uid}', '${key}')">Ayarları Düzenle / Kaydet</button>
+                            <button class="green" onclick="window.saveWorldSettings('${uid}', '${key}')">Ayarları Kaydet</button>
                             <button class="blue" onclick="window.makeWorldPublic('${key}', ${JSON.stringify(worldData).replace(/'/g, "&#39;")})">Herkese Aç</button>
-                            <button class="orange" onclick="window.makeWorldPrivate('${key}')">Özel Yap (Kapat)</button>
+                            <button class="orange" onclick="window.makeWorldPrivate('${key}')">Özel Yap</button>
                             <button onclick="window.deleteUserWorld('${uid}', '${key}')">Dünyayı Sil</button>
                         </div>
                     `;
@@ -176,13 +214,13 @@
             updates[`rooms/${worldKey}`] = parsedVal;
 
             update(ref(db), updates).then(() => {
-                alert("Dünya ayarları başarıyla güncellendi ve kaydedildi!");
+                alert("Dünya ayarları başarıyla güncellendi!");
             }).catch((err) => {
                 alert("Hata: " + err.message);
             });
         }
 
-        // Dünyayı Herkese Açık Yapma (Oyunun okuyabileceği formatta publicRooms'a yazar)
+        // Dünyayı Herkese Açık Yapma (Doğrudan oyunun listelemesi için rooms ve publicRooms altına işler)
         window.makeWorldPublic = function(worldKey, worldData) {
             const publicPayload = (typeof worldData === 'object' && worldData !== null) ? worldData : { active: true, name: worldKey };
             const updates = {};
@@ -190,7 +228,8 @@
             updates[`rooms/${worldKey}`] = publicPayload;
 
             update(ref(db), updates).then(() => {
-                alert("Oda başarıyla herkese açık hale getirildi ve oyun listesine eklendi!");
+                alert("Oda herkese açık hale getirildi ve oyun listesine eklendi!");
+                loadAdminPublicRooms(); // Paneli yenile
             }).catch((err) => {
                 alert("Hata: " + err.message);
             });
@@ -199,25 +238,38 @@
         // Dünyayı Özel Yapma (Kapatma)
         window.makeWorldPrivate = function(worldKey) {
             remove(ref(db, `publicRooms/${worldKey}`)).then(() => {
-                alert("Oda özel (kapalı) konuma getirildi, listeden kaldırıldı!");
+                alert("Oda özel konuma getirildi ve aktif listeden kaldırıldı!");
+                loadAdminPublicRooms(); // Paneli yenile
             });
         }
 
-        // Dünyayı silme
+        // Genel odalardan tamamen silme
+        window.deleteGlobalRoom = function(roomId) {
+            if (confirm(`Bu odayı (${roomId}) tamamen silmek istiyor musun?`)) {
+                remove(ref(db, `publicRooms/${roomId}`));
+                remove(ref(db, `rooms/${roomId}`)).then(() => {
+                    alert("Oda tamamen silindi!");
+                    loadAdminPublicRooms();
+                });
+            }
+        }
+
+        // Kullanıcının dünyasını silme
         window.deleteUserWorld = function(uid, worldKey) {
             if (confirm(`Bu dünyayı (${worldKey}) silmek istediğine emin misin?`)) {
                 remove(ref(db, `users/${uid}/${worldKey}`));
                 remove(ref(db, `rooms/${worldKey}`));
                 remove(ref(db, `publicRooms/${worldKey}`)).then(() => {
-                    alert("Dünya tamamen silindi!");
+                    alert("Dünya silindi!");
                     toggleUserWorlds(uid);
+                    loadAdminPublicRooms();
                 });
             }
         }
 
         // Kullanıcıyı silme
         window.deleteUser = function(uid) {
-            if (confirm("Bu kullanıcıyı ve verilerini silmek istiyor musun?")) {
+            if (confirm("Bu kullanıcıyı ve tüm verilerini silmek istiyor musun?")) {
                 remove(ref(db, 'users/' + uid)).then(() => {
                     alert("Kullanıcı silindi!");
                     loadAdminData();
