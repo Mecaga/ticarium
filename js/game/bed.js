@@ -40,7 +40,7 @@ function overlay() {
 }
 
 const isNight = () => {
-  const hr = ((((Date.Now() / 1000 + clock.off) % 480) / 480) * 24 + 6) % 24;
+  const hr = ((((Date.now() / 1000 + clock.off) % 480) / 480) * 24 + 6) % 24;
   return hr >= 18 || hr < 6;
 };
 
