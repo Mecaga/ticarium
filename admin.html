@@ -21,9 +21,9 @@
         textarea { background: #333; color: #fff; border: 1px solid #555; padding: 8px; border-radius: 4px; width: 100%; height: 80px; margin-bottom: 5px; font-family: monospace; resize: vertical; }
         
         /* Tuval Galerisi Stilleri */
-        .canvas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; margin-top: 10px; }
-        .canvas-card { background: #252525; padding: 10px; border-radius: 6px; border: 1px solid #444; text-align: center; }
-        .canvas-card img { max-width: 100%; max-height: 200px; border: 1px solid #555; border-radius: 4px; margin-top: 5px; background: #000; }
+        .canvas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 15px; margin-top: 10px; }
+        .canvas-card { background: #252525; padding: 12px; border-radius: 6px; border: 1px solid #444; text-align: center; }
+        .canvas-card img { max-width: 100%; max-height: 200px; border: 1px solid #555; border-radius: 4px; margin-top: 5px; background: #000; object-fit: contain; }
     </style>
 </head>
 <body>
@@ -36,10 +36,10 @@
         <!-- BÜTÜN TUVALLERİ TOPLU GÖRÜNTÜLEME BÖLÜMÜ -->
         <div class="section" style="border: 2px solid #9c27b0;">
             <h2>🖼️ Sistemdeki Bütün Tuvaller Galerisi</h2>
-            <p style="color: #aaa; font-size: 13px;">Oluşturulan tüm dünyalardaki tuval ve çizimler otomatik olarak taranıp burada listelenir.</p>
+            <p style="color: #aaa; font-size: 13px;">Oyuncuların `x_y_z` koordinatlarında ve dünyalarında oluşturduğu tüm tuval çizimleri taranıp burada listelenir.</p>
             <button class="purple" onclick="window.loadAllCanvasGallery()">Tuvalleri Yenile / Yükle</button>
             <div id="all-canvas-container" class="canvas-grid">
-                <p style="color: #888;">Yüklemek için butona tıklayın...</p>
+                <p style="color: #888;">Yükleniyor...</p>
             </div>
         </div>
 
@@ -90,7 +90,7 @@
                 document.getElementById('auth-status').style.color = '#4CAF50';
                 document.getElementById('admin-content').style.display = 'block';
                 loadAdminData();
-                loadAllCanvasGallery(); // Panel açıldığında otomatik galeriyi yükle
+                loadAllCanvasGallery();
             } else {
                 const currentEmail = user ? user.email : "Giriş yapılmamış";
                 document.getElementById('auth-status').innerText = `Yetkisiz erişim! (${currentEmail}) Lütfen mecaga5354 hesabıyla giriş yap.`;
@@ -134,7 +134,7 @@
             });
         }
 
-        // BÜTÜN TUVALLERİ TARAYIP GALERİ OLARAK LİSTELEYEN FONKSİYON
+        // BÜTÜN TUVALLERİ `x_y_z` FORMATINA VE RESİM URL/BASE64 DEĞERLERİNE GÖRE TARIYAN GELİŞMİŞ GALERİ FONKSİYONU
         window.loadAllCanvasGallery = async function() {
             const container = document.getElementById('all-canvas-container');
             container.innerHTML = '<p style="color:#ffa500;">Tüm tuvaller taranıyor...</p>';
@@ -151,7 +151,6 @@
             let galleryHtml = '';
 
             snapshot.forEach((userSnap) => {
-                const uid = userSnap.key;
                 const userData = userSnap.val() || {};
                 const profile = userData.profile || {};
                 const username = profile.username || profile.name || 'İsimsiz Oyuncu';
@@ -160,21 +159,23 @@
                     if (worldKey === 'profile') continue;
                     let worldData = userData[worldKey];
 
-                    // Tuval verisini özyinelemeli (recursive) olarak arayalım
-                    let canvasSrc = findCanvasDataRecursive(worldData);
-                    if (canvasSrc) {
-                        if (!canvasSrc.startsWith('data:image') && !canvasSrc.startsWith('http')) {
-                            canvasSrc = 'data:image/png;base64,' + canvasSrc;
+                    // Dünyanın içindeki verileri derinlemesine tarayarak x_y_z formatındaki tuval verilerini buluyoruz
+                    findPaintsRecursive(worldData, (coordKey, paintData) => {
+                        let imgSrc = paintData;
+                        if (typeof imgSrc === 'string') {
+                            if (!imgSrc.startsWith('data:image') && !imgSrc.startsWith('http')) {
+                                imgSrc = 'data:image/png;base64,' + imgSrc;
+                            }
+                            canvasCount++;
+                            galleryHtml += `
+                                <div class="canvas-card">
+                                    <b style="color:#2196F3; font-size:13px;">${username}</b><br>
+                                    <small style="color:#888;">Dünya: ${worldKey} | Poz: (${coordKey})</small><br>
+                                    <img src="${imgSrc}" alt="Tuval Çizimi" onerror="this.src='https://via.placeholder.com/200?text=Gecersiz+Resim';">
+                                </div>
+                            `;
                         }
-                        canvasCount++;
-                        galleryHtml += `
-                            <div class="canvas-card">
-                                <b style="color:#2196F3; font-size:13px;">${username}</b><br>
-                                <small style="color:#888;">Dünya: ${worldKey}</small><br>
-                                <img src="${canvasSrc}" alt="Tuval Resmi" onerror="this.src='https://via.placeholder.com/200?text=Gecersiz+Format';">
-                            </div>
-                        `;
-                    }
+                    });
                 }
             });
 
@@ -185,21 +186,23 @@
             }
         }
 
-        // Nesne içinde tuval resmi verisini (base64 veya resim linki) bulan yardımcı fonksiyon
-        function findCanvasDataRecursive(obj) {
-            if (!obj || typeof obj !== 'object') return null;
+        // `x_y_z` koordinat anahtarlarını veya uzun base64 resim metinlerini bulan yardımcı özyinelemeli fonksiyon
+        function findPaintsRecursive(obj, callback) {
+            if (!obj || typeof obj !== 'object') return;
             for (let k in obj) {
                 let val = obj[k];
-                // Eğer anahtar adı veya değer resim formatına benziyorsa
-                if (typeof val === 'string' && (val.startsWith('data:image') || val.startsWith('http') || val.length > 300)) {
-                    return val;
-                }
-                if (typeof val === 'object') {
-                    let found = findCanvasDataRecursive(val);
-                    if (found) return found;
+                // Eğer anahtar 'x_y_z' formatındaysa veya değer uzun bir resim / base64 metni ise
+                if (typeof val === 'string' && (val.startsWith('data:image') || val.startsWith('http') || val.length > 100)) {
+                    callback(k, val);
+                } else if (typeof val === 'object' && val !== null) {
+                    // Eğer anahtar adından (örn: x_y_z deseni) veya içindeki stringlerden tuval olduğu anlaşılıyorsa
+                    if (/^\d+_\d+_\d+$/.test(k) && typeof val === 'string') {
+                        callback(k, val);
+                    } else {
+                        findPaintsRecursive(val, callback);
+                    }
                 }
             }
-            return null;
         }
 
         window.loadAdminPublicRooms = function() {
