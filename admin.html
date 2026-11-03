@@ -2,11 +2,11 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>BlokDiyar - Tuval Galerisi ve Yönetim Paneli</title>
+    <title>BlokDiyar - Tuval Galerisi ve Birleştirici</title>
     <style>
         body { background: #121212; color: #fff; font-family: Arial, sans-serif; padding: 20px; }
         .section { background: #1e1e1e; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
-        button { background: #ff4444; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 4px; font-weight: bold; margin-right: 4px; margin-top: 5px; }
+        button { background: #ff4444; color: white; border: none; padding: 8px 14px; cursor: pointer; border-radius: 4px; font-weight: bold; margin-right: 4px; margin-top: 5px; }
         button.green { background: #4CAF50; }
         button.blue { background: #2196F3; }
         button.orange { background: #ff9800; }
@@ -20,26 +20,39 @@
         .world-settings-box { background: #161616; padding: 10px; margin-top: 8px; border-radius: 4px; border-left: 3px solid #ff9800; display: none; }
         textarea { background: #333; color: #fff; border: 1px solid #555; padding: 8px; border-radius: 4px; width: 100%; height: 80px; margin-bottom: 5px; font-family: monospace; resize: vertical; }
         
-        /* Tuval Galerisi Stilleri */
+        /* Tuval Galerisi ve Birleştirici Stilleri */
         .canvas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 15px; margin-top: 10px; }
         .canvas-card { background: #252525; padding: 12px; border-radius: 6px; border: 1px solid #444; text-align: center; }
         .canvas-card img { max-width: 100%; max-height: 200px; border: 1px solid #555; border-radius: 4px; margin-top: 5px; background: #000; object-fit: contain; }
+        .merged-preview { background: #161616; padding: 15px; border-radius: 6px; text-align: center; margin-top: 15px; border: 2px dashed #9c27b0; display: none; }
+        .merged-preview img { max-width: 100%; max-height: 400px; border: 2px solid #4CAF50; border-radius: 4px; margin-top: 10px; background: #000; }
     </style>
 </head>
 <body>
 
-    <h1>🛡️ BlokDiyar Tuval Galerisi & Yönetim Paneli</h1>
+    <h1>🛡️ BlokDiyar Tuval Birleştirici & Yönetim Paneli</h1>
     <div id="auth-status">Giriş kontrol ediliyor...</div>
 
     <div id="admin-content" style="display:none;">
         
-        <!-- BÜTÜN TUVALLERİ TOPLU GÖRÜNTÜLEME BÖLÜMÜ -->
+        <!-- BÜTÜN TUVALLERİ TEK RESİMDE BİRLEŞTİRME BÖLÜMÜ -->
         <div class="section" style="border: 2px solid #9c27b0;">
-            <h2>🖼️ Sistemdeki Bütün Tuvaller Galerisi</h2>
-            <p style="color: #aaa; font-size: 13px;">Oyuncuların `x_y_z` koordinatlarında ve dünyalarında oluşturduğu tüm tuval çizimleri taranıp burada listelenir.</p>
-            <button class="purple" onclick="window.loadAllCanvasGallery()">Tuvalleri Yenile / Yükle</button>
+            <h2>🖼️ Toplu Tuval Galerisi & Tek Resim İndirici</h2>
+            <p style="color: #aaa; font-size: 13px;">Tüm oyuncuların tuval çizimlerini tek bir görselde birleştirip indirebilir ya da ayrı ayrı inceleyebilirsin.</p>
+            
+            <button class="purple" onclick="window.loadAllCanvasGallery()">Tuvalleri Tara ve Birleştir</button>
+            <button class="green" id="download-merged-btn" style="display:none;" onclick="window.downloadMergedImage()">💾 Birleşmiş Resmi İndir (PNG)</button>
+
+            <!-- Tek Parça Halinde Birleştirilmiş Resim Önizlemesi -->
+            <div id="merged-container" class="merged-preview">
+                <h4 style="color: #4CAF50; margin: 0 0 5px 0;">✨ Tek Parça Halinde Birleştirilmiş Tuval Resmi:</h4>
+                <canvas id="merge-canvas" style="display:none;"></canvas>
+                <div id="merged-img-wrap"></div>
+            </div>
+
+            <!-- Tekli Tuval Kartları Galerisi -->
             <div id="all-canvas-container" class="canvas-grid">
-                <p style="color: #888;">Yükleniyor...</p>
+                <p style="color: #888;">Taranmayı bekliyor...</p>
             </div>
         </div>
 
@@ -83,6 +96,7 @@
         const db = getDatabase(app);
 
         const ADMIN_EMAIL = "mecaga5354@blokdiyar.app"; 
+        let globalCanvasImages = []; // Toplanan tüm resimleri burada tutacağız
 
         onAuthStateChanged(auth, (user) => {
             if (user && user.email === ADMIN_EMAIL) {
@@ -134,10 +148,16 @@
             });
         }
 
-        // BÜTÜN TUVALLERİ `x_y_z` FORMATINA VE RESİM URL/BASE64 DEĞERLERİNE GÖRE TARIYAN GELİŞMİŞ GALERİ FONKSİYONU
+        // TÜM TUVALLERİ TARAYIP HEM GALERİYE KOYAN HEM DE TEK RESİMDE BİRLEŞTİREN FONKSİYON
         window.loadAllCanvasGallery = async function() {
             const container = document.getElementById('all-canvas-container');
-            container.innerHTML = '<p style="color:#ffa500;">Tüm tuvaller taranıyor...</p>';
+            const mergedPreviewBox = document.getElementById('merged-container');
+            const downloadBtn = document.getElementById('download-merged-btn');
+            
+            container.innerHTML = '<p style="color:#ffa500;">Tüm tuvaller taranıyor ve birleştiriliyor...</p>';
+            mergedPreviewBox.style.display = 'none';
+            downloadBtn.style.display = 'none';
+            globalCanvasImages = [];
 
             const userRef = ref(db, 'users');
             const snapshot = await get(userRef);
@@ -147,7 +167,6 @@
                 return;
             }
 
-            let canvasCount = 0;
             let galleryHtml = '';
 
             snapshot.forEach((userSnap) => {
@@ -159,14 +178,15 @@
                     if (worldKey === 'profile') continue;
                     let worldData = userData[worldKey];
 
-                    // Dünyanın içindeki verileri derinlemesine tarayarak x_y_z formatındaki tuval verilerini buluyoruz
                     findPaintsRecursive(worldData, (coordKey, paintData) => {
                         let imgSrc = paintData;
                         if (typeof imgSrc === 'string') {
                             if (!imgSrc.startsWith('data:image') && !imgSrc.startsWith('http')) {
                                 imgSrc = 'data:image/png;base64,' + imgSrc;
                             }
-                            canvasCount++;
+                            
+                            globalCanvasImages.push(imgSrc);
+
                             galleryHtml += `
                                 <div class="canvas-card">
                                     <b style="color:#2196F3; font-size:13px;">${username}</b><br>
@@ -179,23 +199,94 @@
                 }
             });
 
-            if (canvasCount === 0) {
+            if (globalCanvasImages.length === 0) {
                 container.innerHTML = '<p style="color:#aaa;">Sistemde kayıtlı herhangi bir tuval/çizim bulunamadı.</p>';
             } else {
                 container.innerHTML = galleryHtml;
+                buildMergedCanvasImage(); // Toplanan tüm resimleri tek tuvalde birleştir
             }
         }
 
-        // `x_y_z` koordinat anahtarlarını veya uzun base64 resim metinlerini bulan yardımcı özyinelemeli fonksiyon
+        // Tüm resimleri yan yana/alt alta tek bir büyük resim (canvas) haline getiren fonksiyon
+        function buildMergedCanvasImage() {
+            if (globalCanvasImages.length === 0) return;
+
+            let loadedCount = 0;
+            let imgObjects = [];
+            const mergedWrap = document.getElementById('merged-img-wrap');
+            const mergedPreviewBox = document.getElementById('merged-container');
+            const downloadBtn = document.getElementById('download-merged-btn');
+
+            globalCanvasImages.forEach((src, index) => {
+                let img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => {
+                    imgObjects[index] = img;
+                    loadedCount++;
+                    if (loadedCount === globalCanvasImages.length) {
+                        drawCombinedCanvas(imgObjects);
+                    }
+                };
+                img.onerror = () => {
+                    loadedCount++;
+                    if (loadedCount === globalCanvasImages.length) {
+                        drawCombinedCanvas(imgObjects);
+                    }
+                };
+                img.src = src;
+            });
+        }
+
+        function drawCombinedCanvas(images) {
+            const validImages = images.filter(img => img && img.complete && img.naturalWidth !== 0);
+            if (validImages.length === 0) return;
+
+            const cols = Math.min(4, validImages.length); // Her sırada max 4 resim
+            const rows = Math.ceil(validImages.length / cols);
+            const thumbWidth = 120;
+            const thumbHeight = 120;
+
+            const canvas = document.getElementById('merge-canvas');
+            const ctx = canvas.getContext('2d');
+
+            canvas.width = cols * thumbWidth;
+            canvas.height = rows * thumbHeight;
+
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            validImages.forEach((img, idx) => {
+                let x = (idx % cols) * thumbWidth;
+                let y = Math.floor(idx / cols) * thumbHeight;
+                ctx.drawImage(img, x, y, thumbWidth, thumbHeight);
+                ctx.strokeStyle = '#333';
+                ctx.strokeRect(x, y, thumbWidth, thumbHeight);
+            });
+
+            const dataUrl = canvas.toDataURL('image/png');
+            const mergedWrap = document.getElementById('merged-img-wrap');
+            mergedWrap.innerHTML = `<img src="${dataUrl}" alt="Birleştirilmiş Tuval Resmi">`;
+            
+            document.getElementById('merged-container').style.display = 'block';
+            document.getElementById('download-merged-btn').style.display = 'inline-block';
+        }
+
+        // Birleşmiş resmi bilgisayara indiren fonksiyon
+        window.downloadMergedImage = function() {
+            const canvas = document.getElementById('merge-canvas');
+            const link = document.createElement('a');
+            link.download = `blokdiyar-tum-tuvaller-${Date.now()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
         function findPaintsRecursive(obj, callback) {
             if (!obj || typeof obj !== 'object') return;
             for (let k in obj) {
                 let val = obj[k];
-                // Eğer anahtar 'x_y_z' formatındaysa veya değer uzun bir resim / base64 metni ise
                 if (typeof val === 'string' && (val.startsWith('data:image') || val.startsWith('http') || val.length > 100)) {
                     callback(k, val);
                 } else if (typeof val === 'object' && val !== null) {
-                    // Eğer anahtar adından (örn: x_y_z deseni) veya içindeki stringlerden tuval olduğu anlaşılıyorsa
                     if (/^\d+_\d+_\d+$/.test(k) && typeof val === 'string') {
                         callback(k, val);
                     } else {
