@@ -45,7 +45,7 @@ function mk(x, y, z) {
   }
   g.position.set(x, y, z);
   ob.add(g);
-  return { g, x, y, z, hp: 8, cd: 0 };
+  return { g, x, y, z, hp: 5, cd: 0 };
 }
 function spawnOne() {
   const a = Math.random() * 6.28, d = 14 + Math.random() * 10;
@@ -90,14 +90,14 @@ function tick(now) {
 }
 requestAnimationFrame(tick);
 
-// Örümceğe vurma
+// Örümceğe vurma (Genişletilmiş menzil ve isabet payı)
 export function hitSpider(dx, dy, dz, dmg) {
-  let best = null, bt = 4.5;
+  let best = null, bt = 5.5;
   for (const s of spiders) {
     const vx = s.x - P.x, vy = s.y + 0.4 - (P.y + 1.6), vz = s.z - P.z;
     const t = vx * dx + vy * dy + vz * dz;
     if (t < 0.2 || t > bt) continue;
-    if (Math.hypot(vx - dx * t, vy - dy * t, vz - dz * t) > 0.9) continue;
+    if (Math.hypot(vx - dx * t, vy - dy * t, vz - dz * t) > 1.3) continue;
     bt = t; best = s;
   }
   if (!best) return false;
@@ -109,27 +109,32 @@ export function hitSpider(dx, dy, dz, dmg) {
   return true;
 }
 
-// ---- Uyku senkronu ----
+// ---- Ortak zaman ve uyku ----
+let roomUnsub = null, roomKey = '', myOff = 0;
 export function sleepSync(sleeping) {
   const r = G.room;
-  if (!r || r.solo || !r.code) return Promise.resolve(true);
+  if (!r || r.solo || !r.code) return;
   update(ref(db, 'rooms/' + r.code + '/players/' + uid), { sleep: sleeping ? Date.now() : null }).catch(() => {});
-  return Promise.resolve(false);
 }
-let unsub = null, wasKey = '';
 setInterval(() => {
   const r = G.room;
-  if (!r || r.solo || !r.code) { if (unsub) { unsub(); unsub = null; wasKey = ''; } return; }
-  if (wasKey === r.code) return;
-  wasKey = r.code;
-  unsub = onValue(ref(db, 'rooms/' + r.code + '/players'), s => {
+  if (!r || r.solo || !r.code) {
+    if (roomUnsub) { roomUnsub.forEach(u => u()); roomUnsub = null; roomKey = ''; }
+    return;
+  }
+  if (roomKey === r.code) return;
+  roomKey = r.code;
+  const offs = onValue(ref(db, 'rooms/' + r.code + '/time/off'), s => {
+    if (typeof s.val() === 'number') { myOff = s.val(); clock.off = myOff; }
+  });
+  const pl = onValue(ref(db, 'rooms/' + r.code + '/players'), s => {
     let n = 0, z = 0;
     s.forEach(c => { const v = c.val() || {}; n++; if (v.sleep && Date.now() - v.sleep < 20000) z++; });
-    if (n > 0 && z === n && z > 0) {   // herkes uyuyor: sabah
-      const cur = Date.now() / 1000 + clock.off;
-      clock.off += 480 - (cur % 480);
-      update(ref(db, 'rooms/' + r.code + '/players/' + uid), { sleep: null }).catch(() => {});
+    if (n > 0 && z === n && r.sim) {   // sadece oda yönetimi olan cihaz yazar
+      const cur = Date.now() / 1000 + myOff;
+      update(ref(db, 'rooms/' + r.code + '/time'), { off: myOff + 480 - (cur % 480) }).catch(() => {});
       toast('☀️ Herkes uyudu, sabah oldu');
     }
   });
+  roomUnsub = [offs, pl];
 }, 2000);
