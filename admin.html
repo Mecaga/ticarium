@@ -2,12 +2,13 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>BlokDiyar - Admin Paneli</title>
+    <title>BlokDiyar - Gelişmiş Admin Paneli</title>
     <style>
         body { background: #121212; color: #fff; font-family: Arial, sans-serif; padding: 20px; }
         .section { background: #1e1e1e; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
-        button { background: #ff4444; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 4px; font-weight: bold; }
+        button { background: #ff4444; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 4px; font-weight: bold; margin-right: 5px; }
         button.green { background: #4CAF50; }
+        button.orange { background: #ff9800; }
         ul { list-style: none; padding: 0; }
         li { background: #2a2a2a; margin: 8px 0; padding: 12px; display: flex; justify-content: space-between; align-items: center; border-radius: 6px; }
         #auth-status { font-size: 16px; margin-bottom: 15px; font-weight: bold; color: #ffa500; }
@@ -15,17 +16,17 @@
 </head>
 <body>
 
-    <h1>🛡️ BlokDiyar Yönetici Paneli</h1>
+    <h1>🛡️ BlokDiyar Gelişmiş Yönetici Paneli</h1>
     <div id="auth-status">Giriş kontrol ediliyor...</div>
 
     <div id="admin-content" style="display:none;">
         <div class="section">
-            <h2>Kullanıcılar</h2>
+            <h2>👥 Kullanıcılar ve Profiller</h2>
             <ul id="user-list"></ul>
         </div>
 
         <div class="section">
-            <h2>Dünyalar / Odalar (Rooms)</h2>
+            <h2>🌍 Dünyalar / Odalar (Rooms)</h2>
             <ul id="room-list"></ul>
         </div>
     </div>
@@ -36,7 +37,6 @@
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getDatabase, ref, get, remove, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        // Düzeltilmiş ve Eksiksiz Firebase Yapılandırması
         const firebaseConfig = {
             apiKey: "AIzaSyDBqq-KjCuhwsXLLWbfICps4YFzotAOTv8",
             authDomain: "ticarium-c352c.firebaseapp.com",
@@ -51,7 +51,6 @@
         const auth = getAuth(app);
         const db = getDatabase(app);
 
-        // Admin E-posta Adresin
         const ADMIN_EMAIL = "mecaga5354@blokdiyar.app"; 
 
         onAuthStateChanged(auth, (user) => {
@@ -82,8 +81,11 @@
                     const profile = childSnapshot.child('profile').val() || {};
                     
                     let li = document.createElement('li');
-                    li.innerHTML = `<span><b>${profile.username || 'İsimsiz'}</b> <br><small style="color:#888;">ID: ${uid}</small></span>
-                                    <button onclick="window.deleteUserFolder('${uid}')">Kullanıcıyı Sil</button>`;
+                    li.innerHTML = `<span><b>Kullanıcı:</b> ${profile.username || profile.name || 'İsimsiz'} <br><small style="color:#888;">UID: ${uid}</small></span>
+                                    <div>
+                                        <button class="orange" onclick="window.viewUserWorlds('${uid}')">Dünyalarını Gör</button>
+                                        <button onclick="window.deleteUserFolder('${uid}')">Hesabı/Veriyi Sil</button>
+                                    </div>`;
                     userListUl.appendChild(li);
                 });
             });
@@ -103,7 +105,8 @@
                     let li = document.createElement('li');
                     li.innerHTML = `<span>Oda ID: <b>${roomId}</b></span>
                                     <div>
-                                        <button class="green" onclick="window.makePublic('${roomId}')">Herkese Aç</button>
+                                        <button class="green" onclick="window.setRoomVisibility('${roomId}', true)">Herkese Aç</button>
+                                        <button class="orange" onclick="window.setRoomVisibility('${roomId}', false)">Özel Yap (Kapat)</button>
                                         <button onclick="window.deleteRoom('${roomId}')">Odayı Sil</button>
                                     </div>`;
                     roomListUl.appendChild(li);
@@ -111,16 +114,33 @@
             });
         }
 
-        // Global fonksiyonlar (Butonların çalışması için)
+        // Belirli bir kullanıcının dünyalarını gösteren fonksiyon
+        window.viewUserWorlds = function(uid) {
+            const userWorldRef = ref(db, `users/${uid}/worlds`);
+            get(userWorldRef).then((snapshot) => {
+                if (!snapshot.exists()) {
+                    alert("Bu kullanıcının kayıtlı dünyası bulunmuyor.");
+                    return;
+                }
+                let worldsText = "Kullanıcının Dünyaları:\n";
+                snapshot.forEach((child) => {
+                    worldsText += `- ${child.key}\n`;
+                });
+                alert(worldsText);
+            });
+        }
+
+        // Kullanıcı klasörünü ve verilerini silme
         window.deleteUserFolder = function(uid) {
-            if(confirm("Bu kullanıcı klasörünü silmek istediğine emin misin?")) {
+            if(confirm("Bu kullanıcının veritabanındaki tüm profil ve dünya verilerini silmek istediğine emin misin?")) {
                 remove(ref(db, 'users/' + uid)).then(() => {
-                    alert("Kullanıcı klasörü silindi!");
+                    alert("Kullanıcı verileri silindi!");
                     loadAdminData();
                 });
             }
         }
 
+        // Odayı tamamen silme (Hem rooms hem publicRooms)
         window.deleteRoom = function(roomId) {
             if(confirm("Bu odayı/dünyayı tamamen silmek istiyor musun?")) {
                 remove(ref(db, 'rooms/' + roomId));
@@ -131,12 +151,20 @@
             }
         }
 
-        window.makePublic = function(roomId) {
-            const updates = {};
-            updates['publicRooms/' + roomId] = { count: 1, updated: Date.now() };
-            update(ref(db), updates).then(() => {
-                alert("Oda başarıyla herkese açık hale getirildi!");
-            });
+        // Odanın görünürlüğünü yönetme (Herkese açık veya özel yapma)
+        window.setRoomVisibility = function(roomId, makePublic) {
+            if (makePublic) {
+                const updates = {};
+                updates['publicRooms/' + roomId] = { count: 1, updated: Date.now() };
+                update(ref(db), updates).then(() => {
+                    alert("Oda herkese açık hale getirildi!");
+                });
+            } else {
+                // Özel yapmak için publicRooms listesinden kaldırıyoruz
+                remove(ref(db, 'publicRooms/' + roomId)).then(() => {
+                    alert("Oda özel (kapalı) konuma getirildi!");
+                });
+            }
         }
     </script>
 </body>
