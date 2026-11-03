@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>BlokDiyar - Admin Paneli</title>
+    <style>
+        body { background: #121212; color: #fff; font-family: Arial, sans-serif; padding: 20px; }
+        .section { background: #1e1e1e; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
+        button { background: #ff4444; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; }
+        button.green { background: #4CAF50; }
+        ul { list-style: none; padding: 0; }
+        li { background: #2a2a2a; margin: 5px 0; padding: 10px; display: flex; justify-content: space-between; align-items: center; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <h1>🛡️ BlokDiyar Yönetici Paneli</h1>
+    <div id="auth-status">Giriş kontrol ediliyor...</div>
+
+    <div id="admin-content" style="display:none;">
+        <div class="section">
+            <h2>Kullanıcılar</h2>
+            <ul id="user-list"></ul>
+        </div>
+
+        <div class="section">
+            <h2>Dünyalar / Odalar (Rooms)</h2>
+            <ul id="room-list"></ul>
+        </div>
+    </div>
+
+    <!-- Firebase SDK'ları -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getDatabase, ref, get, remove, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        // Kendi Firebase yapılandırmanı buraya ekle
+        const firebaseConfig = {
+            apiKey: "SENIN_API_KEY",
+            authDomain: "SENIN_AUTH_DOMAIN",
+            databaseURL: "https://ticarium-c352c-default-rtdb.firebaseio.com",
+            projectId: "ticarium"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        // Kendi Admin E-posta adresini buraya yaz
+        const ADMIN_EMAIL = "senin_gercek_mailin@blokdiyar.app"; 
+
+        onAuthStateChanged(auth, (user) => {
+            if (user && user.email === ADMIN_EMAIL) {
+                document.getElementById('auth-status').innerText = `Hoş geldin Admin: ${user.email}`;
+                document.getElementById('admin-content').style.display = 'block';
+                loadAdminData();
+            } else {
+                document.getElementById('auth-status').innerText = "Bu sayfaya erişim yetkin yok! Admin olarak giriş yapmalısın.";
+            }
+        });
+
+        function loadAdminData() {
+            // 1. Kullanıcıları Listele
+            const userRef = ref(db, 'users');
+            get(userRef).then((snapshot) => {
+                const userListUl = document.getElementById('user-list');
+                userListUl.innerHTML = '';
+                snapshot.forEach((childSnapshot) => {
+                    const uid = childSnapshot.key;
+                    const profile = childSnapshot.child('profile').val() || {};
+                    
+                    let li = document.createElement('li');
+                    li.innerHTML = `<span><b>${profile.username || 'İsimsiz'}</b> (${uid})</span>
+                                    <button onclick="deleteUserFolder('${uid}')">Kullanıcıyı Sil</button>`;
+                    userListUl.appendChild(li);
+                });
+            });
+
+            // 2. Odaları/Dünyaları Listele
+            const roomRef = ref(db, 'rooms');
+            get(roomRef).then((snapshot) => {
+                const roomListUl = document.getElementById('room-list');
+                roomListUl.innerHTML = '';
+                snapshot.forEach((childSnapshot) => {
+                    const roomId = childSnapshot.key;
+                    
+                    let li = document.createElement('li');
+                    li.innerHTML = `<span>Oda ID: <b>${roomId}</b></span>
+                                    <div>
+                                        <button class="green" onclick="makePublic('${roomId}')">Herkese Aç</button>
+                                        <button onclick="deleteRoom('${roomId}')">Odayı Sil</button>
+                                    </div>`;
+                    roomListUl.appendChild(li);
+                });
+            });
+        }
+
+        // Global fonksiyonlar (Butonların çalışması için)
+        window.deleteUserFolder = function(uid) {
+            if(confirm("Bu kullanıcı klasörünü silmek istediğine emin misin?")) {
+                remove(ref(db, 'users/' + uid)).then(() => alert("Kullanıcı silindi!"));
+            }
+        }
+
+        window.deleteRoom = function(roomId) {
+            if(confirm("Bu odayı/dünyayı tamamen silmek istiyor musun?")) {
+                remove(ref(db, 'rooms/' + roomId));
+                remove(ref(db, 'publicRooms/' + roomId)).then(() => alert("Oda silindi!"));
+            }
+        }
+
+        window.makePublic = function(roomId) {
+            // Odayı publicRooms altına ekleyerek herkese açık hale getirir
+            const updates = {};
+            updates['publicRooms/' + roomId] = { count: 1, updated: Date.now() };
+            update(ref(db), updates).then(() => alert("Oda herkese açık hale getirildi!"));
+        }
+    </script>
+</body>
+</html>
