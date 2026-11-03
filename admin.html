@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>BlokDiyar - Tam Yetkili Admin Paneli</title>
+    <title>BlokDiyar - Detaylı Admin Paneli</title>
     <style>
         body { background: #121212; color: #fff; font-family: Arial, sans-serif; padding: 20px; }
         .section { background: #1e1e1e; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
@@ -12,26 +12,22 @@
         button.orange { background: #ff9800; }
         ul { list-style: none; padding: 0; }
         li { background: #2a2a2a; margin: 8px 0; padding: 12px; border-radius: 6px; }
-        .user-row, .room-row { display: flex; justify-content: space-between; align-items: center; }
+        .user-row { display: flex; justify-content: space-between; align-items: center; }
         #auth-status { font-size: 16px; margin-bottom: 15px; font-weight: bold; color: #ffa500; }
-        .settings-box { background: #181818; padding: 10px; margin-top: 10px; border-radius: 5px; border-left: 4px solid #2196F3; display: none; }
-        input[type="text"] { background: #333; color: #fff; border: 1px solid #555; padding: 5px; border-radius: 4px; width: 60%; margin-right: 5px; }
+        .user-worlds-box { background: #181818; padding: 12px; margin-top: 10px; border-radius: 5px; border-left: 4px solid #ff9800; display: none; }
+        .world-card { background: #222; padding: 10px; margin-top: 8px; border-radius: 5px; border: 1px solid #444; }
+        input[type="text"] { background: #333; color: #fff; border: 1px solid #555; padding: 5px; border-radius: 4px; width: 70%; margin-bottom: 5px; }
     </style>
 </head>
 <body>
 
-    <h1>🛡️ BlokDiyar Tam Yetkili Yönetici Paneli</h1>
+    <h1>🛡️ BlokDiyar Kullanıcı ve Dünya Paneli</h1>
     <div id="auth-status">Giriş kontrol ediliyor...</div>
 
     <div id="admin-content" style="display:none;">
         <div class="section">
-            <h2>👥 Kullanıcılar ve Dünyaları / Ayarları</h2>
+            <h2>👥 Kullanıcılar ve Dünyaları</h2>
             <ul id="user-list"></ul>
-        </div>
-
-        <div class="section">
-            <h2>🌍 Genel Dünya / Oda Listesi (Rooms)</h2>
-            <ul id="room-list"></ul>
         </div>
     </div>
 
@@ -71,7 +67,7 @@
         });
 
         function loadAdminData() {
-            // 1. Kullanıcıları Listele
+            // Kullanıcıları Listele
             const userRef = ref(db, 'users');
             get(userRef).then((snapshot) => {
                 const userListUl = document.getElementById('user-list');
@@ -82,152 +78,133 @@
                 }
                 snapshot.forEach((childSnapshot) => {
                     const uid = childSnapshot.key;
-                    const profile = childSnapshot.child('profile').val() || {};
+                    const userData = childSnapshot.val() || {};
+                    const profile = userData.profile || {};
                     
                     let li = document.createElement('li');
                     li.innerHTML = `
                         <div class="user-row">
                             <span><b>Kullanıcı:</b> ${profile.username || profile.name || 'İsimsiz'} <br><small style="color:#888;">UID: ${uid}</small></span>
                             <div>
-                                <button class="blue" onclick="window.toggleUserSettings('${uid}')">Dünyalarını ve Ayarlarını Gör</button>
-                                <button onclick="window.deleteUserFolder('${uid}')">Hesabı/Veriyi Sil</button>
+                                <button class="orange" onclick="window.toggleUserWorlds('${uid}')">Kullanıcının Dünyalarını Gör</button>
+                                <button onclick="window.deleteUser('${uid}')">Hesabı Sil</button>
                             </div>
                         </div>
-                        <div id="settings-${uid}" class="settings-box">
-                            <p>Yükleniyor...</p>
+                        <div id="user-worlds-${uid}" class="user-worlds-box">
+                            <p>Dünyalar yükleniyor...</p>
                         </div>
                     `;
                     userListUl.appendChild(li);
                 });
             });
-
-            // 2. Genel Odaları Listele
-            const roomRef = ref(db, 'rooms');
-            get(roomRef).then((snapshot) => {
-                const roomListUl = document.getElementById('room-list');
-                roomListUl.innerHTML = '';
-                if (!snapshot.exists()) {
-                    roomListUl.innerHTML = '<li>Kayıtlı oda/dünya bulunamadı.</li>';
-                    return;
-                }
-                snapshot.forEach((childSnapshot) => {
-                    const roomId = childSnapshot.key;
-                    let li = document.createElement('li');
-                    li.innerHTML = `
-                        <div class="room-row">
-                            <span>Oda ID: <b>${roomId}</b></span>
-                            <div>
-                                <button class="green" onclick="window.setRoomVisibility('${roomId}', true)">Herkese Aç</button>
-                                <button class="orange" onclick="window.setRoomVisibility('${roomId}', false)">Özel Yap</button>
-                                <button onclick="window.deleteRoom('${roomId}')">Odayı Sil</button>
-                            </div>
-                        </div>
-                    `;
-                    roomListUl.appendChild(li);
-                });
-            });
         }
 
-        // Kullanıcının dünyalarını ve ayarlarını açıp kapatan / çeken fonksiyon
-        window.toggleUserSettings = function(uid) {
-            const box = document.getElementById(`settings-${uid}`);
+        // Kullanıcıya bastığında dünyalarını açıp kapatan ve listeleyen fonksiyon
+        window.toggleUserWorlds = function(uid) {
+            const box = document.getElementById(`user-worlds-${uid}`);
             if (box.style.display === 'block') {
                 box.style.display = 'none';
                 return;
             }
             box.style.display = 'block';
 
-            // Kullanıcının dünyalarını çek
-            const userWorldsRef = ref(db, `users/${uid}`);
-            get(userWorldsRef).then((snapshot) => {
+            // Kullanıcının altındaki verileri çekiyoruz (dünyaları arıyoruz)
+            const userRef = ref(db, `users/${uid}`);
+            get(userRef).then((snapshot) => {
                 if (!snapshot.exists()) {
-                    box.innerHTML = '<p>Bu kullanıcıya ait veri bulunamadı.</p>';
+                    box.innerHTML = '<p>Bu kullanıcıya ait veri yok.</p>';
                     return;
                 }
                 const data = snapshot.val();
-                let html = '<h4>Kullanıcı Verileri ve Dünyaları:</h4>';
+                let html = '<h4>Bu Kullanıcının Dünyaları / Odaları:</h4>';
                 
-                // Eğer dünyalar düğümü varsa
-                if (data.worlds || data.rooms || data.worldData) {
-                    // Veritabanındaki anahtar alanları tarayalım
-                    for (let key in data) {
-                        if (key === 'profile') continue; // Profili geç
-                        let valStr = JSON.stringify(data[key]);
-                        html += `
-                            <div style="margin-bottom: 10px; background:#222; padding:8px; border-radius:4px;">
-                                <b style="color:#2196F3;">Alan (${key}):</b>
-                                <input type="text" id="val-${uid}-${key}" value='${valStr}'>
-                                <button class="green" onclick="window.updateUserVal('${uid}', '${key}')">Ayarı Kaydet</button>
-                            </div>
-                        `;
-                    }
-                } else {
-                    // Genel diğer veriler varsa
-                    let valStr = JSON.stringify(data);
+                // Kullanıcının içinde "worlds", "rooms" veya benzeri dünya sakladığı anahtarları kontrol edelim
+                let foundWorlds = false;
+                for (let key in data) {
+                    if (key === 'profile') continue; // Profili atla
+
+                    foundWorlds = true;
+                    let worldData = data[key];
+                    let worldJson = JSON.stringify(worldData, null, 2);
+
                     html += `
-                        <div style="margin-bottom: 10px; background:#222; padding:8px; border-radius:4px;">
-                            <b>Tüm Veri:</b>
-                            <input type="text" id="val-${uid}-all" value='${valStr}'>
-                            <button class="green" onclick="window.updateUserJson('${uid}')">Kaydet</button>
+                        <div class="world-card" id="world-card-${uid}-${key}">
+                            <b>Dünya / Oda Anahtarı:</b> <span style="color:#2196F3;">${key}</span><br><br>
+                            <label>Özellikler / Ayarlar (JSON veya Metin):</label><br>
+                            <input type="text" id="input-${uid}-${key}" value='${JSON.stringify(worldData)}'><br>
+                            
+                            <button class="green" onclick="window.saveWorldSettings('${uid}', '${key}')">Ayarları Düzenle / Kaydet</button>
+                            <button class="blue" onclick="window.makeWorldPublic('${key}', ${JSON.stringify(worldData)})">Herkese Aç</button>
+                            <button class="orange" onclick="window.makeWorldPrivate('${key}')">Özel Yap (Kapat)</button>
+                            <button onclick="window.deleteUserWorld('${uid}', '${key}')">Dünyayı Sil</button>
                         </div>
                     `;
                 }
+
+                if (!foundWorlds) {
+                    html += '<p style="color:#aaa;">Bu kullanıcının oluşturduğu herhangi bir dünya bulunamadı.</p>';
+                }
+
                 box.innerHTML = html;
             });
         }
 
-        // Kullanıcı ayarını güncelleme
-        window.updateUserVal = function(uid, key) {
-            const inputVal = document.getElementById(`val-${uid}-${key}`).value;
-            let parsedData;
+        // Dünya ayarlarını güncelleme (Düzenleme)
+        window.saveWorldSettings = function(uid, worldKey) {
+            const valStr = document.getElementById(`input-${uid}-${worldKey}`).value;
+            let parsedVal;
             try {
-                parsedData = JSON.parse(inputVal);
+                parsedVal = JSON.parse(valStr);
             } catch (e) {
-                parsedData = inputVal; // Eğer JSON değilse düz metin al
+                parsedVal = valStr; // JSON değilse düz metin olarak al
             }
 
             const updates = {};
-            updates[`users/${uid}/${key}`] = parsedData;
+            updates[`users/${uid}/${worldKey}`] = parsedVal;
+            // Eğer ana rooms listesinde de varsa orayı da güncelleyebiliriz
+            updates[`rooms/${worldKey}`] = parsedVal;
 
             update(ref(db), updates).then(() => {
-                alert("Kullanıcı ayarı başarıyla güncellendi ve Firebase'e işlendi!");
+                alert("Dünya ayarları başarıyla güncellendi!");
             }).catch((err) => {
                 alert("Hata: " + err.message);
             });
         }
 
-        // Kullanıcı klasörünü silme
-        window.deleteUserFolder = function(uid) {
-            if(confirm("Bu kullanıcının veritabanındaki tüm verilerini silmek istediğine emin misin?")) {
+        // Dünyayı Herkese Açık Yapma
+        window.makeWorldPublic = function(worldKey, worldData) {
+            const updates = {};
+            updates[`publicRooms/${worldKey}`] = worldData || { active: true, updated: Date.now() };
+            update(ref(db), updates).then(() => {
+                alert("Oda başarıyla herkese açık hale getirildi!");
+            });
+        }
+
+        // Dünyayı Özel Yapma (Kapatma)
+        window.makeWorldPrivate = function(worldKey) {
+            remove(ref(db, `publicRooms/${worldKey}`)).then(() => {
+                alert("Oda özel (kapalı) konuma getirildi!");
+            });
+        }
+
+        // Kullanıcının spesifik dünyasını silme
+        window.deleteUserWorld = function(uid, worldKey) {
+            if (confirm(`Bu dünyayı (${worldKey}) silmek istediğine emin misin?`)) {
+                remove(ref(db, `users/${uid}/${worldKey}`));
+                remove(ref(db, `rooms/${worldKey}`));
+                remove(ref(db, `publicRooms/${worldKey}`)).then(() => {
+                    alert("Dünya tamamen silindi!");
+                    toggleUserWorlds(uid); // Listeyi tazele
+                });
+            }
+        }
+
+        // Kullanıcının tamamını silme
+        window.deleteUser = function(uid) {
+            if (confirm("Bu kullanıcıyı ve tüm verilerini silmek istiyor musun?")) {
                 remove(ref(db, 'users/' + uid)).then(() => {
-                    alert("Kullanıcı verileri silindi!");
+                    alert("Kullanıcı silindi!");
                     loadAdminData();
-                });
-            }
-        }
-
-        // Odayı tamamen silme
-        window.deleteRoom = function(roomId) {
-            if(confirm("Bu odayı tamamen silmek istiyor musun?")) {
-                remove(ref(db, 'rooms/' + roomId));
-                remove(ref(db, 'publicRooms/' + roomId)).then(() => {
-                    alert("Oda silindi!");
-                    loadAdminData();
-                });
-            }
-        }
-
-        // Odayı herkese açık veya özel yapma
-        window.setRoomVisibility = function(roomId, makePublic) {
-            if (makePublic) {
-                const updates = {};
-                updates['publicRooms/' + roomId] = { count: 1, updated: Date.now() };
-                update(ref(db), updates).then(() => {
-                    alert("Oda herkese açık hale getirildi!");
-                });
-            } else {
-                remove(ref(db, 'publicRooms/' + roomId)).then(() => {
-                    alert("Oda özel konuma getirildi!");
                 });
             }
         }
