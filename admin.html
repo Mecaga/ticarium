@@ -6,10 +6,11 @@
     <style>
         body { background: #121212; color: #fff; font-family: Arial, sans-serif; padding: 20px; }
         .section { background: #1e1e1e; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
-        button { background: #ff4444; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; }
+        button { background: #ff4444; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 4px; font-weight: bold; }
         button.green { background: #4CAF50; }
         ul { list-style: none; padding: 0; }
-        li { background: #2a2a2a; margin: 5px 0; padding: 10px; display: flex; justify-content: space-between; align-items: center; border-radius: 4px; }
+        li { background: #2a2a2a; margin: 8px 0; padding: 12px; display: flex; justify-content: space-between; align-items: center; border-radius: 6px; }
+        #auth-status { font-size: 16px; margin-bottom: 15px; font-weight: bold; color: #ffa500; }
     </style>
 </head>
 <body>
@@ -35,10 +36,8 @@
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getDatabase, ref, get, remove, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        // Kendi Firebase yapılandırmanı buraya ekle
+        // BlokDiyar Firebase Yapılandırması
         const firebaseConfig = {
-            apiKey: "SENIN_API_KEY",
-            authDomain: "SENIN_AUTH_DOMAIN",
             databaseURL: "https://ticarium-c352c-default-rtdb.firebaseio.com",
             projectId: "ticarium"
         };
@@ -47,16 +46,19 @@
         const auth = getAuth(app);
         const db = getDatabase(app);
 
-        // Kendi Admin E-posta adresini buraya yaz
-        const ADMIN_EMAIL = "senin_gercek_mailin@blokdiyar.app"; 
+        // Admin E-posta Adresin
+        const ADMIN_EMAIL = "mecaga5354@blokdiyar.app"; 
 
         onAuthStateChanged(auth, (user) => {
             if (user && user.email === ADMIN_EMAIL) {
                 document.getElementById('auth-status').innerText = `Hoş geldin Admin: ${user.email}`;
+                document.getElementById('auth-status').style.color = '#4CAF50';
                 document.getElementById('admin-content').style.display = 'block';
                 loadAdminData();
             } else {
-                document.getElementById('auth-status').innerText = "Bu sayfaya erişim yetkin yok! Admin olarak giriş yapmalısın.";
+                const currentEmail = user ? user.email : "Giriş yapılmamış";
+                document.getElementById('auth-status').innerText = `Yetkisiz erişim! (${currentEmail}) Lütfen mecaga5354 hesabıyla giriş yap.`;
+                document.getElementById('auth-status').style.color = '#ff4444';
             }
         });
 
@@ -66,13 +68,17 @@
             get(userRef).then((snapshot) => {
                 const userListUl = document.getElementById('user-list');
                 userListUl.innerHTML = '';
+                if (!snapshot.exists()) {
+                    userListUl.innerHTML = '<li>Kayıtlı kullanıcı bulunamadı.</li>';
+                    return;
+                }
                 snapshot.forEach((childSnapshot) => {
                     const uid = childSnapshot.key;
                     const profile = childSnapshot.child('profile').val() || {};
                     
                     let li = document.createElement('li');
-                    li.innerHTML = `<span><b>${profile.username || 'İsimsiz'}</b> (${uid})</span>
-                                    <button onclick="deleteUserFolder('${uid}')">Kullanıcıyı Sil</button>`;
+                    li.innerHTML = `<span><b>${profile.username || 'İsimsiz'}</b> <br><small style="color:#888;">ID: ${uid}</small></span>
+                                    <button onclick="window.deleteUserFolder('${uid}')">Kullanıcıyı Sil</button>`;
                     userListUl.appendChild(li);
                 });
             });
@@ -82,14 +88,18 @@
             get(roomRef).then((snapshot) => {
                 const roomListUl = document.getElementById('room-list');
                 roomListUl.innerHTML = '';
+                if (!snapshot.exists()) {
+                    roomListUl.innerHTML = '<li>Kayıtlı oda/dünya bulunamadı.</li>';
+                    return;
+                }
                 snapshot.forEach((childSnapshot) => {
                     const roomId = childSnapshot.key;
                     
                     let li = document.createElement('li');
                     li.innerHTML = `<span>Oda ID: <b>${roomId}</b></span>
                                     <div>
-                                        <button class="green" onclick="makePublic('${roomId}')">Herkese Aç</button>
-                                        <button onclick="deleteRoom('${roomId}')">Odayı Sil</button>
+                                        <button class="green" onclick="window.makePublic('${roomId}')">Herkese Aç</button>
+                                        <button onclick="window.deleteRoom('${roomId}')">Odayı Sil</button>
                                     </div>`;
                     roomListUl.appendChild(li);
                 });
@@ -99,22 +109,29 @@
         // Global fonksiyonlar (Butonların çalışması için)
         window.deleteUserFolder = function(uid) {
             if(confirm("Bu kullanıcı klasörünü silmek istediğine emin misin?")) {
-                remove(ref(db, 'users/' + uid)).then(() => alert("Kullanıcı silindi!"));
+                remove(ref(db, 'users/' + uid)).then(() => {
+                    alert("Kullanıcı klasörü silindi!");
+                    loadAdminData();
+                });
             }
         }
 
         window.deleteRoom = function(roomId) {
             if(confirm("Bu odayı/dünyayı tamamen silmek istiyor musun?")) {
                 remove(ref(db, 'rooms/' + roomId));
-                remove(ref(db, 'publicRooms/' + roomId)).then(() => alert("Oda silindi!"));
+                remove(ref(db, 'publicRooms/' + roomId)).then(() => {
+                    alert("Oda tamamen silindi!");
+                    loadAdminData();
+                });
             }
         }
 
         window.makePublic = function(roomId) {
-            // Odayı publicRooms altına ekleyerek herkese açık hale getirir
             const updates = {};
             updates['publicRooms/' + roomId] = { count: 1, updated: Date.now() };
-            update(ref(db), updates).then(() => alert("Oda herkese açık hale getirildi!"));
+            update(ref(db), updates).then(() => {
+                alert("Oda başarıyla herkese açık hale getirildi!");
+            });
         }
     </script>
 </body>
