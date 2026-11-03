@@ -2,9 +2,9 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>BlokDiyar - Gelişmiş Admin ve Tuval Paneli</title>
+    <title>BlokDiyar - Sürükle Bırak Tuval Galerisi</title>
     <style>
-        body { background: #121212; color: #fff; font-family: Arial, sans-serif; padding: 20px; }
+        body { background: #121212; color: #fff; font-family: Arial, sans-serif; padding: 20px; user-select: none; }
         .section { background: #1e1e1e; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
         button { background: #ff4444; color: white; border: none; padding: 8px 14px; cursor: pointer; border-radius: 4px; font-weight: bold; margin-right: 4px; margin-top: 5px; }
         button.green { background: #4CAF50; }
@@ -20,13 +20,17 @@
         .world-settings-box { background: #161616; padding: 10px; margin-top: 8px; border-radius: 4px; border-left: 3px solid #ff9800; display: none; }
         textarea { background: #333; color: #fff; border: 1px solid #555; padding: 8px; border-radius: 4px; width: 100%; height: 80px; margin-bottom: 5px; font-family: monospace; resize: vertical; }
         
-        /* Tuval Galerisi Stilleri (Tam 5'li Düzen) */
+        /* 5'li Tuval Grid ve Sürükle-Bırak Stilleri */
         .canvas-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 10px; }
         @media(max-width: 1200px) { .canvas-grid { grid-template-columns: repeat(3, 1fr); } }
         @media(max-width: 768px) { .canvas-grid { grid-template-columns: repeat(1, 1fr); } }
         
-        .canvas-card { background: #252525; padding: 10px; border-radius: 6px; border: 1px solid #444; text-align: center; position: relative; }
-        .canvas-card img { max-width: 100%; max-height: 140px; border: 1px solid #555; border-radius: 4px; margin-top: 5px; background: #000; object-fit: contain; }
+        .canvas-card { background: #252525; padding: 10px; border-radius: 6px; border: 1px solid #444; text-align: center; position: relative; cursor: grab; transition: transform 0.2s, background 0.2s; }
+        .canvas-card:active { cursor: grabbing; }
+        .canvas-card.dragging { opacity: 0.4; border: 2px dashed #9c27b0; }
+        .canvas-card.drag-over { border: 2px solid #4CAF50; background: #2c3e2d; }
+        
+        .canvas-card img { max-width: 100%; max-height: 140px; border: 1px solid #555; border-radius: 4px; margin-top: 5px; background: #000; object-fit: contain; pointer-events: none; }
         .edit-controls { display: none; margin-top: 6px; background: #1a1a1a; padding: 5px; border-radius: 4px; }
         
         .merged-preview { background: #161616; padding: 15px; border-radius: 6px; text-align: center; margin-top: 15px; border: 2px dashed #9c27b0; display: none; }
@@ -41,10 +45,10 @@
 
     <div id="admin-content" style="display:none;">
         
-        <!-- BÜTÜN TUVALLERİ GÖRME VE SIRA DEĞİŞTİRME GALERİSİ -->
+        <!-- BÜTÜN TUVALLERİ GÖRME VE SÜRÜKLEME GALERİSİ -->
         <div class="section" style="border: 2px solid #9c27b0;">
-            <h2>🖼️ Tuvaller Galerisi (5'li Düzen & Sıralama Kontrolü)</h2>
-            <p style="color: #aaa; font-size: 13px;">Sistemdeki tüm tuval çizimleri listelenir. Düzenleme modunu açarak tuval sıralarını değiştirebilir veya silebilirsin.</p>
+            <h2>🖼️ Tuvaller Galerisi (5'li Düzen & Sürükle-Bırak)</h2>
+            <p style="color: #aaa; font-size: 13px;">Tuvalleri fareyle tutarak (veya düzenleme modunda ok tuşlarıyla) yerlerini dilediğin gibi değiştirebilirsin.</p>
             
             <button class="purple" onclick="window.loadAllCanvasGallery()">Tuvalleri Yenile</button>
             <button class="blue" onclick="window.toggleCanvasEditMode(true)">Düzenleme Modunu Aç</button>
@@ -58,7 +62,7 @@
                 <div id="merged-img-wrap"></div>
             </div>
 
-            <!-- 5'li Tuval Grid Listesi -->
+            <!-- 5'li Sürüklenebilir Tuval Grid Listesi -->
             <div id="all-canvas-container" class="canvas-grid">
                 <p style="color: #888;">Taranmayı bekliyor...</p>
             </div>
@@ -105,6 +109,7 @@
 
         const ADMIN_EMAIL = "mecaga5354@blokdiyar.app"; 
         let globalCanvasImages = []; 
+        let draggedCardSrc = null;
 
         onAuthStateChanged(auth, (user) => {
             if (user && user.email === ADMIN_EMAIL) {
@@ -120,7 +125,6 @@
             }
         });
 
-        // KULLANICILARI VE DÜNYA/TUVAL SAYILARINI HESAPLAYIP LİSTELEME
         function loadAdminData() {
             loadAdminPublicRooms();
 
@@ -139,7 +143,6 @@
                     const profile = userData.profile || {};
                     const userEmail = profile.email || "E-posta bulunamadı";
                     
-                    // Dünya (Oda) sayısını hesapla (profile hariç)
                     let worldCount = 0;
                     let canvasCount = 0;
                     for (let key in userData) {
@@ -173,7 +176,7 @@
             });
         }
 
-        // TUVALLERİ 5'Lİ GRİD OLARAK LİSTELEME VE SIRA DEĞİŞTİRME DESTEĞİ
+        // TUVALLERİ SÜRÜKLENEBİLİR (DRAG & DROP) OLARAK LİSTELEME
         window.loadAllCanvasGallery = async function() {
             const container = document.getElementById('all-canvas-container');
             const downloadBtn = document.getElementById('download-merged-btn');
@@ -214,7 +217,11 @@
                             let currentIndex = itemIndex++;
 
                             galleryHtml += `
-                                <div class="canvas-card" id="canvas-card-${currentIndex}" data-index="${currentIndex}">
+                                <div class="canvas-card" id="canvas-card-${currentIndex}" draggable="true" 
+                                     ondragstart="window.onDragStart(event, ${currentIndex})" 
+                                     ondragover="window.onDragOver(event)" 
+                                     ondrop="window.onDrop(event, ${currentIndex})"
+                                     ondragend="window.onDragEnd(event)">
                                     <b style="color:#2196F3; font-size:12px;">${username}</b><br>
                                     <small style="color:#888;">Dünya: ${worldKey} | (${coordKey})</small><br>
                                     <img src="${imgSrc}" alt="Tuval">
@@ -238,7 +245,42 @@
             }
         }
 
-        // Düzenleme Modunu Açma / Kapatma
+        // Sürükle Bırak Olayları (Drag & Drop handlers)
+        let sourceIndex = null;
+        window.onDragStart = function(event, index) {
+            sourceIndex = index;
+            event.dataTransfer.effectAllowed = 'move';
+            document.getElementById(`canvas-card-${index}`).classList.add('dragging');
+        }
+
+        window.onDragOver = function(event) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+        }
+
+        window.onDrop = function(event, targetIndex) {
+            event.preventDefault();
+            if (sourceIndex === null || sourceIndex === targetIndex) return;
+
+            const container = document.getElementById('all-canvas-container');
+            const cards = Array.from(container.getElementsByClassName('canvas-card'));
+            const sourceCard = document.getElementById(`canvas-card-${sourceIndex}`);
+            const targetCard = document.getElementById(`canvas-card-${targetIndex}`);
+
+            if (sourceIndex < targetIndex) {
+                container.insertBefore(sourceCard, targetCard.nextSibling);
+            } else {
+                container.insertBefore(sourceCard, targetCard);
+            }
+        }
+
+        window.onDragEnd = function(event) {
+            document.querySelectorAll('.canvas-card').forEach(card => {
+                card.classList.remove('dragging', 'drag-over');
+            });
+            sourceIndex = null;
+        }
+
         window.toggleCanvasEditMode = function(enable) {
             const controls = document.querySelectorAll('.edit-controls');
             controls.forEach(el => {
@@ -246,7 +288,6 @@
             });
         }
 
-        // Tuvallerin sırasını (yerini) sağa veya sola kaydırarak değiştirme
         window.moveCanvasCard = function(index, direction) {
             const container = document.getElementById('all-canvas-container');
             const cards = Array.from(container.getElementsByClassName('canvas-card'));
@@ -455,7 +496,7 @@
             updates[`publicRooms/${worldKey}`] = null;
 
             update(ref(db), updates).then(() => {
-                alert("Dünya özel konuma getirildi!");
+                alert("Oda özel konuma getirildi!");
                 loadAdminPublicRooms();
             });
         }
