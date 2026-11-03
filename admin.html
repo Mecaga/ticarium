@@ -20,17 +20,18 @@
         .world-settings-box { background: #161616; padding: 10px; margin-top: 8px; border-radius: 4px; border-left: 3px solid #ff9800; display: none; }
         textarea { background: #333; color: #fff; border: 1px solid #555; padding: 8px; border-radius: 4px; width: 100%; height: 80px; margin-bottom: 5px; font-family: monospace; resize: vertical; }
         
-        /* Tuval Galerisi Stilleri (Tam 5'li Izgara) */
+        /* Tuval Galerisi Stilleri (Tam 5'li Düzen) */
         .canvas-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 10px; }
         @media(max-width: 1200px) { .canvas-grid { grid-template-columns: repeat(3, 1fr); } }
         @media(max-width: 768px) { .canvas-grid { grid-template-columns: repeat(1, 1fr); } }
         
         .canvas-card { background: #252525; padding: 10px; border-radius: 6px; border: 1px solid #444; text-align: center; position: relative; }
-        .canvas-card img { max-width: 100%; max-height: 150px; border: 1px solid #555; border-radius: 4px; margin-top: 5px; background: #000; object-fit: contain; }
-        .edit-controls { display: none; margin-top: 8px; background: #1a1a1a; padding: 5px; border-radius: 4px; }
+        .canvas-card img { max-width: 100%; max-height: 140px; border: 1px solid #555; border-radius: 4px; margin-top: 5px; background: #000; object-fit: contain; }
+        .edit-controls { display: none; margin-top: 6px; background: #1a1a1a; padding: 5px; border-radius: 4px; }
         
         .merged-preview { background: #161616; padding: 15px; border-radius: 6px; text-align: center; margin-top: 15px; border: 2px dashed #9c27b0; display: none; }
         .merged-preview img { max-width: 100%; max-height: 400px; border: 2px solid #4CAF50; border-radius: 4px; margin-top: 10px; background: #000; }
+        .badge { background: #333; color: #4CAF50; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-left: 5px; }
     </style>
 </head>
 <body>
@@ -40,14 +41,14 @@
 
     <div id="admin-content" style="display:none;">
         
-        <!-- BÜTÜN TUVALLERİ GÖRME VE DÜZENLEME GALERİSİ -->
+        <!-- BÜTÜN TUVALLERİ GÖRME VE SIRA DEĞİŞTİRME GALERİSİ -->
         <div class="section" style="border: 2px solid #9c27b0;">
-            <h2>🖼️ Tuvaller Galerisi (5'li Düzen)</h2>
-            <p style="color: #aaa; font-size: 13px;">Sistemdeki tüm tuval çizimleri kronolojik sırayla listelenir.</p>
+            <h2>🖼️ Tuvaller Galerisi (5'li Düzen & Sıralama Kontrolü)</h2>
+            <p style="color: #aaa; font-size: 13px;">Sistemdeki tüm tuval çizimleri listelenir. Düzenleme modunu açarak tuval sıralarını değiştirebilir veya silebilirsin.</p>
             
             <button class="purple" onclick="window.loadAllCanvasGallery()">Tuvalleri Yenile</button>
-            <button class="blue" onclick="window.toggleCanvasEditMode(true)">Düzenleme Modu Aç</button>
-            <button class="orange" onclick="window.toggleCanvasEditMode(false)">Normal Sıralamaya Geç</button>
+            <button class="blue" onclick="window.toggleCanvasEditMode(true)">Düzenleme Modunu Aç</button>
+            <button class="orange" onclick="window.loadAllCanvasGallery()">Normal Sıralamaya Geç</button>
             <button class="green" id="download-merged-btn" style="display:none;" onclick="window.downloadMergedImage()">💾 Birleşmiş Resmi İndir</button>
 
             <!-- Birleştirilmiş Önizleme -->
@@ -75,9 +76,9 @@
             <ul id="admin-public-rooms"></ul>
         </div>
 
-        <!-- KULLANICILAR VE DÜNYALARI -->
+        <!-- KULLANICILAR, DÜNYA VE TUVAL SAYILARI -->
         <div class="section">
-            <h2>👥 Kullanıcılar ve Dünyaları</h2>
+            <h2>👥 Kullanıcılar, Dünya ve Tuval İstatistikleri</h2>
             <ul id="user-list"></ul>
         </div>
     </div>
@@ -119,27 +120,44 @@
             }
         });
 
+        // KULLANICILARI VE DÜNYA/TUVAL SAYILARINI HESAPLAYIP LİSTELEME
         function loadAdminData() {
             loadAdminPublicRooms();
 
             const userRef = ref(db, 'users');
-            get(userRef).then((snapshot) => {
+            get(userRef).then(async (snapshot) => {
                 const userListUl = document.getElementById('user-list');
                 userListUl.innerHTML = '';
                 if (!snapshot.exists()) {
                     userListUl.innerHTML = '<li>Kayıtlı kullanıcı bulunamadı.</li>';
                     return;
                 }
+
                 snapshot.forEach((childSnapshot) => {
                     const uid = childSnapshot.key;
                     const userData = childSnapshot.val() || {};
                     const profile = userData.profile || {};
                     const userEmail = profile.email || "E-posta bulunamadı";
                     
+                    // Dünya (Oda) sayısını hesapla (profile hariç)
+                    let worldCount = 0;
+                    let canvasCount = 0;
+                    for (let key in userData) {
+                        if (key === 'profile') continue;
+                        worldCount++;
+                        findPaintsRecursive(userData[key], () => { canvasCount++; });
+                    }
+
                     let li = document.createElement('li');
                     li.innerHTML = `
                         <div class="user-row">
-                            <span><b>Kullanıcı:</b> ${profile.username || profile.name || 'İsimsiz'} <br><small style="color:#aaa;">E-posta: ${userEmail}</small><br><small style="color:#888;">UID: ${uid}</small></span>
+                            <span>
+                                <b>Kullanıcı:</b> ${profile.username || profile.name || 'İsimsiz'} 
+                                <span class="badge">Dünya: ${worldCount}</span> 
+                                <span class="badge" style="color:#ff9800;">Tuval: ${canvasCount}</span><br>
+                                <small style="color:#aaa;">E-posta: ${userEmail}</small><br>
+                                <small style="color:#888;">UID: ${uid}</small>
+                            </span>
                             <div>
                                 <button class="purple" onclick="window.sendResetEmail('${userEmail}')">Şifre Sıfırla</button>
                                 <button class="blue" onclick="window.toggleUserWorlds('${uid}')">Dünyalarını Gör</button>
@@ -155,12 +173,12 @@
             });
         }
 
-        // TUVALLERİ 5'Lİ GRİD OLARAK TARAYIP SIRALAMA MANTIĞIYLA LİSTELEME
+        // TUVALLERİ 5'Lİ GRİD OLARAK LİSTELEME VE SIRA DEĞİŞTİRME DESTEĞİ
         window.loadAllCanvasGallery = async function() {
             const container = document.getElementById('all-canvas-container');
             const downloadBtn = document.getElementById('download-merged-btn');
             
-            container.innerHTML = '<p style="color:#ffa500;">Tuvaller taranıyor ve sıralanıyor...</p>';
+            container.innerHTML = '<p style="color:#ffa500;">Tuvaller taranıyor...</p>';
             downloadBtn.style.display = 'none';
             globalCanvasImages = [];
 
@@ -173,6 +191,7 @@
             }
 
             let galleryHtml = '';
+            let itemIndex = 0;
 
             snapshot.forEach((userSnap) => {
                 const uid = userSnap.key;
@@ -192,14 +211,17 @@
                             }
                             
                             globalCanvasImages.push(imgSrc);
+                            let currentIndex = itemIndex++;
 
                             galleryHtml += `
-                                <div class="canvas-card">
+                                <div class="canvas-card" id="canvas-card-${currentIndex}" data-index="${currentIndex}">
                                     <b style="color:#2196F3; font-size:12px;">${username}</b><br>
                                     <small style="color:#888;">Dünya: ${worldKey} | (${coordKey})</small><br>
                                     <img src="${imgSrc}" alt="Tuval">
-                                    <div class="edit-controls" id="edit-ctrl-${uid}-${worldKey}-${coordKey}">
-                                        <button class="orange" style="font-size:10px; padding:4px;" onclick="window.deleteSingleCanvas('${uid}', '${worldKey}', '${coordKey}')">Bu Çizimi Sil</button>
+                                    <div class="edit-controls" id="edit-ctrl-${currentIndex}">
+                                        <button class="blue" style="font-size:10px; padding:3px 6px;" onclick="window.moveCanvasCard(${currentIndex}, -1)">◀ Sola</button>
+                                        <button class="blue" style="font-size:10px; padding:3px 6px;" onclick="window.moveCanvasCard(${currentIndex}, 1)">Sağa ▶</button><br>
+                                        <button class="orange" style="font-size:10px; padding:3px 6px; margin-top:3px;" onclick="window.deleteSingleCanvas('${uid}', '${worldKey}', '${coordKey}')">Sil</button>
                                     </div>
                                 </div>
                             `;
@@ -216,7 +238,7 @@
             }
         }
 
-        // Düzenleme Modunu Açma / Kapatma (Normal Sıralamaya Dönüş Tuşu)
+        // Düzenleme Modunu Açma / Kapatma
         window.toggleCanvasEditMode = function(enable) {
             const controls = document.querySelectorAll('.edit-controls');
             controls.forEach(el => {
@@ -224,16 +246,32 @@
             });
         }
 
-        // Tekil tuval çizimini silme
+        // Tuvallerin sırasını (yerini) sağa veya sola kaydırarak değiştirme
+        window.moveCanvasCard = function(index, direction) {
+            const container = document.getElementById('all-canvas-container');
+            const cards = Array.from(container.getElementsByClassName('canvas-card'));
+            const targetIndex = index + direction;
+
+            if (targetIndex >= 0 && targetIndex < cards.length) {
+                const currentCard = document.getElementById(`canvas-card-${index}`);
+                const targetCard = document.getElementById(`canvas-card-${targetIndex}`);
+
+                if (direction === -1) {
+                    container.insertBefore(currentCard, targetCard);
+                } else {
+                    container.insertBefore(targetCard, currentCard);
+                }
+            }
+        }
+
         window.deleteSingleCanvas = function(uid, worldKey, coordKey) {
             if (confirm(`(${coordKey}) konumundaki bu çizimi silmek istiyor musun?`)) {
-                // Veritabanında ilgili koordinat verisini null yaparak temizliyoruz
                 const updates = {};
                 updates[`users/${uid}/${worldKey}/${coordKey}`] = null;
-                // Eğer nested bir yapıdaysa dinamik temizlenebilir
                 update(ref(db), updates).then(() => {
                     alert("Çizim silindi!");
                     loadAllCanvasGallery();
+                    loadAdminData();
                 });
             }
         }
@@ -254,7 +292,6 @@
             }
         }
 
-        // AKTİF ODALAR VE "ODAYA KATIL" BUTONU
         window.loadAdminPublicRooms = function() {
             const publicRef = ref(db, 'rooms');
             get(publicRef).then((snapshot) => {
@@ -266,7 +303,6 @@
                 }
                 snapshot.forEach((childSnapshot) => {
                     const roomId = childSnapshot.key;
-                    // Odaya katılmak için oyunun ana index sayfasına oda parametresiyle yönlendiriyoruz
                     const joinUrl = `index.html?room=${roomId}`;
 
                     let li = document.createElement('li');
@@ -360,6 +396,7 @@
             update(ref(db), updates).then(() => {
                 alert("Dünya ayarları başarıyla kaydedildi!");
                 window.loadAllCanvasGallery();
+                loadAdminData();
             }).catch((err) => {
                 alert("Hata: " + err.message);
             });
@@ -418,7 +455,7 @@
             updates[`publicRooms/${worldKey}`] = null;
 
             update(ref(db), updates).then(() => {
-                alert("Oda özel konuma getirildi!");
+                alert("Dünya özel konuma getirildi!");
                 loadAdminPublicRooms();
             });
         }
@@ -448,6 +485,7 @@
                     toggleUserWorlds(uid);
                     loadAdminPublicRooms();
                     window.loadAllCanvasGallery();
+                    loadAdminData();
                 });
             }
         }
@@ -497,7 +535,7 @@
             const validImages = images.filter(img => img && img.complete && img.naturalWidth !== 0);
             if (validImages.length === 0) return;
 
-            const cols = 5; // 5'li birleştirme
+            const cols = 5; 
             const rows = Math.ceil(validImages.length / cols);
             const thumbWidth = 120;
             const thumbHeight = 120;
