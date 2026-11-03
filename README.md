@@ -1,41 +1,30 @@
 # 🌍 BlokDiyar
 
-BlokDiyar, web tabanlı, çok oyunculu ve 3D dünyalar inşa edebileceğin, Firebase altyapısıyla güçlendirilmiş açık kaynaklı bir tarayıcı oyunudur. Oyuncular kendi dünyalarını kurabilir, odalarını yönetebilir ve toplulukla paylaşabilirler.
+BlokDiyar, Firebase altyapısıyla güçlendirilmiş, web tabanlı, çok oyunculu ve 3D dünyalar inşa edebileceğin açık kaynaklı bir tarayıcı oyunudur.
 
 ---
 
-## 🛡️ Gelişmiş Yönetici (Admin) Paneli
+## 🛡️ Yönetici (Admin) Paneli
 
-Proje, oyun içi ekosistemi ve oyuncu verilerini tamamen kontrol altında tutabilmek için özel bir **Admin Paneli (`admin.html`)** barındırır. Bu panel yalnızca yetkili admin hesabıyla (`mecaga5354@blokdiyar.app`) güvenli bir şekilde çalışır.
+Yalnızca yetkili admin hesabı (`mecaga5354@blokdiyar.app`) ile çalışan özel yönetim paneli (`admin.html`) şu özellikleri sunar:
 
-### ✨ Admin Paneli Özellikleri:
-1. **Kullanıcı Yönetimi:**
-   - Kayıtlı tüm oyuncuları ve e-posta/profil bilgilerini listeleme.
-   - Tek tıkla şifre sıfırlama e-postası gönderme.
-   - Oyuncu hesaplarını ve veritabanındaki tüm verilerini tamamen temizleme / silme.
-2. **Kademeli Dünya ve Oda Denetimi:**
-   - Oyuncuların üzerine tıklayarak oluşturdukları dünyaları listeleyebilme.
-   - Her dünyanın üzerine basarak **Oda Ayarlarını & Özelliklerini** detaylıca inceleyebilme ve JSON düzenleyici ile güncelleyebilme.
-3. **Anlık Görünürlük Kontrolü (Herkese Aç / Özel):**
-   - Dünyaları tek tıkla **Herkese Açık** hale getirme (Firebase `rooms` ve `publicRooms` yollarıyla tam senkronizasyon).
-   - İstenilen odayı anında **Özel Yaparak (Kapatarak)** aktif listeden kaldırma.
-   - İstenmeyen veya zararlı dünyaları veritabanından tamamen **Silme**.
-4. **Hızlı Toplu İşlemler:**
-   - Tek tuşla sistemdeki tüm dünyaları ve kanalları anında herkese açık duruma getirme.
+- **Oda ve Dünya Yönetimi:** Oyuncuların dünyalarını listeleyebilir, tane tane düzenleyebilir, herkese açık yapabilir veya silebilirsin.
+- **Doğrudan Odaya Katılma:** Aktif odalara tek tuşla hızlıca bağlanabilirsin.
+- **Kullanıcı Yönetimi:** Oyuncuları listeleyebilir, şifre sıfırlama e-postası gönderebilir veya hesaplarını yönetebilirsin.
+- **Tuval (Canvas) Galerisi:** Oyuncuların oyun içinde çizdiği tuval resimlerini tek ekranda görebilir, sıralarını düzenleyebilir ve tek parça halinde indirebilirsin.
 
 ---
 
 ## 🛠️ Teknolojiler
 
 - **Frontend:** HTML5, CSS3, JavaScript (ES Modules)
-- **Backend & Database:** Firebase Realtime Database
-- **Authentication:** Firebase Auth (Admin yetkilendirmesi)
+- **Backend & Database:** Firebase Realtime Database & Auth
 - **Host:** GitHub Pages
 
 ---
 
-## 🚀 Kurulum ve Çalıştırma
+## 🚀 Kurulum
 
-1. Projeyi klonlayın veya indirin:
+1. Projeyi klonlayın:
    ```bash
    git clone [https://github.com/mecaga/ticarium.git](https://github.com/mecaga/ticarium.git)
