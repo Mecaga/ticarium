@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>BlokDiyar - Sürükle Bırak Tuval Galerisi</title>
+    <title>BlokDiyar - Sürüklenebilir Tek Parça Tuval Paneli</title>
     <style>
         body { background: #121212; color: #fff; font-family: Arial, sans-serif; padding: 20px; user-select: none; }
         .section { background: #1e1e1e; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
@@ -28,7 +28,6 @@
         .canvas-card { background: #252525; padding: 10px; border-radius: 6px; border: 1px solid #444; text-align: center; position: relative; cursor: grab; transition: transform 0.2s, background 0.2s; }
         .canvas-card:active { cursor: grabbing; }
         .canvas-card.dragging { opacity: 0.4; border: 2px dashed #9c27b0; }
-        .canvas-card.drag-over { border: 2px solid #4CAF50; background: #2c3e2d; }
         
         .canvas-card img { max-width: 100%; max-height: 140px; border: 1px solid #555; border-radius: 4px; margin-top: 5px; background: #000; object-fit: contain; pointer-events: none; }
         .edit-controls { display: none; margin-top: 6px; background: #1a1a1a; padding: 5px; border-radius: 4px; }
@@ -47,8 +46,8 @@
         
         <!-- BÜTÜN TUVALLERİ GÖRME VE SÜRÜKLEME GALERİSİ -->
         <div class="section" style="border: 2px solid #9c27b0;">
-            <h2>🖼️ Tuvaller Galerisi (5'li Düzen & Sürükle-Bırak)</h2>
-            <p style="color: #aaa; font-size: 13px;">Tuvalleri fareyle tutarak (veya düzenleme modunda ok tuşlarıyla) yerlerini dilediğin gibi değiştirebilirsin.</p>
+            <h2>🖼️ Tuvaller Galerisi (Sürükle-Bırak ile Tek Parçayı Yönet)</h2>
+            <p style="color: #aaa; font-size: 13px;">Aşağıdaki tuvalleri sürükleyerek yerlerini değiştirdiğinizde, yukarıdaki <b>Tek Parça Halindeki Birleşmiş Resim</b> de yeni sıranıza göre otomatik olarak güncellenir!</p>
             
             <button class="purple" onclick="window.loadAllCanvasGallery()">Tuvalleri Yenile</button>
             <button class="blue" onclick="window.toggleCanvasEditMode(true)">Düzenleme Modunu Aç</button>
@@ -57,7 +56,7 @@
 
             <!-- Birleştirilmiş Önizleme -->
             <div id="merged-container" class="merged-preview">
-                <h4 style="color: #4CAF50; margin: 0 0 5px 0;">✨ Tek Parça Halinde Birleştirilmiş Tuval Resmi:</h4>
+                <h4 style="color: #4CAF50; margin: 0 0 5px 0;">✨ Sürüklediğiniz Sıraya Göre Güncellenen Tek Parça Resim:</h4>
                 <canvas id="merge-canvas" style="display:none;"></canvas>
                 <div id="merged-img-wrap"></div>
             </div>
@@ -109,7 +108,7 @@
 
         const ADMIN_EMAIL = "mecaga5354@blokdiyar.app"; 
         let globalCanvasImages = []; 
-        let draggedCardSrc = null;
+        let sourceIndex = null;
 
         onAuthStateChanged(auth, (user) => {
             if (user && user.email === ADMIN_EMAIL) {
@@ -176,7 +175,6 @@
             });
         }
 
-        // TUVALLERİ SÜRÜKLENEBİLİR (DRAG & DROP) OLARAK LİSTELEME
         window.loadAllCanvasGallery = async function() {
             const container = document.getElementById('all-canvas-container');
             const downloadBtn = document.getElementById('download-merged-btn');
@@ -213,7 +211,7 @@
                                 imgSrc = 'data:image/png;base64,' + imgSrc;
                             }
                             
-                            globalCanvasImages.push(imgSrc);
+                            globalCanvasImages.push({ src: imgSrc, key: `${uid}_${worldKey}_${coordKey}` });
                             let currentIndex = itemIndex++;
 
                             galleryHtml += `
@@ -221,7 +219,8 @@
                                      ondragstart="window.onDragStart(event, ${currentIndex})" 
                                      ondragover="window.onDragOver(event)" 
                                      ondrop="window.onDrop(event, ${currentIndex})"
-                                     ondragend="window.onDragEnd(event)">
+                                     ondragend="window.onDragEnd(event)"
+                                     data-src="${imgSrc}">
                                     <b style="color:#2196F3; font-size:12px;">${username}</b><br>
                                     <small style="color:#888;">Dünya: ${worldKey} | (${coordKey})</small><br>
                                     <img src="${imgSrc}" alt="Tuval">
@@ -241,12 +240,11 @@
                 container.innerHTML = '<p style="color:#aaa;">Kayıtlı tuval/çizim bulunamadı.</p>';
             } else {
                 container.innerHTML = galleryHtml;
-                buildMergedCanvasImage();
+                buildMergedCanvasImageFromDOM(); // Grid üzerindeki anlık sıraya göre birleştir
             }
         }
 
-        // Sürükle Bırak Olayları (Drag & Drop handlers)
-        let sourceIndex = null;
+        // Sürükle Bırak Olayları ve Sıralama Güncellemesi
         window.onDragStart = function(event, index) {
             sourceIndex = index;
             event.dataTransfer.effectAllowed = 'move';
@@ -263,7 +261,6 @@
             if (sourceIndex === null || sourceIndex === targetIndex) return;
 
             const container = document.getElementById('all-canvas-container');
-            const cards = Array.from(container.getElementsByClassName('canvas-card'));
             const sourceCard = document.getElementById(`canvas-card-${sourceIndex}`);
             const targetCard = document.getElementById(`canvas-card-${targetIndex}`);
 
@@ -272,11 +269,14 @@
             } else {
                 container.insertBefore(sourceCard, targetCard);
             }
+            
+            // Sürükleme bittiğinde üstteki tek parça resmi yeni sıraya göre yeniden çiz
+            buildMergedCanvasImageFromDOM();
         }
 
         window.onDragEnd = function(event) {
             document.querySelectorAll('.canvas-card').forEach(card => {
-                card.classList.remove('dragging', 'drag-over');
+                card.classList.remove('dragging');
             });
             sourceIndex = null;
         }
@@ -302,6 +302,7 @@
                 } else {
                     container.insertBefore(targetCard, currentCard);
                 }
+                buildMergedCanvasImageFromDOM();
             }
         }
 
@@ -496,7 +497,7 @@
             updates[`publicRooms/${worldKey}`] = null;
 
             update(ref(db), updates).then(() => {
-                alert("Oda özel konuma getirildi!");
+                alert("Dünya özel konuma getirildi!");
                 loadAdminPublicRooms();
             });
         }
@@ -551,22 +552,28 @@
             }
         }
 
-        function buildMergedCanvasImage() {
-            if (globalCanvasImages.length === 0) return;
+        // DOM üzerindeki güncel sıralamaya göre tek parça resmi çizen fonksiyon
+        function buildMergedCanvasImageFromDOM() {
+            const cards = Array.from(document.querySelectorAll('.canvas-card'));
+            if (cards.length === 0) return;
+
+            let sources = cards.map(card => card.getAttribute('data-src')).filter(Boolean);
+            if (sources.length === 0) return;
+
             let loadedCount = 0;
             let imgObjects = [];
 
-            globalCanvasImages.forEach((src, index) => {
+            sources.forEach((src, index) => {
                 let img = new Image();
                 img.crossOrigin = "anonymous";
                 img.onload = () => {
                     imgObjects[index] = img;
                     loadedCount++;
-                    if (loadedCount === globalCanvasImages.length) drawCombinedCanvas(imgObjects);
+                    if (loadedCount === sources.length) drawCombinedCanvas(imgObjects);
                 };
                 img.onerror = () => {
                     loadedCount++;
-                    if (loadedCount === globalCanvasImages.length) drawCombinedCanvas(imgObjects);
+                    if (loadedCount === sources.length) drawCombinedCanvas(imgObjects);
                 };
                 img.src = src;
             });
@@ -599,7 +606,7 @@
             });
 
             const dataUrl = canvas.toDataURL('image/png');
-            document.getElementById('merged-img-wrap').innerHTML = `<img src="${dataUrl}" alt="Birleştirilmiş Tuval Resmi">`;
+            document.getElementById('merged-img-wrap').innerHTML = `<img src="${dataUrl}" alt="Sıralı Birleştirilmiş Tuval Resmi">`;
             document.getElementById('merged-container').style.display = 'block';
             document.getElementById('download-merged-btn').style.display = 'inline-block';
         }
@@ -607,7 +614,7 @@
         window.downloadMergedImage = function() {
             const canvas = document.getElementById('merge-canvas');
             const link = document.createElement('a');
-            link.download = `blokdiyar-tum-tuvaller-${Date.now()}.png`;
+            link.download = `blokdiyar-sirali-tuvaller-${Date.now()}.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
         }
