@@ -50,9 +50,21 @@ function enterMain(a) {
 
 function showAuth(a) {
   show('sAuth');
-  $('auHint').textContent = a.isLegacyAnon()
+  let hintText = a.isLegacyAnon()
     ? 'Bu cihazda eski misafir dünyaların var. Korumak için GİRİŞ YAPMA, KAYIT OL de: kullanıcı adı ve şifre seç, dünyaların hesabına bağlanır.'
     : 'Kullanıcı adı ve şifrenle giriş yap ya da yeni hesap aç.';
+
+  // "Beni hatırla" kayıtlı verisi varsa kullanıcı adı ve şifreyi doldur, hint mesajını güncelle
+  try {
+    const c = JSON.parse(localStorage.getItem('bd_cred') || 'null');
+    if (c) {
+      $('auUser').value = c[0]; 
+      $('auPass').value = c[1];
+      hintText = '👋 Tekrar hoş geldin, ' + c[0] + '. Giriş Yap\'a bas (şifre hatırlandı).';
+    }
+  } catch (e) {}
+
+  $('auHint').textContent = hintText;
 }
 
 export function showMenu() {
@@ -86,6 +98,12 @@ async function doAuth(mode) {
     if (mode === 'login') await a.doLogin($('auUser').value, $('auPass').value);
     else await a.doRegister($('auUser').value, $('auPass').value);
   } catch (e) { throw new Error(a.authError(e)); }
+  
+  // Başarılı giriş/kayıt sonrası kimlik bilgilerini localStorage'da sakla
+  try { 
+    localStorage.setItem('bd_cred', JSON.stringify([$('auUser').value, $('auPass').value])); 
+  } catch (e) {}
+
   $('auPass').value = '';
   enterMain(a);
 }
@@ -98,6 +116,9 @@ export function initMenu(cb) {
   $('auLogin').onclick = e => run(e.currentTarget, () => doAuth('login'));
   $('auReg').onclick = e => run(e.currentTarget, () => doAuth('register'));
   $('mLogout').onclick = async () => {
+    try { 
+      localStorage.removeItem('bd_cred'); 
+    } catch (e) {}
     try { await (await loadA()).doLogout(); } catch (e) {}
     location.reload();
   };
@@ -134,4 +155,4 @@ export function initMenu(cb) {
     const r = await loadR();
     enter(await r.joinRoom($('jCode').value, pname()));
   });
-      }
+}
