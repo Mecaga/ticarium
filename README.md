@@ -4,16 +4,6 @@ BlokDiyar, Firebase altyapısıyla güçlendirilmiş, web tabanlı, çok oyuncul
 
 ---
 
-## 🛡️ Yönetici (Admin) Paneli
-
-Yalnızca yetkili admin hesabı (`mecaga5354@blokdiyar.app`) ile çalışan özel yönetim paneli (`admin.html`) şu özellikleri sunar:
-
-- **Oda ve Dünya Yönetimi:** Oyuncuların dünyalarını listeleyebilir, tane tane düzenleyebilir, herkese açık yapabilir veya silebilirsin.
-- **Doğrudan Odaya Katılma:** Aktif odalara tek tuşla hızlıca bağlanabilirsin.
-- **Kullanıcı Yönetimi:** Oyuncuları listeleyebilir, şifre sıfırlama e-postası gönderebilir veya hesaplarını yönetebilirsin.
-- **Tuval (Canvas) Galerisi:** Oyuncuların oyun içinde çizdiği tuval resimlerini tek ekranda görebilir, sıralarını düzenleyebilir ve tek parça halinde indirebilirsin.
-
----
 
 ## 🛠️ Teknolojiler
 
