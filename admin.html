@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>BlokDiyar - Net Ok Tuşlu Tuval Paneli</title>
+    <title>BlokDiyar - Köşe Yön Tuşlu Tuval Paneli</title>
     <style>
         body { background: #121212; color: #fff; font-family: Arial, sans-serif; padding: 20px; }
         .section { background: #1e1e1e; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
@@ -20,15 +20,28 @@
         .world-settings-box { background: #161616; padding: 10px; margin-top: 8px; border-radius: 4px; border-left: 3px solid #ff9800; display: none; }
         textarea { background: #333; color: #fff; border: 1px solid #555; padding: 8px; border-radius: 4px; width: 100%; height: 80px; margin-bottom: 5px; font-family: monospace; resize: vertical; }
         
-        /* 5'li Tuval Grid ve Ok Tuşu Stilleri */
+        /* 5'li Tuval Grid ve Seçim Stilleri */
         .canvas-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 10px; }
         @media(max-width: 1200px) { .canvas-grid { grid-template-columns: repeat(3, 1fr); } }
         @media(max-width: 768px) { .canvas-grid { grid-template-columns: repeat(1, 1fr); } }
         
-        .canvas-card { background: #252525; padding: 10px; border-radius: 6px; border: 1px solid #444; text-align: center; position: relative; }
-        .canvas-card img { max-width: 100%; max-height: 130px; border: 1px solid #555; border-radius: 4px; margin-top: 5px; background: #000; object-fit: contain; }
-        .arrow-controls { margin-top: 6px; background: #1a1a1a; padding: 5px; border-radius: 4px; }
+        .canvas-card { background: #252525; padding: 10px; border-radius: 6px; border: 2px solid #444; text-align: center; position: relative; cursor: pointer; transition: 0.2s; }
+        .canvas-card:hover { border-color: #666; }
+        .canvas-card.selected { border: 2px solid #4CAF50; background: #1a2e1b; box-shadow: 0 0 10px rgba(76, 175, 80, 0.5); }
         
+        .canvas-card img { max-width: 100%; max-height: 130px; border: 1px solid #555; border-radius: 4px; margin-top: 5px; background: #000; object-fit: contain; pointer-events: none; }
+        
+        /* Köşe Yön Kontrol Paneli (Floating D-Pad) */
+        .corner-dpad { position: fixed; bottom: 20px; right: 20px; background: rgba(20, 20, 20, 0.95); border: 2px solid #4CAF50; padding: 12px; border-radius: 12px; z-index: 999; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.7); display: none; }
+        .dpad-grid { display: grid; grid-template-columns: repeat(3, 40px); grid-template-rows: repeat(3, 40px); gap: 5px; justify-content: center; align-items: center; margin-top: 8px; }
+        .dpad-btn { background: #333; color: white; border: 1px solid #555; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; display: flex; justify-content: center; align-items: center; height: 100%; width: 100%; }
+        .dpad-btn:hover { background: #4CAF50; border-color: #fff; }
+        .dpad-up { grid-column: 2; grid-row: 1; }
+        .dpad-left { grid-column: 1; grid-row: 2; }
+        .dpad-right { grid-column: 3; grid-row: 2; }
+        .dpad-down { grid-column: 2; grid-row: 3; }
+        .dpad-center { grid-column: 2; grid-row: 2; background: #222; font-size: 10px; color: #888; }
+
         .merged-preview { background: #161616; padding: 15px; border-radius: 6px; text-align: center; margin-top: 15px; border: 2px dashed #9c27b0; display: none; }
         .merged-preview img { max-width: 100%; max-height: 400px; border: 2px solid #4CAF50; border-radius: 4px; margin-top: 10px; background: #000; }
         .badge { background: #333; color: #4CAF50; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-left: 5px; }
@@ -41,10 +54,10 @@
 
     <div id="admin-content" style="display:none;">
         
-        <!-- BÜTÜN TUVALLERİ GÖRME VE OK TUŞLARIYLA YER DEĞİŞTİRME -->
+        <!-- BÜTÜN TUVALLERİ GÖRME VE KÖŞE YÖN TUŞLARIYLA KONTROL -->
         <div class="section" style="border: 2px solid #9c27b0;">
-            <h2>🖼️ Tuvaller Galerisi (5'li Düzen & ◀️▶️ Ok Tuşları)</h2>
-            <p style="color: #aaa; font-size: 13px;">Her tuvalin altındaki <b>◀️ Sola</b> ve <b>Sağa ▶️</b> tuşlarını kullanarak sırayı kolayca değiştirebilir, üstteki tek parça resmi güncelleyebilirsiniz.</p>
+            <h2>🖼️ Tuvaller Galerisi (5'li Düzen & Köşe Kontrol Paneli)</h2>
+            <p style="color: #aaa; font-size: 13px;">Galerideki herhangi bir tuvale tıklayarak seçin. Sağ köşede açılacak yön tuşlarıyla ([İleri, Geri, Sola, Sağa]) yerini kolayca değiştirin.</p>
             
             <button class="purple" onclick="window.loadAllCanvasGallery()">Tuvalleri Yenile</button>
             <button class="orange" onclick="window.loadAllCanvasGallery()">Normal Sıralamaya Dön</button>
@@ -52,7 +65,7 @@
 
             <!-- Birleştirilmiş Önizleme -->
             <div id="merged-container" class="merged-preview">
-                <h4 style="color: #4CAF50; margin: 0 0 5px 0;">✨ Ok Sıralamanıza Göre Güncellenen Tek Parça Resim:</h4>
+                <h4 style="color: #4CAF50; margin: 0 0 5px 0;">✨ Seçtiğiniz Sıraya Göre Güncellenen Tek Parça Resim:</h4>
                 <canvas id="merge-canvas" style="display:none;"></canvas>
                 <div id="merged-img-wrap"></div>
             </div>
@@ -61,6 +74,19 @@
             <div id="all-canvas-container" class="canvas-grid">
                 <p style="color: #888;">Taranmayı bekliyor...</p>
             </div>
+        </div>
+
+        <!-- KÖŞE YÖN KONTROL PANELİ (FLOATING D-PAD) -->
+        <div id="corner-dpad" class="corner-dpad">
+            <b id="selected-info" style="font-size: 11px; color: #4CAF50;">Tuval Seçildi</b>
+            <div class="dpad-grid">
+                <button class="dpad-btn dpad-up" onclick="window.moveSelectedCard('up')">⬆️</button>
+                <button class="dpad-btn dpad-left" onclick="window.moveSelectedCard('left')">⬅️</button>
+                <div class="dpad-btn dpad-center" onclick="window.unselectCard()">✖</div>
+                <button class="dpad-btn dpad-right" onclick="window.moveSelectedCard('right')">➡️</button>
+                <button class="dpad-btn dpad-down" onclick="window.moveSelectedCard('down')">⬇️</button>
+            </div>
+            <button class="orange" style="font-size: 10px; padding: 4px 8px; margin-top: 6px;" onclick="window.deleteSelectedCard()">Bu Çizimi Sil</button>
         </div>
 
         <!-- HIZLI ODA YÖNETİMİ -->
@@ -103,6 +129,7 @@
         const db = getDatabase(app);
 
         const ADMIN_EMAIL = "mecaga5354@blokdiyar.app"; 
+        let selectedIndex = null;
 
         onAuthStateChanged(auth, (user) => {
             if (user && user.email === ADMIN_EMAIL) {
@@ -169,13 +196,14 @@
             });
         }
 
-        // TUVALLERİ 5'Lİ GRİD VE NET OK TUŞLARIYLA LİSTELEME
+        // TUVALLERİ LİSTELEME VE TIKLANDIĞINDA SEÇME
         window.loadAllCanvasGallery = async function() {
             const container = document.getElementById('all-canvas-container');
             const downloadBtn = document.getElementById('download-merged-btn');
             
             container.innerHTML = '<p style="color:#ffa500;">Tuvaller taranıyor...</p>';
             downloadBtn.style.display = 'none';
+            unselectCard();
 
             const userRef = ref(db, 'users');
             const snapshot = await get(userRef);
@@ -208,15 +236,10 @@
                             let currentIndex = itemIndex++;
 
                             galleryHtml += `
-                                <div class="canvas-card" id="canvas-card-${currentIndex}" data-src="${imgSrc}">
+                                <div class="canvas-card" id="canvas-card-${currentIndex}" data-src="${imgSrc}" data-uid="${uid}" data-world="${worldKey}" data-coord="${coordKey}" onclick="window.selectCard(${currentIndex})">
                                     <b style="color:#2196F3; font-size:12px;">${username}</b><br>
                                     <small style="color:#888;">Dünya: ${worldKey} | (${coordKey})</small><br>
                                     <img src="${imgSrc}" alt="Tuval">
-                                    <div class="arrow-controls">
-                                        <button class="blue" style="font-size:11px; padding:4px 8px;" onclick="window.moveCanvasCard(${currentIndex}, -1)">◀️ Sola</button>
-                                        <button class="blue" style="font-size:11px; padding:4px 8px;" onclick="window.moveCanvasCard(${currentIndex}, 1)">Sağa ▶️</button><br>
-                                        <button class="orange" style="font-size:10px; padding:3px 6px; margin-top:4px;" onclick="window.deleteSingleCanvas('${uid}', '${worldKey}', '${coordKey}')">Sil</button>
-                                    </div>
                                 </div>
                             `;
                         }
@@ -232,33 +255,70 @@
             }
         }
 
-        // Ok tuşlarıyla kartın yerini sağa veya sola kaydırma fonksiyonu
-        window.moveCanvasCard = function(index, direction) {
-            const container = document.getElementById('all-canvas-container');
-            const cards = Array.from(container.getElementsByClassName('canvas-card'));
-            
-            // Kartın şu anki DOM'daki sırasını buluyoruz
-            const currentCard = document.getElementById(`canvas-card-${index}`);
-            const currentIndex = cards.indexOf(currentCard);
-            const targetIndex = currentIndex + direction;
-
-            if (targetIndex >= 0 && targetIndex < cards.length) {
-                const targetCard = cards[targetIndex];
-                if (direction === -1) {
-                    container.insertBefore(currentCard, targetCard);
-                } else {
-                    container.insertBefore(targetCard, currentCard);
-                }
-                buildMergedCanvasImageFromDOM(); // Sıra değiştiği an birleşik resmi güncelle
+        // Tuvale tıklayıp seçme ve köşe yön tuş panelini açma
+        window.selectCard = function(index) {
+            document.querySelectorAll('.canvas-card').forEach(card => card.classList.remove('selected'));
+            selectedIndex = index;
+            const card = document.getElementById(`canvas-card-${index}`);
+            if (card) {
+                card.classList.add('selected');
+                document.getElementById('corner-dpad').style.display = 'block';
+                document.getElementById('selected-info').innerText = `Seçili: #${index + 1}`;
             }
         }
 
-        window.deleteSingleCanvas = function(uid, worldKey, coordKey) {
+        window.unselectCard = function() {
+            document.querySelectorAll('.canvas-card').forEach(card => card.classList.remove('selected'));
+            selectedIndex = null;
+            document.getElementById('corner-dpad').style.display = 'none';
+        }
+
+        // Köşe Yön Tuşları ile Grid Üzerinde Hareket Ettirme (Yukarı, Aşağı, Sol, Sağ)
+        window.moveSelectedCard = function(direction) {
+            if (selectedIndex === null) return;
+
+            const container = document.getElementById('all-canvas-container');
+            const cards = Array.from(container.getElementsByClassName('canvas-card'));
+            const currentCard = document.getElementById(`canvas-card-${selectedIndex}`);
+            const currentIndex = cards.indexOf(currentCard);
+            
+            const cols = 5; // Grid sütun sayısı (5'li düzen)
+            let targetIndex = currentIndex;
+
+            if (direction === 'left') targetIndex = currentIndex - 1;
+            else if (direction === 'right') targetIndex = currentIndex + 1;
+            else if (direction === 'up') targetIndex = currentIndex - cols;
+            else if (direction === 'down') targetIndex = currentIndex + cols;
+
+            if (targetIndex >= 0 && targetIndex < cards.length) {
+                const targetCard = cards[targetIndex];
+                if (currentIndex < targetIndex) {
+                    container.insertBefore(currentCard, targetCard.nextSibling);
+                } else {
+                    container.insertBefore(currentCard, targetCard);
+                }
+                
+                // Seçimi yeni indexe taşı
+                const newCards = Array.from(container.getElementsByClassName('canvas-card'));
+                const newIndex = newCards.indexOf(currentCard);
+                selectCard(newIndex);
+                buildMergedCanvasImageFromDOM(); // Tek parça resmi anında güncelle
+            }
+        }
+
+        window.deleteSelectedCard = function() {
+            if (selectedIndex === null) return;
+            const card = document.getElementById(`canvas-card-${selectedIndex}`);
+            const uid = card.getAttribute('data-uid');
+            const worldKey = card.getAttribute('data-world');
+            const coordKey = card.getAttribute('data-coord');
+
             if (confirm(`(${coordKey}) konumundaki bu çizimi silmek istiyor musun?`)) {
                 const updates = {};
                 updates[`users/${uid}/${worldKey}/${coordKey}`] = null;
                 update(ref(db), updates).then(() => {
                     alert("Çizim silindi!");
+                    unselectCard();
                     loadAllCanvasGallery();
                     loadAdminData();
                 });
@@ -499,7 +559,6 @@
             }
         }
 
-        // Grid üzerindeki güncel ok sıralamasına göre tek parça resmi çizen fonksiyon
         function buildMergedCanvasImageFromDOM() {
             const cards = Array.from(document.querySelectorAll('.canvas-card'));
             if (cards.length === 0) return;
@@ -561,7 +620,7 @@
         window.downloadMergedImage = function() {
             const canvas = document.getElementById('merge-canvas');
             const link = document.createElement('a');
-            link.download = `blokdiyar-ok-sirali-tuvaller-${Date.now()}.png`;
+            link.download = `blokdiyar-kose-tuşlu-tuvaller-${Date.now()}.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
         }
