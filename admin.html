@@ -2,12 +2,12 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>BlokDiyar - Kesin Çözüm Admin Paneli</title>
+    <title>BlokDiyar - Tek Tuş Admin Paneli</title>
     <style>
         body { background: #121212; color: #fff; font-family: Arial, sans-serif; padding: 20px; }
         .section { background: #1e1e1e; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
-        button { background: #ff4444; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 4px; font-weight: bold; margin-right: 5px; margin-top: 5px; }
-        button.green { background: #4CAF50; }
+        button { background: #ff4444; color: white; border: none; padding: 8px 14px; cursor: pointer; border-radius: 4px; font-weight: bold; margin-right: 5px; margin-top: 5px; }
+        button.green { background: #4CAF50; font-size: 14px; }
         button.blue { background: #2196F3; }
         button.orange { background: #ff9800; }
         button.purple { background: #9c27b0; }
@@ -22,14 +22,21 @@
 </head>
 <body>
 
-    <h1>🛡️ BlokDiyar Admin & Kanal Yönetim Paneli</h1>
+    <h1>🛡️ BlokDiyar Tek Tuş Yönetim Paneli</h1>
     <div id="auth-status">Giriş kontrol ediliyor...</div>
 
-    <div id="admin-content" style="display:none;" x-data>
+    <div id="admin-content" style="display:none;">
         
-        <!-- ADMINİN KENDİ AÇIK ODALARI VE KANALLARI -->
-        <div class="section" style="border: 2px solid #4CAF50;">
-            <h2>🌟 Admin (mecaga5354) Açık Odalarım ve Kanallarım</h2>
+        <!-- TEK TUŞLA TÜM KANALLARI HERKESE AÇMA BÖLÜMÜ -->
+        <div class="section" style="border: 2px solid #4CAF50; text-align: center;">
+            <h2>🚀 Hızlı Oda & Kanal Yönetimi</h2>
+            <p style="color: #aaa; font-size: 14px;">Sistemdeki bütün kullanıcı dünyalarını ve odaları tek dokunuşla ortak listeye aç!</p>
+            <button class="green" onclick="window.makeAllWorldsPublic()">🌟 BÜTÜN OLUŞTURULAN KANALLARI HERKESE AÇ</button>
+        </div>
+
+        <!-- ADMININ AÇIK KANALLARI -->
+        <div class="section">
+            <h2>🌟 Aktif Herkese Açık Kanallar</h2>
             <ul id="admin-public-rooms"></ul>
         </div>
 
@@ -111,7 +118,49 @@
             });
         }
 
-        // Adminin açık odalarını / kanallarını listeleyen fonksiyon
+        // TEK TUŞ: Veritabanındaki tüm kullanıcıların dünyalarını tarar ve hepsini herkese açık hale getirir!
+        window.makeAllWorldsPublic = async function() {
+            if (!confirm("Sistemdeki tüm kullanıcı dünyaları ve odaları herkese açık hale getirilsin mi?")) return;
+
+            const updates = {};
+            const userRef = ref(db, 'users');
+            const snapshot = await get(userRef);
+
+            if (!snapshot.exists()) {
+                alert("Veritabanında taranacak kullanıcı bulunamadı.");
+                return;
+            }
+
+            let count = 0;
+            snapshot.forEach((userSnap) => {
+                const userData = userSnap.val() || {};
+                for (let key in userData) {
+                    if (key === 'profile') continue;
+                    
+                    let worldData = userData[key];
+                    let payload = (typeof worldData === 'object' && worldData !== null) ? worldData : { active: true, name: key };
+
+                    // Tüm olası okuma yollarına yazıyoruz ki oyun hangisinden okursa okusun görsün
+                    updates[`publicRooms/${key}`] = payload;
+                    updates[`rooms/${key}`] = payload;
+                    updates[`odalar/${key}`] = payload;
+                    count++;
+                }
+            });
+
+            if (count === 0) {
+                alert("Kullanıcıların hiç oluşturulmuş dünyası bulunamadı.");
+                return;
+            }
+
+            update(ref(db), updates).then(() => {
+                alert(`Başarılı! Toplam ${count} dünya/kanal tek tuşla herkese açık hale getirildi ve oyun listesine eklendi!`);
+                loadAdminPublicRooms();
+            }).catch((err) => {
+                alert("Hata: " + err.message);
+            });
+        }
+
         window.loadAdminPublicRooms = function() {
             const publicRef = ref(db, 'publicRooms');
             get(publicRef).then((snapshot) => {
@@ -215,7 +264,6 @@
             });
         }
 
-        // Kesin çözüm: Herkese aç butonuna basıldığında tüm olası yerlere yazarak oyunun görmesini garantiler
         window.makeWorldPublic = function(worldKey, worldData) {
             const publicPayload = (typeof worldData === 'object' && worldData !== null) ? worldData : { active: true, name: worldKey };
             
@@ -225,7 +273,7 @@
             updates[`odalar/${worldKey}`] = publicPayload;
 
             update(ref(db), updates).then(() => {
-                alert("Oda herkese açık hale getirildi ve oyun listesine eklendi!");
+                alert("Oda herkese açık hale getirildi!");
                 window.loadAdminPublicRooms();
             }).catch((err) => {
                 alert("Hata: " + err.message);
