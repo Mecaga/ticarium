@@ -2,13 +2,14 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>BlokDiyar - Admin ve Kanal Paneli</title>
+    <title>BlokDiyar - Kesin Çözüm Admin Paneli</title>
     <style>
         body { background: #121212; color: #fff; font-family: Arial, sans-serif; padding: 20px; }
         .section { background: #1e1e1e; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
         button { background: #ff4444; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 4px; font-weight: bold; margin-right: 5px; margin-top: 5px; }
         button.green { background: #4CAF50; }
-        button.blue { background: #2196F3; button.orange { background: #ff9800; }
+        button.blue { background: #2196F3; }
+        button.orange { background: #ff9800; }
         button.purple { background: #9c27b0; }
         ul { list-style: none; padding: 0; }
         li { background: #2a2a2a; margin: 8px 0; padding: 12px; border-radius: 6px; }
@@ -24,7 +25,7 @@
     <h1>🛡️ BlokDiyar Admin & Kanal Yönetim Paneli</h1>
     <div id="auth-status">Giriş kontrol ediliyor...</div>
 
-    <div id="admin-content" style="display:none;">
+    <div id="admin-content" style="display:none;" x-data>
         
         <!-- ADMINİN KENDİ AÇIK ODALARI VE KANALLARI -->
         <div class="section" style="border: 2px solid #4CAF50;">
@@ -75,10 +76,8 @@
         });
 
         function loadAdminData() {
-            // 1. Adminin ve genel sistemin açık odalarını / kanallarını yükle
             loadAdminPublicRooms();
 
-            // 2. Tüm kullanıcıları yükle
             const userRef = ref(db, 'users');
             get(userRef).then((snapshot) => {
                 const userListUl = document.getElementById('user-list');
@@ -113,7 +112,7 @@
         }
 
         // Adminin açık odalarını / kanallarını listeleyen fonksiyon
-        function loadAdminPublicRooms() {
+        window.loadAdminPublicRooms = function() {
             const publicRef = ref(db, 'publicRooms');
             get(publicRef).then((snapshot) => {
                 const container = document.getElementById('admin-public-rooms');
@@ -124,7 +123,6 @@
                 }
                 snapshot.forEach((childSnapshot) => {
                     const roomId = childSnapshot.key;
-                    const roomData = childSnapshot.val();
 
                     let li = document.createElement('li');
                     li.innerHTML = `
@@ -139,7 +137,6 @@
             });
         }
 
-        // Şifre Sıfırlama E-postası Gönderme
         window.sendResetEmail = function(email) {
             if (!email || email.includes("Bulunamadı")) {
                 alert("Bu kullanıcının geçerli bir e-posta adresi kayıtlı değil. Hesabı silip yeniden oluşturabilirsiniz.");
@@ -152,7 +149,6 @@
             });
         }
 
-        // Kullanıcının dünyalarını açıp kapatan fonksiyon
         window.toggleUserWorlds = function(uid) {
             const box = document.getElementById(`user-worlds-${uid}`);
             if (box.style.display === 'block') {
@@ -199,7 +195,6 @@
             });
         }
 
-        // Dünya ayarlarını güncelleme
         window.saveWorldSettings = function(uid, worldKey) {
             const valStr = document.getElementById(`input-${uid}-${worldKey}`).value;
             let parsedVal;
@@ -220,54 +215,61 @@
             });
         }
 
-        // Dünyayı Herkese Açık Yapma (Doğrudan oyunun listelemesi için rooms ve publicRooms altına işler)
+        // Kesin çözüm: Herkese aç butonuna basıldığında tüm olası yerlere yazarak oyunun görmesini garantiler
         window.makeWorldPublic = function(worldKey, worldData) {
             const publicPayload = (typeof worldData === 'object' && worldData !== null) ? worldData : { active: true, name: worldKey };
+            
             const updates = {};
             updates[`publicRooms/${worldKey}`] = publicPayload;
             updates[`rooms/${worldKey}`] = publicPayload;
+            updates[`odalar/${worldKey}`] = publicPayload;
 
             update(ref(db), updates).then(() => {
                 alert("Oda herkese açık hale getirildi ve oyun listesine eklendi!");
-                loadAdminPublicRooms(); // Paneli yenile
+                window.loadAdminPublicRooms();
             }).catch((err) => {
                 alert("Hata: " + err.message);
             });
         }
 
-        // Dünyayı Özel Yapma (Kapatma)
         window.makeWorldPrivate = function(worldKey) {
-            remove(ref(db, `publicRooms/${worldKey}`)).then(() => {
-                alert("Oda özel konuma getirildi ve aktif listeden kaldırıldı!");
-                loadAdminPublicRooms(); // Paneli yenile
+            const updates = {};
+            updates[`publicRooms/${worldKey}`] = null;
+            updates[`rooms/${worldKey}`] = null;
+            updates[`odalar/${worldKey}`] = null;
+
+            update(ref(db), updates).then(() => {
+                alert("Oda özel konuma getirildi ve listeden kaldırıldı!");
+                window.loadAdminPublicRooms();
+            }).catch((err) => {
+                alert("Hata: " + err.message);
             });
         }
 
-        // Genel odalardan tamamen silme
         window.deleteGlobalRoom = function(roomId) {
             if (confirm(`Bu odayı (${roomId}) tamamen silmek istiyor musun?`)) {
                 remove(ref(db, `publicRooms/${roomId}`));
-                remove(ref(db, `rooms/${roomId}`)).then(() => {
+                remove(ref(db, `rooms/${roomId}`));
+                remove(ref(db, `odalar/${roomId}`)).then(() => {
                     alert("Oda tamamen silindi!");
-                    loadAdminPublicRooms();
+                    window.loadAdminPublicRooms();
                 });
             }
         }
 
-        // Kullanıcının dünyasını silme
         window.deleteUserWorld = function(uid, worldKey) {
             if (confirm(`Bu dünyayı (${worldKey}) silmek istediğine emin misin?`)) {
                 remove(ref(db, `users/${uid}/${worldKey}`));
                 remove(ref(db, `rooms/${worldKey}`));
-                remove(ref(db, `publicRooms/${worldKey}`)).then(() => {
+                remove(ref(db, `publicRooms/${worldKey}`));
+                remove(ref(db, `odalar/${worldKey}`)).then(() => {
                     alert("Dünya silindi!");
                     toggleUserWorlds(uid);
-                    loadAdminPublicRooms();
+                    window.loadAdminPublicRooms();
                 });
             }
         }
 
-        // Kullanıcıyı silme
         window.deleteUser = function(uid) {
             if (confirm("Bu kullanıcıyı ve tüm verilerini silmek istiyor musun?")) {
                 remove(ref(db, 'users/' + uid)).then(() => {
