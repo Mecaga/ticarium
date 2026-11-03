@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>BlokDiyar - Sade Oda Yönetim Paneli</title>
+    <title>BlokDiyar - Kademeli Dünya Yönetim Paneli</title>
     <style>
         body { background: #121212; color: #fff; font-family: Arial, sans-serif; padding: 20px; }
         .section { background: #1e1e1e; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
@@ -16,12 +16,14 @@
         .user-row { display: flex; justify-content: space-between; align-items: center; }
         #auth-status { font-size: 16px; margin-bottom: 15px; font-weight: bold; color: #ffa500; }
         .user-worlds-box { background: #181818; padding: 12px; margin-top: 10px; border-radius: 5px; border-left: 4px solid #2196F3; display: none; }
-        .world-card { background: #222; padding: 10px; margin-top: 8px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444; }
+        .world-item { background: #222; padding: 10px; margin-top: 8px; border-radius: 4px; border: 1px solid #444; }
+        .world-settings-box { background: #161616; padding: 10px; margin-top: 8px; border-radius: 4px; border-left: 3px solid #ff9800; display: none; }
+        textarea { background: #333; color: #fff; border: 1px solid #555; padding: 8px; border-radius: 4px; width: 100%; height: 80px; margin-bottom: 5px; font-family: monospace; resize: vertical; }
     </style>
 </head>
 <body>
 
-    <h1>🛡️ BlokDiyar Dünya Yönetim Paneli</h1>
+    <h1>🛡️ BlokDiyar Kademeli Yönetim Paneli</h1>
     <div id="auth-status">Giriş kontrol ediliyor...</div>
 
     <div id="admin-content" style="display:none;">
@@ -34,7 +36,7 @@
 
         <!-- AKTİF HERKESE AÇIK KANALLAR -->
         <div class="section">
-            <h2>🌟 Aktif Herkese Açık Odalar (Oyunun Gördükleri)</h2>
+            <h2>🌟 Aktif Herkese Açık Odalar</h2>
             <ul id="admin-public-rooms"></ul>
         </div>
 
@@ -141,7 +143,7 @@
             });
         }
 
-        // Kullanıcıya basınca dünyalarını sade liste halinde gösteren fonksiyon
+        // 1. ADIM: Kullanıcıya basınca dünyalarını listeleyen fonksiyon
         window.toggleUserWorlds = function(uid) {
             const box = document.getElementById(`user-worlds-${uid}`);
             if (box.style.display === 'block') {
@@ -157,22 +159,34 @@
                     return;
                 }
                 const data = snapshot.val();
-                let html = '<h4>📁 Bu Kullanıcının Dünyaları / Odaları:</h4>';
+                let html = '<h4>📁 Kullanıcının Dünyaları:</h4>';
                 
                 let foundWorlds = false;
                 for (let key in data) {
-                    if (key === 'profile') continue; // Profili geç, dünyaları yakala
+                    if (key === 'profile') continue; // Profili geç
 
                     foundWorlds = true;
                     let worldData = data[key];
+                    let worldJson = JSON.stringify(worldData, null, 2);
 
                     html += `
-                        <div class="world-card">
-                            <span><b>Dünya ID:</b> <span style="color:#2196F3;">${key}</span></span>
-                            <div>
-                                <button class="green" onclick="window.makeWorldPublicDirect('${key}', ${JSON.stringify(worldData).replace(/'/g, "&#39;")})">Herkese Aç</button>
-                                <button class="orange" onclick="window.makeWorldPrivate('${key}')">Özel Yap</button>
-                                <button onclick="window.deleteUserWorld('${uid}', '${key}')">Dünyayı Sil</button>
+                        <div class="world-item">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span><b>Dünya ID:</b> <span style="color:#2196F3;">${key}</span></span>
+                                <button class="blue" onclick="window.toggleWorldSettings('${uid}', '${key}')">Dünya Ayarlarını Aç / Düzenle</button>
+                            </div>
+                            
+                            <!-- 2. ADIM: Dünyaya basınca açılan ayar ve düzenleme kutusu -->
+                            <div id="world-settings-${uid}-${key}" class="world-settings-box">
+                                <label style="font-size:12px; color:#aaa;">Oda Ayarları / Özellikleri (JSON Düzenleyici):</label>
+                                <textarea id="input-${uid}-${key}">${worldJson}</textarea>
+                                
+                                <div>
+                                    <button class="green" onclick="window.saveWorldSettings('${uid}', '${key}')">Ayarları Kaydet</button>
+                                    <button class="blue" onclick="window.makeWorldPublicDirect('${key}', ${JSON.stringify(worldData).replace(/'/g, "&#39;")})">Herkese Aç</button>
+                                    <button class="orange" onclick="window.makeWorldPrivate('${key}')">Özel Yap</button>
+                                    <button onclick="window.deleteUserWorld('${uid}', '${key}')">Dünyayı Sil</button>
+                                </div>
                             </div>
                         </div>
                     `;
@@ -186,7 +200,39 @@
             });
         }
 
-        // Tek bir odayı KESİN OLARAK herkese açma
+        // Dünyaya basınca ayarlar kutusunu açıp kapatan fonksiyon
+        window.toggleWorldSettings = function(uid, worldKey) {
+            const settingsBox = document.getElementById(`world-settings-${uid}-${worldKey}`);
+            if (settingsBox.style.display === 'block') {
+                settingsBox.style.display = 'none';
+            } else {
+                settingsBox.style.display = 'block';
+            }
+        }
+
+        // Dünya ayarlarını veritabanına kaydetme
+        window.saveWorldSettings = function(uid, worldKey) {
+            const valStr = document.getElementById(`input-${uid}-${worldKey}`).value;
+            let parsedVal;
+            try {
+                parsedVal = JSON.parse(valStr);
+            } catch (e) {
+                alert("Hata: Geçerli bir JSON formatı girmelisin!");
+                return;
+            }
+
+            const updates = {};
+            updates[`users/${uid}/${worldKey}`] = parsedVal;
+            updates[`rooms/${worldKey}`] = parsedVal;
+
+            update(ref(db), updates).then(() => {
+                alert("Dünya ayarları başarıyla kaydedildi!");
+            }).catch((err) => {
+                alert("Hata: " + err.message);
+            });
+        }
+
+        // Herkese Aç
         window.makeWorldPublicDirect = function(worldKey, worldData) {
             const payload = (typeof worldData === 'object' && worldData !== null) ? worldData : { active: true, name: worldKey, updated: Date.now() };
             
@@ -235,6 +281,7 @@
             });
         }
 
+        // Özel Yap
         window.makeWorldPrivate = function(worldKey) {
             const updates = {};
             updates[`rooms/${worldKey}`] = null;
@@ -246,6 +293,7 @@
             });
         }
 
+        // Global Sil
         window.deleteGlobalRoom = function(roomId) {
             if (confirm(`Bu odayı (${roomId}) tamamen silmek istiyor musun?`)) {
                 const updates = {};
@@ -259,6 +307,7 @@
             }
         }
 
+        // Kullanıcı Dünyasını Sil
         window.deleteUserWorld = function(uid, worldKey) {
             if (confirm(`Bu dünyayı (${worldKey}) silmek istediğine emin misin?`)) {
                 const updates = {};
