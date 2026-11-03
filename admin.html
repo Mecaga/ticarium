@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>BlokDiyar - Köşe Yön Tuşlu Tuval Paneli</title>
+    <title>BlokDiyar - Sade Oda ve Dünya Yönetim Paneli</title>
     <style>
         body { background: #121212; color: #fff; font-family: Arial, sans-serif; padding: 20px; }
         .section { background: #1e1e1e; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
@@ -12,98 +12,38 @@
         button.orange { background: #ff9800; }
         button.purple { background: #9c27b0; }
         ul { list-style: none; padding: 0; }
-        li { background: #2a2a2a; margin: 8px 0; padding: 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
-        .user-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+        li { background: #2a2a2a; margin: 8px 0; padding: 12px; border-radius: 6px; }
+        .user-row { display: flex; justify-content: space-between; align-items: center; }
         #auth-status { font-size: 16px; margin-bottom: 15px; font-weight: bold; color: #ffa500; }
         .user-worlds-box { background: #181818; padding: 12px; margin-top: 10px; border-radius: 5px; border-left: 4px solid #2196F3; display: none; }
         .world-item { background: #222; padding: 10px; margin-top: 8px; border-radius: 4px; border: 1px solid #444; }
         .world-settings-box { background: #161616; padding: 10px; margin-top: 8px; border-radius: 4px; border-left: 3px solid #ff9800; display: none; }
-        textarea { background: #333; color: #fff; border: 1px solid #555; padding: 8px; border-radius: 4px; width: 100%; height: 80px; margin-bottom: 5px; font-family: monospace; resize: vertical; }
-        
-        /* 5'li Tuval Grid ve Seçim Stilleri */
-        .canvas-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 10px; }
-        @media(max-width: 1200px) { .canvas-grid { grid-template-columns: repeat(3, 1fr); } }
-        @media(max-width: 768px) { .canvas-grid { grid-template-columns: repeat(1, 1fr); } }
-        
-        .canvas-card { background: #252525; padding: 10px; border-radius: 6px; border: 2px solid #444; text-align: center; position: relative; cursor: pointer; transition: 0.2s; }
-        .canvas-card:hover { border-color: #666; }
-        .canvas-card.selected { border: 2px solid #4CAF50; background: #1a2e1b; box-shadow: 0 0 10px rgba(76, 175, 80, 0.5); }
-        
-        .canvas-card img { max-width: 100%; max-height: 130px; border: 1px solid #555; border-radius: 4px; margin-top: 5px; background: #000; object-fit: contain; pointer-events: none; }
-        
-        /* Köşe Yön Kontrol Paneli (Floating D-Pad) */
-        .corner-dpad { position: fixed; bottom: 20px; right: 20px; background: rgba(20, 20, 20, 0.95); border: 2px solid #4CAF50; padding: 12px; border-radius: 12px; z-index: 999; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.7); display: none; }
-        .dpad-grid { display: grid; grid-template-columns: repeat(3, 40px); grid-template-rows: repeat(3, 40px); gap: 5px; justify-content: center; align-items: center; margin-top: 8px; }
-        .dpad-btn { background: #333; color: white; border: 1px solid #555; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; display: flex; justify-content: center; align-items: center; height: 100%; width: 100%; }
-        .dpad-btn:hover { background: #4CAF50; border-color: #fff; }
-        .dpad-up { grid-column: 2; grid-row: 1; }
-        .dpad-left { grid-column: 1; grid-row: 2; }
-        .dpad-right { grid-column: 3; grid-row: 2; }
-        .dpad-down { grid-column: 2; grid-row: 3; }
-        .dpad-center { grid-column: 2; grid-row: 2; background: #222; font-size: 10px; color: #888; }
-
-        .merged-preview { background: #161616; padding: 15px; border-radius: 6px; text-align: center; margin-top: 15px; border: 2px dashed #9c27b0; display: none; }
-        .merged-preview img { max-width: 100%; max-height: 400px; border: 2px solid #4CAF50; border-radius: 4px; margin-top: 10px; background: #000; }
+        textarea { background: #333; color: #fff; border: 1px solid #555; padding: 8px; border-radius: 4px; width: 100%; height: 90px; margin-bottom: 5px; font-family: monospace; resize: vertical; }
         .badge { background: #333; color: #4CAF50; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-left: 5px; }
     </style>
 </head>
 <body>
 
-    <h1>🛡️ BlokDiyar Gelişmiş Yönetim Paneli</h1>
+    <h1>🛡️ BlokDiyar Net Yönetim Paneli</h1>
     <div id="auth-status">Giriş kontrol ediliyor...</div>
 
-    <div id="admin-content" style="display:none;">
+    <div id="admin-content" style="display:none;" x-data>
         
-        <!-- BÜTÜN TUVALLERİ GÖRME VE KÖŞE YÖN TUŞLARIYLA KONTROL -->
-        <div class="section" style="border: 2px solid #9c27b0;">
-            <h2>🖼️ Tuvaller Galerisi (5'li Düzen & Köşe Kontrol Paneli)</h2>
-            <p style="color: #aaa; font-size: 13px;">Galerideki herhangi bir tuvale tıklayarak seçin. Sağ köşede açılacak yön tuşlarıyla ([İleri, Geri, Sola, Sağa]) yerini kolayca değiştirin.</p>
-            
-            <button class="purple" onclick="window.loadAllCanvasGallery()">Tuvalleri Yenile</button>
-            <button class="orange" onclick="window.loadAllCanvasGallery()">Normal Sıralamaya Dön</button>
-            <button class="green" id="download-merged-btn" style="display:none;" onclick="window.downloadMergedImage()">💾 Birleşmiş Resmi İndir</button>
-
-            <!-- Birleştirilmiş Önizleme -->
-            <div id="merged-container" class="merged-preview">
-                <h4 style="color: #4CAF50; margin: 0 0 5px 0;">✨ Seçtiğiniz Sıraya Göre Güncellenen Tek Parça Resim:</h4>
-                <canvas id="merge-canvas" style="display:none;"></canvas>
-                <div id="merged-img-wrap"></div>
-            </div>
-
-            <!-- 5'li Tuval Grid Listesi -->
-            <div id="all-canvas-container" class="canvas-grid">
-                <p style="color: #888;">Taranmayı bekliyor...</p>
-            </div>
-        </div>
-
-        <!-- KÖŞE YÖN KONTROL PANELİ (FLOATING D-PAD) -->
-        <div id="corner-dpad" class="corner-dpad">
-            <b id="selected-info" style="font-size: 11px; color: #4CAF50;">Tuval Seçildi</b>
-            <div class="dpad-grid">
-                <button class="dpad-btn dpad-up" onclick="window.moveSelectedCard('up')">⬆️</button>
-                <button class="dpad-btn dpad-left" onclick="window.moveSelectedCard('left')">⬅️</button>
-                <div class="dpad-btn dpad-center" onclick="window.unselectCard()">✖</div>
-                <button class="dpad-btn dpad-right" onclick="window.moveSelectedCard('right')">➡️</button>
-                <button class="dpad-btn dpad-down" onclick="window.moveSelectedCard('down')">⬇️</button>
-            </div>
-            <button class="orange" style="font-size: 10px; padding: 4px 8px; margin-top: 6px;" onclick="window.deleteSelectedCard()">Bu Çizimi Sil</button>
-        </div>
-
         <!-- HIZLI ODA YÖNETİMİ -->
         <div class="section" style="border: 2px solid #4CAF50; text-align: center;">
             <h2>🚀 Hızlı Oda Yönetimi</h2>
             <button class="green" style="padding: 10px 16px; font-size: 15px;" onclick="window.makeAllWorldsPublic()">🌟 TÜM DÜNYALARI TEK TUŞLA HERKESE AÇ</button>
         </div>
 
-        <!-- AKTİF HERKESE AÇIK KANALLAR -->
+        <!-- AKTİF HERKESE AÇIK KANALLAR VE ODAYA KATIL TUŞU -->
         <div class="section">
-            <h2>🌟 Aktif Herkese Açık Odalar ve Kanallar</h2>
+            <h2>🌟 Aktif Herkese Açık Odalar (Oyun Kanalları)</h2>
             <ul id="admin-public-rooms"></ul>
         </div>
 
-        <!-- KULLANICILAR, DÜNYA VE TUVAL SAYILARI -->
+        <!-- KULLANICILAR VE DÜNYALARI (TANE TANE DÜZENLEME) -->
         <div class="section">
-            <h2>👥 Kullanıcılar, Dünya ve Tuval İstatistikleri</h2>
+            <h2>👥 Kullanıcılar ve Dünyaları</h2>
             <ul id="user-list"></ul>
         </div>
     </div>
@@ -129,7 +69,6 @@
         const db = getDatabase(app);
 
         const ADMIN_EMAIL = "mecaga5354@blokdiyar.app"; 
-        let selectedIndex = null;
 
         onAuthStateChanged(auth, (user) => {
             if (user && user.email === ADMIN_EMAIL) {
@@ -137,7 +76,6 @@
                 document.getElementById('auth-status').style.color = '#4CAF50';
                 document.getElementById('admin-content').style.display = 'block';
                 loadAdminData();
-                loadAllCanvasGallery();
             } else {
                 const currentEmail = user ? user.email : "Giriş yapılmamış";
                 document.getElementById('auth-status').innerText = `Yetkisiz erişim! (${currentEmail}) Lütfen mecaga5354 hesabıyla giriş yap.`;
@@ -149,7 +87,7 @@
             loadAdminPublicRooms();
 
             const userRef = ref(db, 'users');
-            get(userRef).then(async (snapshot) => {
+            get(userRef).then((snapshot) => {
                 const userListUl = document.getElementById('user-list');
                 userListUl.innerHTML = '';
                 if (!snapshot.exists()) {
@@ -163,12 +101,10 @@
                     const profile = userData.profile || {};
                     const userEmail = profile.email || "E-posta bulunamadı";
                     
+                    // Toplam dünya sayısını hesapla
                     let worldCount = 0;
-                    let canvasCount = 0;
                     for (let key in userData) {
-                        if (key === 'profile') continue;
-                        worldCount++;
-                        findPaintsRecursive(userData[key], () => { canvasCount++; });
+                        if (key !== 'profile') worldCount++;
                     }
 
                     let li = document.createElement('li');
@@ -176,8 +112,7 @@
                         <div class="user-row">
                             <span>
                                 <b>Kullanıcı:</b> ${profile.username || profile.name || 'İsimsiz'} 
-                                <span class="badge">Dünya: ${worldCount}</span> 
-                                <span class="badge" style="color:#ff9800;">Tuval: ${canvasCount}</span><br>
+                                <span class="badge">Dünya Sayısı: ${worldCount}</span><br>
                                 <small style="color:#aaa;">E-posta: ${userEmail}</small><br>
                                 <small style="color:#888;">UID: ${uid}</small>
                             </span>
@@ -187,7 +122,7 @@
                                 <button onclick="window.deleteUser('${uid}')">Hesabı Sil</button>
                             </div>
                         </div>
-                        <div id="user-worlds-${uid}" class="user-worlds-box" style="width:100%;">
+                        <div id="user-worlds-${uid}" class="user-worlds-box">
                             <p>Dünyalar yükleniyor...</p>
                         </div>
                     `;
@@ -196,151 +131,7 @@
             });
         }
 
-        // TUVALLERİ LİSTELEME VE TIKLANDIĞINDA SEÇME
-        window.loadAllCanvasGallery = async function() {
-            const container = document.getElementById('all-canvas-container');
-            const downloadBtn = document.getElementById('download-merged-btn');
-            
-            container.innerHTML = '<p style="color:#ffa500;">Tuvaller taranıyor...</p>';
-            downloadBtn.style.display = 'none';
-            unselectCard();
-
-            const userRef = ref(db, 'users');
-            const snapshot = await get(userRef);
-
-            if (!snapshot.exists()) {
-                container.innerHTML = '<p style="color:#aaa;">Taranacak veri bulunamadı.</p>';
-                return;
-            }
-
-            let galleryHtml = '';
-            let itemIndex = 0;
-
-            snapshot.forEach((userSnap) => {
-                const uid = userSnap.key;
-                const userData = userSnap.val() || {};
-                const profile = userData.profile || {};
-                const username = profile.username || profile.name || 'İsimsiz Oyuncu';
-
-                for (let worldKey in userData) {
-                    if (worldKey === 'profile') continue;
-                    let worldData = userData[worldKey];
-
-                    findPaintsRecursive(worldData, (coordKey, paintData) => {
-                        let imgSrc = paintData;
-                        if (typeof imgSrc === 'string') {
-                            if (!imgSrc.startsWith('data:image') && !imgSrc.startsWith('http')) {
-                                imgSrc = 'data:image/png;base64,' + imgSrc;
-                            }
-                            
-                            let currentIndex = itemIndex++;
-
-                            galleryHtml += `
-                                <div class="canvas-card" id="canvas-card-${currentIndex}" data-src="${imgSrc}" data-uid="${uid}" data-world="${worldKey}" data-coord="${coordKey}" onclick="window.selectCard(${currentIndex})">
-                                    <b style="color:#2196F3; font-size:12px;">${username}</b><br>
-                                    <small style="color:#888;">Dünya: ${worldKey} | (${coordKey})</small><br>
-                                    <img src="${imgSrc}" alt="Tuval">
-                                </div>
-                            `;
-                        }
-                    });
-                }
-            });
-
-            if (itemIndex === 0) {
-                container.innerHTML = '<p style="color:#aaa;">Kayıtlı tuval/çizim bulunamadı.</p>';
-            } else {
-                container.innerHTML = galleryHtml;
-                buildMergedCanvasImageFromDOM();
-            }
-        }
-
-        // Tuvale tıklayıp seçme ve köşe yön tuş panelini açma
-        window.selectCard = function(index) {
-            document.querySelectorAll('.canvas-card').forEach(card => card.classList.remove('selected'));
-            selectedIndex = index;
-            const card = document.getElementById(`canvas-card-${index}`);
-            if (card) {
-                card.classList.add('selected');
-                document.getElementById('corner-dpad').style.display = 'block';
-                document.getElementById('selected-info').innerText = `Seçili: #${index + 1}`;
-            }
-        }
-
-        window.unselectCard = function() {
-            document.querySelectorAll('.canvas-card').forEach(card => card.classList.remove('selected'));
-            selectedIndex = null;
-            document.getElementById('corner-dpad').style.display = 'none';
-        }
-
-        // Köşe Yön Tuşları ile Grid Üzerinde Hareket Ettirme (Yukarı, Aşağı, Sol, Sağ)
-        window.moveSelectedCard = function(direction) {
-            if (selectedIndex === null) return;
-
-            const container = document.getElementById('all-canvas-container');
-            const cards = Array.from(container.getElementsByClassName('canvas-card'));
-            const currentCard = document.getElementById(`canvas-card-${selectedIndex}`);
-            const currentIndex = cards.indexOf(currentCard);
-            
-            const cols = 5; // Grid sütun sayısı (5'li düzen)
-            let targetIndex = currentIndex;
-
-            if (direction === 'left') targetIndex = currentIndex - 1;
-            else if (direction === 'right') targetIndex = currentIndex + 1;
-            else if (direction === 'up') targetIndex = currentIndex - cols;
-            else if (direction === 'down') targetIndex = currentIndex + cols;
-
-            if (targetIndex >= 0 && targetIndex < cards.length) {
-                const targetCard = cards[targetIndex];
-                if (currentIndex < targetIndex) {
-                    container.insertBefore(currentCard, targetCard.nextSibling);
-                } else {
-                    container.insertBefore(currentCard, targetCard);
-                }
-                
-                // Seçimi yeni indexe taşı
-                const newCards = Array.from(container.getElementsByClassName('canvas-card'));
-                const newIndex = newCards.indexOf(currentCard);
-                selectCard(newIndex);
-                buildMergedCanvasImageFromDOM(); // Tek parça resmi anında güncelle
-            }
-        }
-
-        window.deleteSelectedCard = function() {
-            if (selectedIndex === null) return;
-            const card = document.getElementById(`canvas-card-${selectedIndex}`);
-            const uid = card.getAttribute('data-uid');
-            const worldKey = card.getAttribute('data-world');
-            const coordKey = card.getAttribute('data-coord');
-
-            if (confirm(`(${coordKey}) konumundaki bu çizimi silmek istiyor musun?`)) {
-                const updates = {};
-                updates[`users/${uid}/${worldKey}/${coordKey}`] = null;
-                update(ref(db), updates).then(() => {
-                    alert("Çizim silindi!");
-                    unselectCard();
-                    loadAllCanvasGallery();
-                    loadAdminData();
-                });
-            }
-        }
-
-        function findPaintsRecursive(obj, callback) {
-            if (!obj || typeof obj !== 'object') return;
-            for (let k in obj) {
-                let val = obj[k];
-                if (typeof val === 'string' && (val.startsWith('data:image') || val.startsWith('http') || val.length > 100)) {
-                    callback(k, val);
-                } else if (typeof val === 'object' && val !== null) {
-                    if (/^\d+_\d+_\d+$/.test(k) && typeof val === 'string') {
-                        callback(k, val);
-                    } else {
-                        findPaintsRecursive(val, callback);
-                    }
-                }
-            }
-        }
-
+        // Aktif herkese açık odalar ve odaya direkt katılma tuşu
         window.loadAdminPublicRooms = function() {
             const publicRef = ref(db, 'rooms');
             get(publicRef).then((snapshot) => {
@@ -352,9 +143,13 @@
                 }
                 snapshot.forEach((childSnapshot) => {
                     const roomId = childSnapshot.key;
+                    // Odaya doğrudan oyun ekranı üzerinden katılmak için doğru yönlendirme bağlantısı:
                     const joinUrl = `index.html?room=${roomId}`;
 
                     let li = document.createElement('li');
+                    li.style.display = 'flex';
+                    li.style.justifyContent = 'space-between';
+                    li.style.alignItems = 'center';
                     li.innerHTML = `
                         <span><b>Oda ID:</b> <span style="color:#4CAF50;">${roomId}</span></span>
                         <div>
@@ -368,6 +163,7 @@
             });
         }
 
+        // Kullanıcıya tıklayınca dünyalarını tek tek listeleyen fonksiyon
         window.toggleUserWorlds = function(uid) {
             const box = document.getElementById(`user-worlds-${uid}`);
             if (box.style.display === 'block') {
@@ -383,7 +179,7 @@
                     return;
                 }
                 const data = snapshot.val();
-                let html = '<h4>📁 Kullanıcının Dünyaları:</h4>';
+                let html = '<h4>📁 Bu Kullanıcının Dünyaları / Odaları:</h4>';
                 
                 let foundWorlds = false;
                 for (let key in data) {
@@ -392,20 +188,25 @@
                     foundWorlds = true;
                     let worldData = data[key];
                     let worldJson = JSON.stringify(worldData, null, 2);
+                    const joinUrl = `index.html?room=${key}`;
 
                     html += `
                         <div class="world-item">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <span><b>Dünya ID:</b> <span style="color:#2196F3;">${key}</span></span>
-                                <button class="blue" onclick="window.toggleWorldSettings('${uid}', '${key}')">Düzenle</button>
+                                <div>
+                                    <a href="${joinUrl}" target="_blank"><button class="green">Odaya Katıl</button></a>
+                                    <button class="blue" onclick="window.toggleWorldSettings('${uid}', '${key}')">Tanıdık / Ayarları Düzenle</button>
+                                </div>
                             </div>
                             
+                            <!-- Tane Tane Düzenleme Paneli (JSON) -->
                             <div id="world-settings-${uid}-${key}" class="world-settings-box">
-                                <label style="font-size:12px; color:#aaa;">Oda Ayarları / Özellikleri (JSON):</label>
+                                <label style="font-size:12px; color:#aaa;">Dünya Verileri (JSON Düzenleyici):</label>
                                 <textarea id="input-${uid}-${key}">${worldJson}</textarea>
                                 
                                 <div>
-                                    <button class="green" onclick="window.saveWorldSettings('${uid}', '${key}')">Ayarları Kaydet</button>
+                                    <button class="green" onclick="window.saveWorldSettings('${uid}', '${key}')">Değişiklikleri Kaydet</button>
                                     <button class="blue" onclick="window.makeWorldPublicDirect('${key}', ${JSON.stringify(worldData).replace(/'/g, "&#39;")})">Herkese Aç</button>
                                     <button class="orange" onclick="window.makeWorldPrivate('${key}')">Özel Yap</button>
                                     <button onclick="window.deleteUserWorld('${uid}', '${key}')">Dünyayı Sil</button>
@@ -443,8 +244,7 @@
             updates[`rooms/${worldKey}`] = parsedVal;
 
             update(ref(db), updates).then(() => {
-                alert("Dünya ayarları başarıyla kaydedildi!");
-                window.loadAllCanvasGallery();
+                alert("Dünya başarıyla güncellendi ve kaydedildi!");
                 loadAdminData();
             }).catch((err) => {
                 alert("Hata: " + err.message);
@@ -467,7 +267,7 @@
         }
 
         window.makeAllWorldsPublic = async function() {
-            if (!confirm("Sistemdeki tüm dünyalar herkese açık hale getirilsin mi?")) return;
+            if (!confirm("Sistemdeki tüm dünyлар herkese açık hale getirilsin mi?")) return;
 
             const updates = {};
             const userRef = ref(db, 'users');
@@ -504,7 +304,7 @@
             updates[`publicRooms/${worldKey}`] = null;
 
             update(ref(db), updates).then(() => {
-                alert("Dünya özel konuma getirildi!");
+                alert("Dünya özel konuma getirildi (listeden kaldırıldı)!");
                 loadAdminPublicRooms();
             });
         }
@@ -533,7 +333,6 @@
                     alert("Dünya silindi!");
                     toggleUserWorlds(uid);
                     loadAdminPublicRooms();
-                    window.loadAllCanvasGallery();
                     loadAdminData();
                 });
             }
@@ -554,75 +353,8 @@
                 remove(ref(db, 'users/' + uid)).then(() => {
                     alert("Kullanıcı silindi!");
                     loadAdminData();
-                    window.loadAllCanvasGallery();
                 });
             }
-        }
-
-        function buildMergedCanvasImageFromDOM() {
-            const cards = Array.from(document.querySelectorAll('.canvas-card'));
-            if (cards.length === 0) return;
-
-            let sources = cards.map(card => card.getAttribute('data-src')).filter(Boolean);
-            if (sources.length === 0) return;
-
-            let loadedCount = 0;
-            let imgObjects = [];
-
-            sources.forEach((src, index) => {
-                let img = new Image();
-                img.crossOrigin = "anonymous";
-                img.onload = () => {
-                    imgObjects[index] = img;
-                    loadedCount++;
-                    if (loadedCount === sources.length) drawCombinedCanvas(imgObjects);
-                };
-                img.onerror = () => {
-                    loadedCount++;
-                    if (loadedCount === sources.length) drawCombinedCanvas(imgObjects);
-                };
-                img.src = src;
-            });
-        }
-
-        function drawCombinedCanvas(images) {
-            const validImages = images.filter(img => img && img.complete && img.naturalWidth !== 0);
-            if (validImages.length === 0) return;
-
-            const cols = 5; 
-            const rows = Math.ceil(validImages.length / cols);
-            const thumbWidth = 120;
-            const thumbHeight = 120;
-
-            const canvas = document.getElementById('merge-canvas');
-            const ctx = canvas.getContext('2d');
-
-            canvas.width = cols * thumbWidth;
-            canvas.height = rows * thumbHeight;
-
-            ctx.fillStyle = '#111';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            validImages.forEach((img, idx) => {
-                let x = (idx % cols) * thumbWidth;
-                let y = Math.floor(idx / cols) * thumbHeight;
-                ctx.drawImage(img, x, y, thumbWidth, thumbHeight);
-                ctx.strokeStyle = '#333';
-                ctx.strokeRect(x, y, thumbWidth, thumbHeight);
-            });
-
-            const dataUrl = canvas.toDataURL('image/png');
-            document.getElementById('merged-img-wrap').innerHTML = `<img src="${dataUrl}" alt="Sıralı Birleştirilmiş Tuval Resmi">`;
-            document.getElementById('merged-container').style.display = 'block';
-            document.getElementById('download-merged-btn').style.display = 'inline-block';
-        }
-
-        window.downloadMergedImage = function() {
-            const canvas = document.getElementById('merge-canvas');
-            const link = document.createElement('a');
-            link.download = `blokdiyar-kose-tuşlu-tuvaller-${Date.now()}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
         }
     </script>
 </body>
