@@ -4,7 +4,7 @@ import { N } from './idtable.js';
 import { hash, atlas, FACE_TILES, T, initAtlas, tileOf } from './textures.js';
 import {
   BEDROCK, SAPLING, BIRCH_LOG, BIRCH_LEAF, WATER, GLASS, WATER_MAX, LAVA, LAVA_MAX, OBSIDIAN,
-  COAL_ORE, IRON_ORE, GOLD_ORE, DIAMOND_ORE, FLOWER_MIN, TALL, isPlant
+  COAL_ORE, IRON_ORE, GOLD_ORE, DIAMOND_ORE, FLOWER_MIN, TALL, isPlant, isCrop
 } from './defs.js';
 export * from './defs.js';
 export { atlas, sideTile } from './textures.js';
