@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>BlokDiyar - Tuval ve Dünya Yönetim Paneli</title>
+    <title>BlokDiyar - Tuval Galerisi ve Yönetim Paneli</title>
     <style>
         body { background: #121212; color: #fff; font-family: Arial, sans-serif; padding: 20px; }
         .section { background: #1e1e1e; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
@@ -19,17 +19,30 @@
         .world-item { background: #222; padding: 10px; margin-top: 8px; border-radius: 4px; border: 1px solid #444; }
         .world-settings-box { background: #161616; padding: 10px; margin-top: 8px; border-radius: 4px; border-left: 3px solid #ff9800; display: none; }
         textarea { background: #333; color: #fff; border: 1px solid #555; padding: 8px; border-radius: 4px; width: 100%; height: 80px; margin-bottom: 5px; font-family: monospace; resize: vertical; }
-        .canvas-preview-container { margin-top: 10px; background: #111; padding: 10px; border-radius: 4px; text-align: center; border: 1px dashed #555; display: none; }
-        .canvas-preview-container img { max-width: 100%; max-height: 300px; border: 2px solid #444; border-radius: 4px; }
+        
+        /* Tuval Galerisi Stilleri */
+        .canvas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; margin-top: 10px; }
+        .canvas-card { background: #252525; padding: 10px; border-radius: 6px; border: 1px solid #444; text-align: center; }
+        .canvas-card img { max-width: 100%; max-height: 200px; border: 1px solid #555; border-radius: 4px; margin-top: 5px; background: #000; }
     </style>
 </head>
 <body>
 
-    <h1>🛡️ BlokDiyar Tuval ve Yönetim Paneli</h1>
+    <h1>🛡️ BlokDiyar Tuval Galerisi & Yönetim Paneli</h1>
     <div id="auth-status">Giriş kontrol ediliyor...</div>
 
     <div id="admin-content" style="display:none;">
         
+        <!-- BÜTÜN TUVALLERİ TOPLU GÖRÜNTÜLEME BÖLÜMÜ -->
+        <div class="section" style="border: 2px solid #9c27b0;">
+            <h2>🖼️ Sistemdeki Bütün Tuvaller Galerisi</h2>
+            <p style="color: #aaa; font-size: 13px;">Oluşturulan tüm dünyalardaki tuval ve çizimler otomatik olarak taranıp burada listelenir.</p>
+            <button class="purple" onclick="window.loadAllCanvasGallery()">Tuvalleri Yenile / Yükle</button>
+            <div id="all-canvas-container" class="canvas-grid">
+                <p style="color: #888;">Yüklemek için butona tıklayın...</p>
+            </div>
+        </div>
+
         <!-- HIZLI ODA YÖNETİMİ -->
         <div class="section" style="border: 2px solid #4CAF50; text-align: center;">
             <h2>🚀 Hızlı Oda Yönetimi</h2>
@@ -77,6 +90,7 @@
                 document.getElementById('auth-status').style.color = '#4CAF50';
                 document.getElementById('admin-content').style.display = 'block';
                 loadAdminData();
+                loadAllCanvasGallery(); // Panel açıldığında otomatik galeriyi yükle
             } else {
                 const currentEmail = user ? user.email : "Giriş yapılmamış";
                 document.getElementById('auth-status').innerText = `Yetkisiz erişim! (${currentEmail}) Lütfen mecaga5354 hesabıyla giriş yap.`;
@@ -120,6 +134,74 @@
             });
         }
 
+        // BÜTÜN TUVALLERİ TARAYIP GALERİ OLARAK LİSTELEYEN FONKSİYON
+        window.loadAllCanvasGallery = async function() {
+            const container = document.getElementById('all-canvas-container');
+            container.innerHTML = '<p style="color:#ffa500;">Tüm tuvaller taranıyor...</p>';
+
+            const userRef = ref(db, 'users');
+            const snapshot = await get(userRef);
+
+            if (!snapshot.exists()) {
+                container.innerHTML = '<p style="color:#aaa;">Taranacak kullanıcı verisi bulunamadı.</p>';
+                return;
+            }
+
+            let canvasCount = 0;
+            let galleryHtml = '';
+
+            snapshot.forEach((userSnap) => {
+                const uid = userSnap.key;
+                const userData = userSnap.val() || {};
+                const profile = userData.profile || {};
+                const username = profile.username || profile.name || 'İsimsiz Oyuncu';
+
+                for (let worldKey in userData) {
+                    if (worldKey === 'profile') continue;
+                    let worldData = userData[worldKey];
+
+                    // Tuval verisini özyinelemeli (recursive) olarak arayalım
+                    let canvasSrc = findCanvasDataRecursive(worldData);
+                    if (canvasSrc) {
+                        if (!canvasSrc.startsWith('data:image') && !canvasSrc.startsWith('http')) {
+                            canvasSrc = 'data:image/png;base64,' + canvasSrc;
+                        }
+                        canvasCount++;
+                        galleryHtml += `
+                            <div class="canvas-card">
+                                <b style="color:#2196F3; font-size:13px;">${username}</b><br>
+                                <small style="color:#888;">Dünya: ${worldKey}</small><br>
+                                <img src="${canvasSrc}" alt="Tuval Resmi" onerror="this.src='https://via.placeholder.com/200?text=Gecersiz+Format';">
+                            </div>
+                        `;
+                    }
+                }
+            });
+
+            if (canvasCount === 0) {
+                container.innerHTML = '<p style="color:#aaa;">Sistemde kayıtlı herhangi bir tuval/çizim bulunamadı.</p>';
+            } else {
+                container.innerHTML = galleryHtml;
+            }
+        }
+
+        // Nesne içinde tuval resmi verisini (base64 veya resim linki) bulan yardımcı fonksiyon
+        function findCanvasDataRecursive(obj) {
+            if (!obj || typeof obj !== 'object') return null;
+            for (let k in obj) {
+                let val = obj[k];
+                // Eğer anahtar adı veya değer resim formatına benziyorsa
+                if (typeof val === 'string' && (val.startsWith('data:image') || val.startsWith('http') || val.length > 300)) {
+                    return val;
+                }
+                if (typeof val === 'object') {
+                    let found = findCanvasDataRecursive(val);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+
         window.loadAdminPublicRooms = function() {
             const publicRef = ref(db, 'rooms');
             get(publicRef).then((snapshot) => {
@@ -159,7 +241,7 @@
                     return;
                 }
                 const data = snapshot.val();
-                let html = '<h4>📁 Kullanıcının Dünyaları ve Tuval Resimleri:</h4>';
+                let html = '<h4>📁 Kullanıcının Dünyaları:</h4>';
                 
                 let foundWorlds = false;
                 for (let key in data) {
@@ -173,18 +255,9 @@
                         <div class="world-item">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <span><b>Dünya ID:</b> <span style="color:#2196F3;">${key}</span></span>
-                                <div>
-                                    <button class="purple" onclick="window.viewCanvas('${uid}', '${key}')">🖼️ Tuval Resmini Gör</button>
-                                    <button class="blue" onclick="window.toggleWorldSettings('${uid}', '${key}')">Düzenle</button>
-                                </div>
-                            </div>
-
-                            <!-- Tuval Resmi Önizleme Alanı -->
-                            <div id="canvas-preview-${uid}-${key}" class="canvas-preview-container">
-                                <p style="color:#aaa; font-size:12px;">Tuval aranıyor...</p>
+                                <button class="blue" onclick="window.toggleWorldSettings('${uid}', '${key}')">Düzenle</button>
                             </div>
                             
-                            <!-- Ayar ve Düzenleme Kutusu -->
                             <div id="world-settings-${uid}-${key}" class="world-settings-box">
                                 <label style="font-size:12px; color:#aaa;">Oda Ayarları / Özellikleri (JSON):</label>
                                 <textarea id="input-${uid}-${key}">${worldJson}</textarea>
@@ -205,59 +278,6 @@
                 }
 
                 box.innerHTML = html;
-            });
-        }
-
-        // Tuval bloğuna ait resmi bulup ekranda gösteren fonksiyon
-        window.viewCanvas = function(uid, worldKey) {
-            const previewBox = document.getElementById(`canvas-preview-${uid}-${worldKey}`);
-            if (previewBox.style.display === 'block') {
-                previewBox.style.display = 'none';
-                return;
-            }
-            previewBox.style.display = 'block';
-            previewBox.innerHTML = '<p style="color:#ffa500; font-size:12px;">Tuval verisi taranıyor...</p>';
-
-            const worldRef = ref(db, `users/${uid}/${worldKey}`);
-            get(worldRef).then((snapshot) => {
-                if (!snapshot.exists()) {
-                    previewBox.innerHTML = '<p style="color:#ff4444; font-size:12px;">Dünya verisi bulunamadı.</p>';
-                    return;
-                }
-                const worldData = snapshot.val();
-                let canvasImageSrc = null;
-
-                // Verinin içinde tuval (canvas, image, picture, drawing vb.) verisi arıyoruz
-                // Genellikle base64 string veya URL olarak saklanır
-                function findCanvasRecursive(obj) {
-                    if (!obj || typeof obj !== 'object') return null;
-                    for (let k in obj) {
-                        let val = obj[k];
-                        if (typeof val === 'string' && (val.startsWith('data:image') || val.startsWith('http') || val.length > 500)) {
-                            // Büyük metin veya base64 resim verisi olabilir
-                            return val;
-                        }
-                        if (typeof val === 'object') {
-                            let found = findCanvasRecursive(val);
-                            if (found) return found;
-                        }
-                    }
-                    return null;
-                }
-
-                canvasImageSrc = findCanvasRecursive(worldData);
-
-                if (canvasImageSrc) {
-                    if (!canvasImageSrc.startsWith('data:image') && !canvasImageSrc.startsWith('http')) {
-                        canvasImageSrc = 'data:image/png;base64,' + canvasImageSrc;
-                    }
-                    previewBox.innerHTML = `
-                        <p style="color:#4CAF50; font-size:12px; margin-bottom:5px;"><b>Tuval Resmi Bulundu:</b></p>
-                        <img src="${canvasImageSrc}" alt="Tuval Resmi" onerror="this.onerror=null; this.parentElement.innerHTML='<p style=\'color:red; font-size:12px;\'>Resim formatı çözülemedi (Metin verisi olabilir).</p>';">
-                    `;
-                } else {
-                    previewBox.innerHTML = '<p style="color:#aaa; font-size:12px;">Bu dünyada kayıtlı bir tuval resmi/çizimi bulunamadı.</p>';
-                }
             });
         }
 
@@ -282,6 +302,7 @@
 
             update(ref(db), updates).then(() => {
                 alert("Dünya ayarları başarıyla kaydedildi!");
+                window.loadAllCanvasGallery();
             }).catch((err) => {
                 alert("Hata: " + err.message);
             });
@@ -369,6 +390,7 @@
                     alert("Dünya silindi!");
                     toggleUserWorlds(uid);
                     loadAdminPublicRooms();
+                    window.loadAllCanvasGallery();
                 });
             }
         }
@@ -388,6 +410,7 @@
                 remove(ref(db, 'users/' + uid)).then(() => {
                     alert("Kullanıcı silindi!");
                     loadAdminData();
+                    window.loadAllCanvasGallery();
                 });
             }
         }
