@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>BlokDiyar - Detaylı Admin Paneli</title>
+    <title>BlokDiyar - Kesin Çözüm Admin Paneli</title>
     <style>
         body { background: #121212; color: #fff; font-family: Arial, sans-serif; padding: 20px; }
         .section { background: #1e1e1e; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
@@ -10,6 +10,7 @@
         button.green { background: #4CAF50; }
         button.blue { background: #2196F3; }
         button.orange { background: #ff9800; }
+        button.purple { background: #9c27b0; }
         ul { list-style: none; padding: 0; }
         li { background: #2a2a2a; margin: 8px 0; padding: 12px; border-radius: 6px; }
         .user-row { display: flex; justify-content: space-between; align-items: center; }
@@ -21,12 +22,12 @@
 </head>
 <body>
 
-    <h1>🛡️ BlokDiyar Kullanıcı ve Dünya Paneli</h1>
+    <h1>🛡️ BlokDiyar Tam Donanımlı Yönetici Paneli</h1>
     <div id="auth-status">Giriş kontrol ediliyor...</div>
 
     <div id="admin-content" style="display:none;">
         <div class="section">
-            <h2>👥 Kullanıcılar ve Dünyaları</h2>
+            <h2>👥 Kullanıcılar, Hesaplar ve Dünyaları</h2>
             <ul id="user-list"></ul>
         </div>
     </div>
@@ -34,7 +35,7 @@
     <!-- Firebase SDK'ları -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getDatabase, ref, get, remove, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         const firebaseConfig = {
@@ -67,7 +68,6 @@
         });
 
         function loadAdminData() {
-            // Kullanıcıları Listele
             const userRef = ref(db, 'users');
             get(userRef).then((snapshot) => {
                 const userListUl = document.getElementById('user-list');
@@ -80,13 +80,15 @@
                     const uid = childSnapshot.key;
                     const userData = childSnapshot.val() || {};
                     const profile = userData.profile || {};
+                    const userEmail = profile.email || "E-posta bulunamadı (Sahte/Bilinmiyor)";
                     
                     let li = document.createElement('li');
                     li.innerHTML = `
                         <div class="user-row">
-                            <span><b>Kullanıcı:</b> ${profile.username || profile.name || 'İsimsiz'} <br><small style="color:#888;">UID: ${uid}</small></span>
+                            <span><b>Kullanıcı:</b> ${profile.username || profile.name || 'İsimsiz'} <br><small style="color:#aaa;">E-posta: ${userEmail}</small><br><small style="color:#888;">UID: ${uid}</small></span>
                             <div>
-                                <button class="orange" onclick="window.toggleUserWorlds('${uid}')">Kullanıcının Dünyalarını Gör</button>
+                                <button class="purple" onclick="window.sendResetEmail('${userEmail}')">Şifre Sıfırla (Mail Gönder)</button>
+                                <button class="orange" onclick="window.toggleUserWorlds('${uid}')">Dünyalarını Gör</button>
                                 <button onclick="window.deleteUser('${uid}')">Hesabı Sil</button>
                             </div>
                         </div>
@@ -99,7 +101,20 @@
             });
         }
 
-        // Kullanıcıya bastığında dünyalarını açıp kapatan ve listeleyen fonksiyon
+        // Şifre Sıfırlama E-postası Gönderme
+        window.sendResetEmail = function(email) {
+            if (!email || email.includes("Bulunamadı")) {
+                alert("Bu kullanıcının geçerli bir e-posta adresi veritabanında kayıtlı değil (sahte mail). Bu yüzden otomatik şifre sıfırlama maili atılamaz. Hesabı silip yeniden oluşturabilirsiniz.");
+                return;
+            }
+            sendPasswordResetEmail(auth, email).then(() => {
+                alert(`${email} adresine şifre sıfırlama talimatı gönderildi!`);
+            }).catch((error) => {
+                alert("Hata oluştu: " + error.message);
+            });
+        }
+
+        // Kullanıcının dünyalarını açıp kapatan fonksiyon
         window.toggleUserWorlds = function(uid) {
             const box = document.getElementById(`user-worlds-${uid}`);
             if (box.style.display === 'block') {
@@ -108,7 +123,6 @@
             }
             box.style.display = 'block';
 
-            // Kullanıcının altındaki verileri çekiyoruz (dünyaları arıyoruz)
             const userRef = ref(db, `users/${uid}`);
             get(userRef).then((snapshot) => {
                 if (!snapshot.exists()) {
@@ -118,23 +132,21 @@
                 const data = snapshot.val();
                 let html = '<h4>Bu Kullanıcının Dünyaları / Odaları:</h4>';
                 
-                // Kullanıcının içinde "worlds", "rooms" veya benzeri dünya sakladığı anahtarları kontrol edelim
                 let foundWorlds = false;
                 for (let key in data) {
-                    if (key === 'profile') continue; // Profili atla
+                    if (key === 'profile') continue;
 
                     foundWorlds = true;
                     let worldData = data[key];
-                    let worldJson = JSON.stringify(worldData, null, 2);
 
                     html += `
                         <div class="world-card" id="world-card-${uid}-${key}">
-                            <b>Dünya / Oda Anahtarı:</b> <span style="color:#2196F3;">${key}</span><br><br>
-                            <label>Özellikler / Ayarlar (JSON veya Metin):</label><br>
+                            <b>Oda / Dünya ID:</b> <span style="color:#2196F3;">${key}</span><br><br>
+                            <label>Özellikler / Ayarlar:</label><br>
                             <input type="text" id="input-${uid}-${key}" value='${JSON.stringify(worldData)}'><br>
                             
                             <button class="green" onclick="window.saveWorldSettings('${uid}', '${key}')">Ayarları Düzenle / Kaydet</button>
-                            <button class="blue" onclick="window.makeWorldPublic('${key}', ${JSON.stringify(worldData)})">Herkese Aç</button>
+                            <button class="blue" onclick="window.makeWorldPublic('${key}', ${JSON.stringify(worldData).replace(/'/g, "&#39;")})">Herkese Aç</button>
                             <button class="orange" onclick="window.makeWorldPrivate('${key}')">Özel Yap (Kapat)</button>
                             <button onclick="window.deleteUserWorld('${uid}', '${key}')">Dünyayı Sil</button>
                         </div>
@@ -149,59 +161,63 @@
             });
         }
 
-        // Dünya ayarlarını güncelleme (Düzenleme)
+        // Dünya ayarlarını güncelleme
         window.saveWorldSettings = function(uid, worldKey) {
             const valStr = document.getElementById(`input-${uid}-${worldKey}`).value;
             let parsedVal;
             try {
                 parsedVal = JSON.parse(valStr);
             } catch (e) {
-                parsedVal = valStr; // JSON değilse düz metin olarak al
+                parsedVal = valStr;
             }
 
             const updates = {};
             updates[`users/${uid}/${worldKey}`] = parsedVal;
-            // Eğer ana rooms listesinde de varsa orayı da güncelleyebiliriz
             updates[`rooms/${worldKey}`] = parsedVal;
 
             update(ref(db), updates).then(() => {
-                alert("Dünya ayarları başarıyla güncellendi!");
+                alert("Dünya ayarları başarıyla güncellendi ve kaydedildi!");
             }).catch((err) => {
                 alert("Hata: " + err.message);
             });
         }
 
-        // Dünyayı Herkese Açık Yapma
+        // Dünyayı Herkese Açık Yapma (Oyunun okuyabileceği formatta publicRooms'a yazar)
         window.makeWorldPublic = function(worldKey, worldData) {
+            const publicPayload = (typeof worldData === 'object' && worldData !== null) ? worldData : { active: true, name: worldKey };
             const updates = {};
-            updates[`publicRooms/${worldKey}`] = worldData || { active: true, updated: Date.now() };
+            updates[`publicRooms/${worldKey}`] = publicPayload;
+            updates[`rooms/${worldKey}`] = publicPayload;
+
             update(ref(db), updates).then(() => {
-                alert("Oda başarıyla herkese açık hale getirildi!");
+                alert("Oda başarıyla herkese açık hale getirildi ve oyun listesine eklendi!");
+            }).catch((err) => {
+                alert("Hata: " + err.message);
             });
         }
 
         // Dünyayı Özel Yapma (Kapatma)
         window.makeWorldPrivate = function(worldKey) {
             remove(ref(db, `publicRooms/${worldKey}`)).then(() => {
-                alert("Oda özel (kapalı) konuma getirildi!");
+                alert("Oda özel (kapalı) konuma getirildi, listeden kaldırıldı!");
             });
         }
 
-        // Kullanıcının spesifik dünyasını silme
+        // Dünyayı silme
         window.deleteUserWorld = function(uid, worldKey) {
             if (confirm(`Bu dünyayı (${worldKey}) silmek istediğine emin misin?`)) {
                 remove(ref(db, `users/${uid}/${worldKey}`));
                 remove(ref(db, `rooms/${worldKey}`));
                 remove(ref(db, `publicRooms/${worldKey}`)).then(() => {
                     alert("Dünya tamamen silindi!");
-                    toggleUserWorlds(uid); // Listeyi tazele
+                    toggleUserWorlds(uid);
                 });
             }
         }
 
-        // Kullanıcının tamamını silme
+        // Kullanıcıyı silme
         window.deleteUser = function(uid) {
-            if (confirm("Bu kullanıcıyı ve tüm verilerini silmek istiyor musun?")) {
+            if (confirm("Bu kullanıcıyı ve verilerini silmek istiyor musun?")) {
                 remove(ref(db, 'users/' + uid)).then(() => {
                     alert("Kullanıcı silindi!");
                     loadAdminData();
