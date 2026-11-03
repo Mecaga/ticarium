@@ -122,10 +122,10 @@ export function heightAt(x, z) {
 
 function oreAt(x, y, z) {
   const cx = x >> 1, cy = y >> 1, cz = z >> 1;
-  if (y <= 6 && hash(cx * 7 + cy, cz * 5 + 3, _seed + 31) < 0.0014 && hash(x * 3 + y, z * 11, _seed + 35) < 0.7) return DIAMOND_ORE;
-  if (y <= 11 && hash(cx * 5 + cy * 3, cz * 7 + 1, _seed + 32) < 0.004 && hash(x * 5 + y * 2, z * 7, _seed + 36) < 0.7) return GOLD_ORE;
-  if (y <= 15 && hash(cx * 3 + cy * 5, cz * 11 + 2, _seed + 33) < 0.008 && hash(x * 7 + y, z * 5, _seed + 37) < 0.7) return IRON_ORE;
-  if (hash(cx * 11 + cy, cz * 3 + 4, _seed + 34) < 0.014 && hash(x * 2 + y * 3, z * 13, _seed + 38) < 0.7) return COAL_ORE;
+  if (y <= 6 && hash(cx * 7 + cy, cz * 5 + 3, _seed + 31) < 0.0030 && hash(x * 3 + y, z * 11, _seed + 35) < 0.7) return DIAMOND_ORE;
+  if (y <= 11 && hash(cx * 5 + cy * 3, cz * 7 + 1, _seed + 32) < 0.008 && hash(x * 5 + y * 2, z * 7, _seed + 36) < 0.7) return GOLD_ORE;
+  if (y <= 15 && hash(cx * 3 + cy * 5, cz * 11 + 2, _seed + 33) < 0.014 && hash(x * 7 + y, z * 5, _seed + 37) < 0.7) return IRON_ORE;
+  if (hash(cx * 11 + cy, cz * 3 + 4, _seed + 34) < 0.022 && hash(x * 2 + y * 3, z * 13, _seed + 38) < 0.7) return COAL_ORE;
   return 0;
 }
 
