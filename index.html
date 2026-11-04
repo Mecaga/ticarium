@@ -44,7 +44,7 @@
     </div>
     <div id="sMain" style="display:none">
       <div id="mUser"></div>
-      <input id="nameIn" maxlength="14" placeholder="Oyuncu adın" style="display:none">
+      <input id="nameIn" maxlength="14" placeholder="Oyuncu adın">
       <button id="mWorlds">🌍 Dünyalarım</button>
       <button id="mCreate">🏠 Oda Kur</button>
       <button id="mList">🌐 Açık Odalar</button>
@@ -129,20 +129,6 @@ var missing = ids.filter(function (i) { return !document.getElementById(i); });
 if (missing.length) {
   showErr('Eksik elemanlar: ' + missing.join(', '));
 } else {
-  // --- "Beni Hatırla" Otomatik Doldurma Entegrasyonu ---
-  window.addEventListener('DOMContentLoaded', function() {
-    try {
-      const c = JSON.parse(localStorage.getItem('bd_cred') || 'null');
-      if (c && document.getElementById('auUser') && document.getElementById('auPass')) {
-        document.getElementById('auUser').value = c[0];
-        document.getElementById('auPass').value = c[1];
-        if (document.getElementById('auHint')) {
-          document.getElementById('auHint').textContent = '👋 Tekrar hoş geldin, ' + c[0] + '. Giriş Yap\'a bas (şifre hatırlandı).';
-        }
-      }
-    } catch (e) {}
-  });
-
   Promise.all([
     import('./js/world/gen/flat.js?v=52').catch(function(){}),
     import('./js/world/gen/sky.js?v=52').catch(function(){}),
