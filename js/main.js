@@ -40,8 +40,9 @@ import './game/library.js';
 import './game/chests.js';
 import './game/spider.js';
 
-// Admin Paneli Modülü
+// Admin Paneli ve Oda Sahibi GM Modülü
 import './ui/admin.js';
+import './game/gmgrant.js';
 
 const $ = id => document.getElementById(id);
 
