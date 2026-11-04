@@ -137,7 +137,8 @@ export async function stopSaver() {
   await flush();
   dropSaver();
 }
+
 export function dropSaver() {
   if (timer) clearInterval(timer);
   timer = null; wid = null; pc = {}; pp = {};
-      }
+}
