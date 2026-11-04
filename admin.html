@@ -3,72 +3,54 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BlokDiyar — Admin Paneli</title>
+<title>BlokDiyar — Oyuncular ve Dünyalar</title>
 <style>
   body { font-family: system-ui, -apple-system, sans-serif; background: #121212; color: #e0e0e0; margin: 0; padding: 20px; }
-  h1, h2 { color: #fff; border-bottom: 2px solid #333; padding-bottom: 8px; }
+  h1 { color: #fff; border-bottom: 2px solid #333; padding-bottom: 8px; }
   .card { background: #1e1e1e; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-  button { background: #6200ee; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-right: 6px; margin-bottom: 6px; }
+  button { background: #6200ee; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-right: 6px; }
   button:hover { background: #7c4dff; }
   button.danger { background: #b00020; }
   button.danger:hover { background: #cf6679; }
-  input, select { background: #2d2d2d; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 4px; margin-bottom: 8px; width: 100%; box-sizing: border-box; }
   table { width: 100%; border-collapse: collapse; margin-top: 10px; }
   th, td { text-align: left; padding: 10px; border-bottom: 1px solid #333; font-size: 14px; }
   th { background: #252525; }
   .status { padding: 10px; border-radius: 4px; margin-bottom: 16px; font-weight: bold; }
   .success { background: #1b5e20; color: #e8f5e9; }
   .error { background: #b71c1c; color: #ffebee; }
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media(max-width: 768px) { .grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
 
-  <h1>👑 BlokDiyar Admin Paneli</h1>
+  <h1>👥 Oyuncular ve Dünyalar Yönetimi</h1>
   <div id="authStatus" class="status error">Oturum açılıyor...</div>
 
-  <div class="grid">
-    <!-- Kullanıcılar ve Dünyaları -->
-    <div class="card">
-      <h2>👥 Kullanıcılar ve Dünyalar</h2>
-      <button onclick="loadUsers()">Kullanıcıları Listele</button>
-      <div id="userList" style="margin-top: 12px; max-height: 400px; overflow-y: auto;">
-        <p style="opacity: 0.6;">Yüklemek için butona basın...</p>
-      </div>
-    </div>
-
-    <!-- Aktif Odalar ve Tuvaller -->
-    <div class="card">
-      <h2>🌐 Aktif Odalar & Tuvaller (Paints)</h2>
-      <button onclick="loadRooms()">Odaları Listele</button>
-      <div id="roomList" style="margin-top: 12px; max-height: 400px; overflow-y: auto;">
-        <p style="opacity: 0.6;">Yüklemek için butona basın...</p>
-      </div>
+  <div class="card">
+    <button onclick="loadUsers()">Listeyi Yenile</button>
+    <div id="userList" style="margin-top: 12px; overflow-x: auto;">
+      <p style="opacity: 0.6;">Yükleniyor...</p>
     </div>
   </div>
 
   <div class="card">
-    <h2>🔍 Seçilen Detay / İşlem Paneli</h2>
+    <h2>🔍 Dünya ve Veri Detayı</h2>
     <div id="detailView" style="font-family: monospace; font-size: 13px; background: #111; padding: 12px; border-radius: 4px; min-height: 80px; white-space: pre-wrap;">
-      Bir kullanıcı veya oda seçin...
+      İncelemek için bir kullanıcının "Dünyaları Gör" butonuna basın...
     </div>
   </div>
 
 <script type="module">
-  import { db, ref, get, remove, update } from './js/core/firebase.js';
+  import { db, ref, get, remove } from './js/core/firebase.js';
   import { auth } from './js/core/firebase.js';
   import { signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
   const statusEl = document.getElementById('authStatus');
 
-  // Admin Oturum Kontrolü
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       statusEl.className = 'status success';
-      statusEl.textContent = `✅ Bağlı Admin UID: ${user.uid}`;
+      statusEl.textContent = `✅ Admin Oturumu Açık (UID: ${user.uid})`;
       loadUsers();
-      loadRooms();
     } else {
       try {
         await signInAnonymously(auth);
@@ -78,109 +60,62 @@
     }
   });
 
-  // Kullanıcıları ve Dünyalarını Listele
   window.loadUsers = async function() {
     const container = document.getElementById('userList');
     container.innerHTML = 'Yükleniyor...';
     try {
       const snap = await get(ref(db, 'users'));
       if (!snap.exists()) {
-        container.innerHTML = '<p>Kayıtlı kullanıcı bulunamadı veya yetkiniz yok.</p>';
+        container.innerHTML = '<p>Kayıtlı kullanıcı bulunamadı.</p>';
         return;
       }
       
-      let html = '<table><tr><th>UID / İsim</th><th>Dünya Sayısı</th><th>İşlem</th></tr>';
+      let html = '<table><tr><th>Kullanıcı / UID</th><th>Dünya Bilgisi</th><th>İşlemler</th></tr>';
       snap.forEach(userSnap => {
         const uid = userSnap.key;
         const data = userSnap.val() || {};
         const profile = data.profile || {};
         const worlds = data.worlds || {};
-        const name = profile.name || profile.username || 'İsimsiz';
-        const worldCount = Object.keys(worlds).length;
+        const name = profile.name || profile.username || 'İsimsiz Oyuncu';
+        const worldNames = Object.values(worlds).map(w => w.name || 'Dünya').join(', ') || 'Dünya yok';
 
         html += `<tr>
           <td><b>${name}</b><br><span style="font-size:11px;opacity:0.5">${uid}</span></td>
-          <td>${worldCount} Dünya</td>
+          <td>${Object.keys(worlds).length} Dünya: <span style="opacity:0.7">${worldNames}</span></td>
           <td>
-            <button onclick='inspectUser("${uid}")'>İncele</button>
-            <button class="danger" onclick='deleteUser("${uid}")'>Sil</button>
+            <button onclick='inspectUser("${uid}")'>Dünyaları Gör</button>
+            <button class="danger" onclick='deleteUser("${uid}")'>Kullanıcıyı Sil</button>
           </td>
         </tr>`;
       });
       html += '</table>';
       container.innerHTML = html;
     } catch (e) {
-      container.innerHTML = `<span style="color:#ff5252">Hata: ${e.message}</span>`;
+      container.innerHTML = `<span style="color:#ff5252">Hata (Yetki yok): ${e.message}</span>`;
     }
   };
 
-  // Açık Odaları Listele
-  window.loadRooms = async function() {
-    const container = document.getElementById('roomList');
-    container.innerHTML = 'Yükleniyor...';
-    try {
-      const snap = await get(ref(db, 'publicRooms'));
-      if (!snap.exists()) {
-        container.innerHTML = '<p>Açık oda bulunamadı.</p>';
-        return;
-      }
-
-      let html = '<table><tr><th>Oda Adı</th><th>Sahip</th><th>İşlem</th></tr>';
-      snap.forEach(roomSnap => {
-        const rId = roomSnap.key;
-        const rData = roomSnap.val() || {};
-        html += `<tr>
-          <td><b>${rData.name || 'Oda'}</b><br><span style="font-size:11px;opacity:0.5">${rId}</span></td>
-          <td>${rData.ownerName || 'Bilinmiyor'}</td>
-          <td>
-            <button class="danger" onclick='deleteRoom("${rId}")'>Odayı Kapat</button>
-          </td>
-        </tr>`;
-      });
-      html += '</table>';
-      container.innerHTML = html;
-    } catch (e) {
-      container.innerHTML = `<span style="color:#ff5252">Hata: ${e.message}</span>`;
-    }
-  };
-
-  // Kullanıcı detaylarını ve tuale/dünya verilerini inceleme
   window.inspectUser = async function(uid) {
     const detail = document.getElementById('detailView');
-    detail.textContent = 'Bilgiler yükleniyor...';
+    detail.textContent = 'Dünyalar yükleniyor...';
     try {
-      const snap = await get(ref(db, `users/${uid}`));
+      const snap = await get(ref(db, `users/${uid}/worlds`));
       if (!snap.exists()) {
-        detail.textContent = 'Kullanıcı verisi bulunamadı.';
+        detail.textContent = 'Bu kullanıcının kayıtlı dünyası yok.';
         return;
       }
-      const data = snap.val();
-      detail.textContent = JSON.stringify(data, null, 2);
+      detail.textContent = JSON.stringify(snap.val(), null, 2);
     } catch (e) {
       detail.textContent = `Hata: ${e.message}`;
     }
   };
 
-  // Kullanıcı silme
   window.deleteUser = async function(uid) {
-    if (!confirm(`Bu kullanıcının (${uid}) tüm dünyalarını ve verilerini silmek istediğine emin misin?`)) return;
+    if (!confirm(`Bu kullanıcının (${uid}) tüm dünyalarını silmek istediğine emin misin?`)) return;
     try {
       await remove(ref(db, `users/${uid}`));
-      alert('Kullanıcı silindi.');
+      alert('Kullanıcı ve tüm dünyaları silindi.');
       loadUsers();
-    } catch (e) {
-      alert(`Hata: ${e.message}`);
-    }
-  };
-
-  // Oda kapatma / silme
-  window.deleteRoom = async function(rId) {
-    if (!confirm('Bu odayı kapatmak istediğine emin misin?')) return;
-    try {
-      await remove(ref(db, `publicRooms/${rId}`));
-      await remove(ref(db, `rooms/${rId}`));
-      alert('Oda kapatıldı.');
-      loadRooms();
     } catch (e) {
       alert(`Hata: ${e.message}`);
     }
