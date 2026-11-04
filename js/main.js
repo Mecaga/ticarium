@@ -12,7 +12,7 @@ import { initMobs, updateMobs } from './entities/mobs.js';
 import { initGravity, updateGravity } from './world/gravity.js';
 import { G } from './core/state.js';
 import { initAutosave } from './game/progress.js';
-import './game/fishing.js'; // Sıralama kuralı: actions.js'ten ÖNCE yüklenmeli
+import './game/fishing.js'; // Sıralama kuralı: actions.js'ten Önce yüklenmeli
 import { initActions, breakBlock, placeBlock, attack } from './game/actions.js';
 import { initMining, breakDown, breakUp, updateMining } from './game/mining.js';
 import { initDeath, toSpawn } from './game/death.js';
@@ -39,6 +39,9 @@ import './game/eggs.js';
 import './game/library.js';
 import './game/chests.js';
 import './game/spider.js';
+
+// Admin Paneli Modülü
+import './ui/admin.js';
 
 const $ = id => document.getElementById(id);
 
