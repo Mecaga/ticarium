@@ -12,6 +12,7 @@ const st = document.createElement('style');
 st.textContent = `
 #sAuth{display:none}
 #mUser{font-size:13px;opacity:.9;margin:0 0 6px;text-align:center}
+#mLogout{display:none !important;}
 `;
 document.head.appendChild(st);
 
@@ -88,9 +89,9 @@ export function initMenu(cb) {
   lists = makeLists({ loadR, loadC, run, enter, err, pname, setUnsub: f => { unsub = f; } });
   worlds = makeWorlds({ loadC, loadR, run, enter, err, pname, show, worldRooms: () => lists.worldRooms() });
 
-  // Çıkış düğmesini bu sistemde gizliyoruz
+  // Çıkış düğmesini garanti olsun diye hem stil hem kodla gizliyoruz
   if ($('mLogout')) {
-    $('mLogout').style.display = 'none';
+    $('mLogout').style.setProperty('display', 'none', 'important');
   }
 
   $('mWorlds').onclick = () => { show('sWorlds'); worlds.start(); };
