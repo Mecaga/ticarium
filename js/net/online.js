@@ -202,13 +202,14 @@ export function startOnline(sc, roomCode, opts = {}) {
         o = others[ch.key] = {
           name: v.name || '?', mesh: makeAvatar(v.name || '?', ch.key),
           tx: 0, ty: 0, tz: 0, tyaw: 0, tpitch: 0, init: false, dead: false, tt: 0, phase: 0, swing: 0,
-          mine: null, mineN: 0, mineAt: 0, crack: null
+          mine: null, mineN: 0, mineAt: 0, crack: null, sneak: false
         };
         group.add(o.mesh);
       }
       o.name = v.name || o.name;
       o.dead = !!v.dead;
       showArmor(o, v.arm);
+      o.sneak = !!v.sn;
       if (typeof v.x === 'number') {
         o.tx = v.x; o.ty = v.y; o.tz = v.z; o.tyaw = v.yaw || 0; o.tpitch = v.pitch || 0;
         if (!o.init) { o.mesh.position.set(v.x, v.y, v.z); o.init = true; }
@@ -256,7 +257,8 @@ function sendPos() {
     z: r2(P.z), 
     yaw: r2(P.yaw), 
     pitch: r2(P.pitch), 
-    arm: [eco.armor.head, eco.armor.chest, eco.armor.legs, eco.armor.feet].join(',') 
+    arm: [eco.armor.head, eco.armor.chest, eco.armor.legs, eco.armor.feet].join(','),
+    sn: P.sneak ? 1 : 0
   };
   const s = JSON.stringify(d);
   if (s === last) return;
@@ -366,6 +368,10 @@ export function updateOthers(dt) {
       if (o.crack) o.crack.show(o.mine.x, o.mine.y, o.mine.z, o.mine.s);
       if (o.swing <= 0) o.swing = 0.35;   // kazma sallar
     } else if (o.crack) o.crack.hide();
+    
+    o.mesh.scale.y = o.sneak ? 0.88 : 1;
+    if (hd) hd.position.z = o.sneak ? -0.12 : 0;
+
     animateAvatar(o, Math.hypot(p.x - ox, p.z - oz) / Math.max(dt, 0.001), dt);
   }
 }
