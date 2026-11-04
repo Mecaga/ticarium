@@ -10,11 +10,8 @@ const screens = ['sAuth', 'sMain', 'sCreate', 'sList', 'sJoin', 'sMine', 'sWorld
 
 const st = document.createElement('style');
 st.textContent = `
-.mbox input[type=password]{width:100%;padding:12px;border-radius:8px;border:0;margin-bottom:8px;font-size:16px;box-sizing:border-box;-webkit-user-select:text;user-select:text}
 #sAuth{display:none}
-#auHint{font-size:13px;opacity:.85;margin:0 0 8px}
 #mUser{font-size:13px;opacity:.9;margin:0 0 6px;text-align:center}
-.mbox #mLogout{background:#444;padding:8px;font-size:13px;margin-top:14px}
 `;
 document.head.appendChild(st);
 
@@ -42,37 +39,31 @@ async function diag() {
 
 function enterMain(a) {
   UN = a.userName;
-  $('nameIn').value = UN;
-  $('mUser').textContent = '👤 ' + UN;
+  const inp = $('nameIn');
+  inp.style.display = 'block';
+  inp.value = UN;
+  $('mUser').textContent = '';
+  inp.onchange = () => {
+    const v = inp.value.trim().slice(0, 14) || UN;
+    UN = v; a.setUserName(v);
+    try { localStorage.setItem('bd_name', v); } catch (e) {}
+    loadC().then(c => c.setProfile(v));
+  };
+  try { localStorage.setItem('bd_name', UN); } catch (e) {}
   show('sMain');
   diag();
-}
-
-function showAuth(a) {
-  show('sAuth');
-  let hintText = a.isLegacyAnon()
-    ? 'Bu cihazda eski misafir dünyaların var. Korumak için GİRİŞ YAPMA, KAYIT OL de: kullanıcı adı ve şifre seç, dünyaların hesabına bağlanır.'
-    : 'Kullanıcı adı ve şifrenle giriş yap ya da yeni hesap aç.';
-
-  // "Beni hatırla" kayıtlı verisi varsa kullanıcı adı ve şifreyi doldur, hint mesajını güncelle
-  try {
-    const c = JSON.parse(localStorage.getItem('bd_cred') || 'null');
-    if (c) {
-      $('auUser').value = c[0]; 
-      $('auPass').value = c[1];
-      hintText = '👋 Tekrar hoş geldin, ' + c[0] + '. Giriş Yap\'a bas (şifre hatırlandı).';
-    }
-  } catch (e) {}
-
-  $('auHint').textContent = hintText;
 }
 
 export function showMenu() {
   $('menu').style.display = 'flex';
   loadA().then(async a => {
-    await a.authReady();
-    if (a.isLoggedIn()) enterMain(a); else showAuth(a);
-  }).catch(e => { show('sAuth'); err(e.code || e.message); });
+    await a.login();
+    let n = '';
+    try { n = localStorage.getItem('bd_name') || ''; } catch (e) {}
+    if (!n) n = 'Oyuncu' + Math.floor(100 + Math.random() * 900);
+    a.setUserName(n);
+    enterMain(a);
+  }).catch(e => { show('sMain'); err(e.code || e.message); });
 }
 
 // opts.keepOpen: host çıkarken oda açık kalsın
@@ -92,36 +83,15 @@ async function run(btn, fn) {
   btn.disabled = false;
 }
 
-async function doAuth(mode) {
-  const a = await loadA();
-  try {
-    if (mode === 'login') await a.doLogin($('auUser').value, $('auPass').value);
-    else await a.doRegister($('auUser').value, $('auPass').value);
-  } catch (e) { throw new Error(a.authError(e)); }
-  
-  // Başarılı giriş/kayıt sonrası kimlik bilgilerini localStorage'da sakla
-  try { 
-    localStorage.setItem('bd_cred', JSON.stringify([$('auUser').value, $('auPass').value])); 
-  } catch (e) {}
-
-  $('auPass').value = '';
-  enterMain(a);
-}
-
 export function initMenu(cb) {
   onEnter = cb;
   lists = makeLists({ loadR, loadC, run, enter, err, pname, setUnsub: f => { unsub = f; } });
   worlds = makeWorlds({ loadC, loadR, run, enter, err, pname, show, worldRooms: () => lists.worldRooms() });
 
-  $('auLogin').onclick = e => run(e.currentTarget, () => doAuth('login'));
-  $('auReg').onclick = e => run(e.currentTarget, () => doAuth('register'));
-  $('mLogout').onclick = async () => {
-    try { 
-      localStorage.removeItem('bd_cred'); 
-    } catch (e) {}
-    try { await (await loadA()).doLogout(); } catch (e) {}
-    location.reload();
-  };
+  // Çıkış düğmesini bu sistemde gizliyoruz
+  if ($('mLogout')) {
+    $('mLogout').style.display = 'none';
+  }
 
   $('mWorlds').onclick = () => { show('sWorlds'); worlds.start(); };
   $('wNew').onclick = () => worlds.openNew();
