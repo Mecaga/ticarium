@@ -1,378 +1,191 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <title>BlokDiyar - Tane Tane Dünya Düzenleme Paneli</title>
-    <style>
-        body { background: #121212; color: #fff; font-family: Arial, sans-serif; padding: 20px; }
-        .section { background: #1e1e1e; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
-        button { background: #ff4444; color: white; border: none; padding: 8px 14px; cursor: pointer; border-radius: 4px; font-weight: bold; margin-right: 4px; margin-top: 5px; }
-        button.green { background: #4CAF50; }
-        button.blue { background: #2196F3; }
-        button.orange { background: #ff9800; }
-        button.purple { background: #9c27b0; }
-        ul { list-style: none; padding: 0; }
-        li { background: #2a2a2a; margin: 8px 0; padding: 12px; border-radius: 6px; }
-        .user-row { display: flex; justify-content: space-between; align-items: center; }
-        #auth-status { font-size: 16px; margin-bottom: 15px; font-weight: bold; color: #ffa500; }
-        .user-worlds-box { background: #181818; padding: 12px; margin-top: 10px; border-radius: 5px; border-left: 4px solid #2196F3; display: none; }
-        .world-item { background: #222; padding: 10px; margin-top: 8px; border-radius: 4px; border: 1px solid #444; }
-        .world-settings-box { background: #161616; padding: 12px; margin-top: 8px; border-radius: 4px; border-left: 3px solid #ff9800; display: none; }
-        
-        /* Tane tane düzenleme form alanları */
-        .form-group { margin-bottom: 10px; }
-        .form-group label { display: block; font-size: 12px; color: #aaa; margin-bottom: 3px; }
-        .form-group input, .form-group select { background: #252525; color: #fff; border: 1px solid #555; padding: 6px 10px; border-radius: 4px; width: 100%; box-sizing: border-box; }
-        .badge { background: #333; color: #4CAF50; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-left: 5px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BlokDiyar — Admin Paneli</title>
+<style>
+  body { font-family: system-ui, -apple-system, sans-serif; background: #121212; color: #e0e0e0; margin: 0; padding: 20px; }
+  h1, h2 { color: #fff; border-bottom: 2px solid #333; padding-bottom: 8px; }
+  .card { background: #1e1e1e; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+  button { background: #6200ee; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-right: 6px; margin-bottom: 6px; }
+  button:hover { background: #7c4dff; }
+  button.danger { background: #b00020; }
+  button.danger:hover { background: #cf6679; }
+  input, select { background: #2d2d2d; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 4px; margin-bottom: 8px; width: 100%; box-sizing: border-box; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  th, td { text-align: left; padding: 10px; border-bottom: 1px solid #333; font-size: 14px; }
+  th { background: #252525; }
+  .status { padding: 10px; border-radius: 4px; margin-bottom: 16px; font-weight: bold; }
+  .success { background: #1b5e20; color: #e8f5e9; }
+  .error { background: #b71c1c; color: #ffebee; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media(max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+</style>
 </head>
 <body>
 
-    <h1>🛡️ BlokDiyar Tane Tane Yönetim Paneli</h1>
-    <div id="auth-status">Giriş kontrol ediliyor...</div>
+  <h1>👑 BlokDiyar Admin Paneli</h1>
+  <div id="authStatus" class="status error">Oturum açılıyor...</div>
 
-    <div id="admin-content" style="display:none;">
-        
-        <!-- HIZLI ODA YÖNETİMİ -->
-        <div class="section" style="border: 2px solid #4CAF50; text-align: center;">
-            <h2>🚀 Hızlı Oda Yönetimi</h2>
-            <button class="green" style="padding: 10px 16px; font-size: 15px;" onclick="window.makeAllWorldsPublic()">🌟 TÜM DÜNYALARI TEK TUŞLA HERKESE AÇ</button>
-        </div>
-
-        <!-- AKTİF HERKESE AÇIK KANALLAR -->
-        <div class="section">
-            <h2>🌟 Aktif Herkese Açık Odalar</h2>
-            <ul id="admin-public-rooms"></ul>
-        </div>
-
-        <!-- KULLANICILAR VE DÜNYALARI -->
-        <div class="section">
-            <h2>👥 Kullanıcılar ve Dünyaları</h2>
-            <ul id="user-list"></ul>
-        </div>
+  <div class="grid">
+    <!-- Kullanıcılar ve Dünyaları -->
+    <div class="card">
+      <h2>👥 Kullanıcılar ve Dünyalar</h2>
+      <button onclick="loadUsers()">Kullanıcıları Listele</button>
+      <div id="userList" style="margin-top: 12px; max-height: 400px; overflow-y: auto;">
+        <p style="opacity: 0.6;">Yüklemek için butona basın...</p>
+      </div>
     </div>
 
-    <!-- Firebase SDK'ları -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getDatabase, ref, get, remove, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    <!-- Aktif Odalar ve Tuvaller -->
+    <div class="card">
+      <h2>🌐 Aktif Odalar & Tuvaller (Paints)</h2>
+      <button onclick="loadRooms()">Odaları Listele</button>
+      <div id="roomList" style="margin-top: 12px; max-height: 400px; overflow-y: auto;">
+        <p style="opacity: 0.6;">Yüklemek için butona basın...</p>
+      </div>
+    </div>
+  </div>
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyDBqq-KjCuhwsXLLWbfICps4YFzotAOTv8",
-            authDomain: "ticarium-c352c.firebaseapp.com",
-            databaseURL: "https://ticarium-c352c-default-rtdb.firebaseio.com",
-            projectId: "ticarium-c352c",
-            storageBucket: "ticarium-c352c.firebasestorage.app",
-            messagingSenderId: "527594429663",
-            appId: "1:527594429663:web:dd1ffb82249264bebbdd6a"
-        };
+  <div class="card">
+    <h2>🔍 Seçilen Detay / İşlem Paneli</h2>
+    <div id="detailView" style="font-family: monospace; font-size: 13px; background: #111; padding: 12px; border-radius: 4px; min-height: 80px; white-space: pre-wrap;">
+      Bir kullanıcı veya oda seçin...
+    </div>
+  </div>
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getDatabase(app);
+<script type="module">
+  import { db, ref, get, remove, update } from './js/core/firebase.js';
+  import { auth } from './js/core/firebase.js';
+  import { signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-        const ADMIN_EMAIL = "mecaga5354@blokdiyar.app"; 
+  const statusEl = document.getElementById('authStatus');
 
-        onAuthStateChanged(auth, (user) => {
-            if (user && user.email === ADMIN_EMAIL) {
-                document.getElementById('auth-status').innerText = `Hoş geldin Admin: ${user.email}`;
-                document.getElementById('auth-status').style.color = '#4CAF50';
-                document.getElementById('admin-content').style.display = 'block';
-                loadAdminData();
-            } else {
-                const currentEmail = user ? user.email : "Giriş yapılmamış";
-                document.getElementById('auth-status').innerText = `Yetkisiz erişim! (${currentEmail}) Lütfen mecaga5354 hesabıyla giriş yap.`;
-                document.getElementById('auth-status').style.color = '#ff4444';
-            }
-        });
+  // Admin Oturum Kontrolü
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      statusEl.className = 'status success';
+      statusEl.textContent = `✅ Bağlı Admin UID: ${user.uid}`;
+      loadUsers();
+      loadRooms();
+    } else {
+      try {
+        await signInAnonymously(auth);
+      } catch (e) {
+        statusEl.textContent = `❌ Oturum açılamadı: ${e.message}`;
+      }
+    }
+  });
 
-        function loadAdminData() {
-            loadAdminPublicRooms();
+  // Kullanıcıları ve Dünyalarını Listele
+  window.loadUsers = async function() {
+    const container = document.getElementById('userList');
+    container.innerHTML = 'Yükleniyor...';
+    try {
+      const snap = await get(ref(db, 'users'));
+      if (!snap.exists()) {
+        container.innerHTML = '<p>Kayıtlı kullanıcı bulunamadı veya yetkiniz yok.</p>';
+        return;
+      }
+      
+      let html = '<table><tr><th>UID / İsim</th><th>Dünya Sayısı</th><th>İşlem</th></tr>';
+      snap.forEach(userSnap => {
+        const uid = userSnap.key;
+        const data = userSnap.val() || {};
+        const profile = data.profile || {};
+        const worlds = data.worlds || {};
+        const name = profile.name || profile.username || 'İsimsiz';
+        const worldCount = Object.keys(worlds).length;
 
-            const userRef = ref(db, 'users');
-            get(userRef).then((snapshot) => {
-                const userListUl = document.getElementById('user-list');
-                userListUl.innerHTML = '';
-                if (!snapshot.exists()) {
-                    userListUl.innerHTML = '<li>Kayıtlı kullanıcı bulunamadı.</li>';
-                    return;
-                }
+        html += `<tr>
+          <td><b>${name}</b><br><span style="font-size:11px;opacity:0.5">${uid}</span></td>
+          <td>${worldCount} Dünya</td>
+          <td>
+            <button onclick='inspectUser("${uid}")'>İncele</button>
+            <button class="danger" onclick='deleteUser("${uid}")'>Sil</button>
+          </td>
+        </tr>`;
+      });
+      html += '</table>';
+      container.innerHTML = html;
+    } catch (e) {
+      container.innerHTML = `<span style="color:#ff5252">Hata: ${e.message}</span>`;
+    }
+  };
 
-                snapshot.forEach((childSnapshot) => {
-                    const uid = childSnapshot.key;
-                    const userData = childSnapshot.val() || {};
-                    const profile = userData.profile || {};
-                    const userEmail = profile.email || "E-posta bulunamadı";
-                    
-                    let worldCount = 0;
-                    for (let key in userData) {
-                        if (key !== 'profile') worldCount++;
-                    }
+  // Açık Odaları Listele
+  window.loadRooms = async function() {
+    const container = document.getElementById('roomList');
+    container.innerHTML = 'Yükleniyor...';
+    try {
+      const snap = await get(ref(db, 'publicRooms'));
+      if (!snap.exists()) {
+        container.innerHTML = '<p>Açık oda bulunamadı.</p>';
+        return;
+      }
 
-                    let li = document.createElement('li');
-                    li.innerHTML = `
-                        <div class="user-row">
-                            <span>
-                                <b>Kullanıcı:</b> ${profile.username || profile.name || 'İsimsiz'} 
-                                <span class="badge">Dünya Sayısı: ${worldCount}</span><br>
-                                <small style="color:#aaa;">E-posta: ${userEmail}</small><br>
-                                <small style="color:#888;">UID: ${uid}</small>
-                            </span>
-                            <div>
-                                <button class="purple" onclick="window.sendResetEmail('${userEmail}')">Şifre Sıfırla</button>
-                                <button class="blue" onclick="window.toggleUserWorlds('${uid}')">Dünyalarını Gör</button>
-                                <button onclick="window.deleteUser('${uid}')">Hesabı Sil</button>
-                            </div>
-                        </div>
-                        <div id="user-worlds-${uid}" class="user-worlds-box">
-                            <p>Dünyalar yükleniyor...</p>
-                        </div>
-                    `;
-                    userListUl.appendChild(li);
-                });
-            });
-        }
+      let html = '<table><tr><th>Oda Adı</th><th>Sahip</th><th>İşlem</th></tr>';
+      snap.forEach(roomSnap => {
+        const rId = roomSnap.key;
+        const rData = roomSnap.val() || {};
+        html += `<tr>
+          <td><b>${rData.name || 'Oda'}</b><br><span style="font-size:11px;opacity:0.5">${rId}</span></td>
+          <td>${rData.ownerName || 'Bilinmiyor'}</td>
+          <td>
+            <button class="danger" onclick='deleteRoom("${rId}")'>Odayı Kapat</button>
+          </td>
+        </tr>`;
+      });
+      html += '</table>';
+      container.innerHTML = html;
+    } catch (e) {
+      container.innerHTML = `<span style="color:#ff5252">Hata: ${e.message}</span>`;
+    }
+  };
 
-        window.loadAdminPublicRooms = function() {
-            const publicRef = ref(db, 'rooms');
-            get(publicRef).then((snapshot) => {
-                const container = document.getElementById('admin-public-rooms');
-                container.innerHTML = '';
-                if (!snapshot.exists()) {
-                    container.innerHTML = '<li>Aktif herkese açık oda bulunmuyor.</li>';
-                    return;
-                }
-                snapshot.forEach((childSnapshot) => {
-                    const roomId = childSnapshot.key;
-                    const joinUrl = `index.html?room=${roomId}`;
+  // Kullanıcı detaylarını ve tuale/dünya verilerini inceleme
+  window.inspectUser = async function(uid) {
+    const detail = document.getElementById('detailView');
+    detail.textContent = 'Bilgiler yükleniyor...';
+    try {
+      const snap = await get(ref(db, `users/${uid}`));
+      if (!snap.exists()) {
+        detail.textContent = 'Kullanıcı verisi bulunamadı.';
+        return;
+      }
+      const data = snap.val();
+      detail.textContent = JSON.stringify(data, null, 2);
+    } catch (e) {
+      detail.textContent = `Hata: ${e.message}`;
+    }
+  };
 
-                    let li = document.createElement('li');
-                    li.style.display = 'flex';
-                    li.style.justifyContent = 'space-between';
-                    li.style.alignItems = 'center';
-                    li.innerHTML = `
-                        <span><b>Oda ID:</b> <span style="color:#4CAF50;">${roomId}</span></span>
-                        <div>
-                            <a href="${joinUrl}" target="_blank"><button class="green">Odaya Katıl</button></a>
-                            <button class="orange" onclick="window.makeWorldPrivate('${roomId}')">Özel Yap</button>
-                            <button onclick="window.deleteGlobalRoom('${roomId}')">Dünyayı Sil</button>
-                        </div>
-                    `;
-                    container.appendChild(li);
-                });
-            });
-        }
+  // Kullanıcı silme
+  window.deleteUser = async function(uid) {
+    if (!confirm(`Bu kullanıcının (${uid}) tüm dünyalarını ve verilerini silmek istediğine emin misin?`)) return;
+    try {
+      await remove(ref(db, `users/${uid}`));
+      alert('Kullanıcı silindi.');
+      loadUsers();
+    } catch (e) {
+      alert(`Hata: ${e.message}`);
+    }
+  };
 
-        // Kullanıcının dünyalarını listeleyip tane tane form alanları ile açma
-        window.toggleUserWorlds = function(uid) {
-            const box = document.getElementById(`user-worlds-${uid}`);
-            if (box.style.display === 'block') {
-                box.style.display = 'none';
-                return;
-            }
-            box.style.display = 'block';
+  // Oda kapatma / silme
+  window.deleteRoom = async function(rId) {
+    if (!confirm('Bu odayı kapatmak istediğine emin misin?')) return;
+    try {
+      await remove(ref(db, `publicRooms/${rId}`));
+      await remove(ref(db, `rooms/${rId}`));
+      alert('Oda kapatıldı.');
+      loadRooms();
+    } catch (e) {
+      alert(`Hata: ${e.message}`);
+    }
+  };
+</script>
 
-            const userRef = ref(db, `users/${uid}`);
-            get(userRef).then((snapshot) => {
-                if (!snapshot.exists()) {
-                    box.innerHTML = '<p>Bu kullanıcıya ait veri yok.</p>';
-                    return;
-                }
-                const data = snapshot.val();
-                let html = '<h4>📁 Bu Kullanıcının Dünyaları:</h4>';
-                
-                let foundWorlds = false;
-                for (let key in data) {
-                    if (key === 'profile') continue;
-
-                    foundWorlds = true;
-                    let worldData = data[key] || {};
-                    const joinUrl = `index.html?room=${key}`;
-
-                    // Dünyanın özelliklerini güvenli şekilde alıyoruz
-                    let worldName = worldData.name || key;
-                    let isActive = worldData.active !== false ? "true" : "false";
-
-                    html += `
-                        <div class="world-item">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <span><b>Dünya ID:</b> <span style="color:#2196F3;">${key}</span></span>
-                                <div>
-                                    <a href="${joinUrl}" target="_blank"><button class="green">Odaya Katıl</button></a>
-                                    <button class="blue" onclick="window.toggleWorldSettings('${uid}', '${key}')">Tane Tane Düzenle</button>
-                                </div>
-                            </div>
-                            
-                            <!-- Tane Tane Ayar Formu -->
-                            <div id="world-settings-${uid}-${key}" class="world-settings-box">
-                                <div class="form-group">
-                                    <label>Dünya / Oda Adı:</label>
-                                    <input type="text" id="name-${uid}-${key}" value="${worldName}">
-                                </div>
-                                <div class="form-group">
-                                    <label>Aktiflik Durumu:</label>
-                                    <select id="active-${uid}-${key}">
-                                        <option value="true" ${isActive === "true" ? "selected" : ""}>Aktif (Açık)</option>
-                                        <option value="false" ${isActive === "false" ? "selected" : ""}>Pasif (Kapalı)</option>
-                                    </select>
-                                </div>
-                                
-                                <div>
-                                    <button class="green" onclick="window.saveWorldSettings('${uid}', '${key}')">Değişiklikleri Kaydet</button>
-                                    <button class="blue" onclick="window.makeWorldPublicDirect('${key}')">Herkese Aç</button>
-                                    <button class="orange" onclick="window.makeWorldPrivate('${key}')">Özel Yap</button>
-                                    <button onclick="window.deleteUserWorld('${uid}', '${key}')">Dünyayı Sil</button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }
-
-                if (!foundWorlds) {
-                    html += '<p style="color:#aaa;">Bu kullanıcının oluşturulmuş dünyası yok.</p>';
-                }
-
-                box.innerHTML = html;
-            });
-        }
-
-        window.toggleWorldSettings = function(uid, worldKey) {
-            const settingsBox = document.getElementById(`world-settings-${uid}-${worldKey}`);
-            settingsBox.style.display = (settingsBox.style.display === 'block') ? 'none' : 'block';
-        }
-
-        // Tane tane girilen form değerlerini kaydeden fonksiyon
-        window.saveWorldSettings = function(uid, worldKey) {
-            const newName = document.getElementById(`name-${uid}-${worldKey}`).value;
-            const newActive = document.getElementById(`active-${uid}-${worldKey}`).value === "true";
-
-            // Önce mevcut dünya verisini alıyoruz ki diğer bloklar / veriler silinmesin
-            const worldRef = ref(db, `users/${uid}/${worldKey}`);
-            get(worldRef).then((snapshot) => {
-                let worldData = snapshot.val() || {};
-                worldData.name = newName;
-                worldData.active = newActive;
-                worldData.updated = Date.now();
-
-                const updates = {};
-                updates[`users/${uid}/${worldKey}`] = worldData;
-                updates[`rooms/${worldKey}`] = worldData;
-
-                update(ref(db), updates).then(() => {
-                    alert("Dünya ayarları başarıyla kaydedildi!");
-                    loadAdminData();
-                }).catch((err) => {
-                    alert("Hata: " + err.message);
-                });
-            });
-        }
-
-        window.makeWorldPublicDirect = function(worldKey) {
-            const worldRef = ref(db, `rooms/${worldKey}`);
-            get(worldRef).then((snapshot) => {
-                let payload = snapshot.val() || { active: true, name: worldKey, updated: Date.now() };
-                
-                const updates = {};
-                updates[`rooms/${worldKey}`] = payload;
-                updates[`publicRooms/${worldKey}`] = payload;
-
-                update(ref(db), updates).then(() => {
-                    alert(`"${worldKey}" ID'li dünya herkese açık hale getirildi!`);
-                    loadAdminPublicRooms();
-                });
-            });
-        }
-
-        window.makeAllWorldsPublic = async function() {
-            if (!confirm("Sistemdeki tüm dünyalar herkese açık hale getirilsin mi?")) return;
-
-            const updates = {};
-            const userRef = ref(db, 'users');
-            const snapshot = await get(userRef);
-
-            if (!snapshot.exists()) {
-                alert("Kullanıcı bulunamadı.");
-                return;
-            }
-
-            let count = 0;
-            snapshot.forEach((userSnap) => {
-                const userData = userSnap.val() || {};
-                for (let key in userData) {
-                    if (key === 'profile') continue;
-                    let worldData = userData[key] || { active: true, name: key, updated: Date.now() };
-                    
-                    updates[`rooms/${key}`] = worldData;
-                    updates[`publicRooms/${key}`] = worldData;
-                    count++;
-                }
-            });
-
-            update(ref(db), updates).then(() => {
-                alert(`Başarılı! Toplam ${count} dünya herkese açıldı!`);
-                loadAdminPublicRooms();
-            });
-        }
-
-        window.makeWorldPrivate = function(worldKey) {
-            const updates = {};
-            updates[`rooms/${worldKey}`] = null;
-            updates[`publicRooms/${worldKey}`] = null;
-
-            update(ref(db), updates).then(() => {
-                alert("Oda özel konuma getirildi (listeden kaldırıldı)!");
-                loadAdminPublicRooms();
-            });
-        }
-
-        window.deleteGlobalRoom = function(roomId) {
-            if (confirm(`Bu odayı (${roomId}) tamamen silmek istiyor musun?`)) {
-                const updates = {};
-                updates[`rooms/${roomId}`] = null;
-                updates[`publicRooms/${roomId}`] = null;
-
-                update(ref(db), updates).then(() => {
-                    alert("Oda silindi!");
-                    loadAdminPublicRooms();
-                });
-            }
-        }
-
-        window.deleteUserWorld = function(uid, worldKey) {
-            if (confirm(`Bu dünyayı (${worldKey}) silmek istediğine emin misin?`)) {
-                const updates = {};
-                updates[`users/${uid}/${worldKey}`] = null;
-                updates[`rooms/${worldKey}`] = null;
-                updates[`publicRooms/${worldKey}`] = null;
-
-                update(ref(db), updates).then(() => {
-                    alert("Dünya silindi!");
-                    toggleUserWorlds(uid);
-                    loadAdminPublicRooms();
-                    loadAdminData();
-                });
-            }
-        }
-
-        window.sendResetEmail = function(email) {
-            if (!email || email.includes("Bulunamadı")) {
-                alert("Bu kullanıcının e-posta adresi kayıtlı değil.");
-                return;
-            }
-            sendPasswordResetEmail(auth, email).then(() => {
-                alert(`${email} adresine şifre sıfırlama talimatı gönderildi!`);
-            });
-        }
-
-        window.deleteUser = function(uid) {
-            if (confirm("Bu kullanıcıyı tamamen silmek istiyor musun?")) {
-                remove(ref(db, 'users/' + uid)).then(() => {
-                    alert("Kullanıcı silindi!");
-                    loadAdminData();
-                });
-            }
-        }
-    </script>
 </body>
 </html>
