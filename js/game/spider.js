@@ -169,3 +169,26 @@ setInterval(() => {   // diğerleri: oku ve çiz
     for (const [id, g] of remote) if (!(id in v)) { ob.remove(g); remote.delete(id); }
   });
 }, 1500);
+
+export function sendSpiderHit(dx, dy, dz, d) {
+  const k = rkey();
+  if (!k) return;
+  update(ref(db, 'rooms/' + k + '/spiderhits/' + uid), { dx, dy, dz, d, px: P.x, py: P.y, pz: P.z, n: Date.now() }).catch(() => {});
+}
+
+let hitKey = '';
+setInterval(() => {   // yönetici: gelen vuruşları uygula
+  const k = rkey();
+  if (!k || !mine() || hitKey === k) return;
+  hitKey = k;
+  onValue(ref(db, 'rooms/' + k + '/spiderhits'), s => {
+    s.forEach(c => {
+      const v = c.val();
+      if (!v || Date.now() - v.n > 1500 || c.key === uid) return;
+      const ox = P.x, oy = P.y, oz = P.z;
+      P.x = v.px; P.y = v.py; P.z = v.pz;   // vuranın konumundan hesapla
+      hitSpider(v.dx, v.dy, v.dz, v.d);
+      P.x = ox; P.y = oy; P.z = oz;
+    });
+  });
+}, 1500);
