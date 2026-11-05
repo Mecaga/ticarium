@@ -138,3 +138,34 @@ setInterval(() => {
   });
   roomUnsub = [offs, pl];
 }, 2000);
+
+// ---- Örümcek senkronu ----
+const remote = new Map();   // başkasının cihazında yönetilen örümcekler (sadece çizim)
+const mine = () => G.room && (G.room.solo || G.room.sim);
+const rkey = () => G.room && !G.room.solo && G.room.code;
+
+setInterval(() => {   // yönetici: konumları yaz
+  const k = rkey();
+  if (!k || !mine()) return;
+  const o = {};
+  spiders.forEach((s, i) => { o['s' + i] = { x: +s.x.toFixed(2), y: +s.y.toFixed(2), z: +s.z.toFixed(2), r: +s.g.rotation.y.toFixed(2) }; });
+  import('../core/firebase.js').then(f => f.set(f.ref(f.db, 'rooms/' + k + '/spiders'), spiders.length ? o : null).catch(() => {}));
+}, 500);
+
+let subKey = '';
+setInterval(() => {   // diğerleri: oku ve çiz
+  const k = rkey();
+  if (!k || mine()) { remote.forEach(g => ob.remove(g)); remote.clear(); subKey = ''; return; }
+  if (subKey === k) return;
+  subKey = k;
+  onValue(ref(db, 'rooms/' + k + '/spiders'), s => {
+    const v = s.val() || {};
+    for (const id in v) {
+      let g = remote.get(id);
+      if (!g) { g = mk(v[id].x, v[id].y, v[id].z).g; remote.set(id, g); }
+      g.position.set(v[id].x, v[id].y, v[id].z);
+      g.rotation.y = v[id].r;
+    }
+    for (const [id, g] of remote) if (!(id in v)) { ob.remove(g); remote.delete(id); }
+  });
+}, 1500);
