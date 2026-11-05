@@ -416,8 +416,8 @@ export function placeBlock() {
   if (t === N.OLTA) return useRod();
   if (t === N.CAKMAK_TASI) { if (!useFlint(target)) toast('Çakmaktaşını TNT\'ye bakarak kullan'); return; }
 
-  if (t === DOOR) return placeDoor();
-  if (t === BED) return placeBed();
+  if (t === N.KAPI_BASI || t === DOOR) return placeDoor();
+  if (t === N.YATAK_BASI || t === N.YATAK_SONU || t === BED) return placeBed();
   if (t === SHEARS) return useShears();
   if (isDisc(t)) return toast('Diski müzik kutusuna bakıp Koy ile yerleştir');
 
