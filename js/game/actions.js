@@ -487,6 +487,9 @@ export function attack() {
   const isSword = !!tl && tl[0] === 'sword' && has;
   const bonus = isSword ? tl[1] : 0;
   
+  if (G.room && !G.room.solo && !G.room.sim && G.online) {
+    import('./spider.js').then(m => m.sendSpiderHit && m.sendSpiderHit(dx, dy, dz, MOB_DMG + bonus));
+  }
   if (hitSpider(dx, dy, dz, MOB_DMG + bonus)) { sfx.hit(); if (isGear(sel) && has) afterWear(sel, isSword ? 1 : 2); return; }
 
   const m = findMob(ex, ey, ez, dx, dy, dz, 4.5);
