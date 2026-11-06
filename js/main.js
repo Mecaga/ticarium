@@ -190,3 +190,4 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 window.P = P; window.eco = eco; window.G = G;
+window.G = G; window.P = P; window.eco = eco;
