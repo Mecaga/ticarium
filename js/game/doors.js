@@ -21,8 +21,8 @@ addFlat(DOOR);
 
 export const EXTRA_DROPS = { [BEDH]: [] };
 for (let f = 0; f < 4; f++) {
-  for (const id of [LO + f, UP + f]) { BOXES[id] = PAN[f]; }
-  for (const id of [LOO + f, UPO + f]) { BOXES[id] = PAN[(f + 1) % 4]; }   // açılınca levha yan kenara döner
+  for (const id of [LO + f, UP + f]) BOXES[id] = PAN[f];
+  for (const id of [LOO + f, UPO + f]) BOXES[id] = PAN[(f + 1) % 4];   // açılınca levha yan kenara döner
   EXTRA_DROPS[LO + f] = [[DOOR, 1]]; EXTRA_DROPS[LOO + f] = [[DOOR, 1]];
   EXTRA_DROPS[UP + f] = []; EXTRA_DROPS[UPO + f] = [];
 }
