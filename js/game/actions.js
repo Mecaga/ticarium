@@ -483,7 +483,7 @@ export function attack() {
   if (o) o.swing();
 
   const sel = (isCreative() || (eco.inv[eco.sel] || 0) > 0) ? eco.sel : 0;
-  const tl = TOOLS[sel], has = (eco.inv[sel] || 0) > 0 || isCreative();
+  const tl = TOOLS[sel], has = (eco.inv[eco.sel] || 0) > 0 || isCreative();
   const isSword = !!tl && tl[0] === 'sword' && has;
   const bonus = isSword ? tl[1] : 0;
   
