@@ -39,6 +39,7 @@ import './game/eggs.js';
 import './game/library.js';
 import './game/chests.js';
 import './game/spider.js';
+import './game/arms.js'; // Yeni eklenen kol/ekipman modülü
 
 // Admin Paneli ve Oda Sahibi GM Modülü
 import './ui/admin.js';
@@ -190,4 +191,3 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 window.P = P; window.eco = eco; window.G = G;
-window.G = G; window.P = P; window.eco = eco;
