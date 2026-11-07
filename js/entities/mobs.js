@@ -7,7 +7,7 @@ import { P } from './player.js';
 export const mhooks = { send: null, remove: null };
 
 const KIND = {
-  cow: { drop: N.ET, dmin: 1, dmax: 3 },
+  cow: { drop: N.DERI, dmin: 1, dmax: 2 }, // İneklerden artık deri düşüyor
   sheep: { drop: N.YUN, dmin: 1, dmax: 2 },
   chicken: { drop: N.ET, dmin: 1, dmax: 1 }
 };
