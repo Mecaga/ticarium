@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>BlokDiyar</title>
-<link rel="stylesheet" href="css/style.css?v=58">
+<link rel="stylesheet" href="css/style.css?v=60">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
-<script src="js/dbg.js?v=58"></script>
+<script src="js/dbg.js?v=60"></script>
 </head>
 <body>
 <div id="flash"></div>
@@ -99,7 +99,7 @@
     </div>
     <div id="mErr"></div>
     <div id="mAuth"></div>
-    <div id="mVer" style="font-size:11px;opacity:.55;text-align:center;margin-top:4px">Sürüm 58</div>
+    <div id="mVer" style="font-size:11px;opacity:.55;text-align:center;margin-top:4px">Sürüm 60</div>
   </div>
 </div>
 
@@ -130,29 +130,30 @@ if (missing.length) {
   showErr('Eksik elemanlar: ' + missing.join(', '));
 } else {
   Promise.all([
-    import('./js/world/gen/flat.js?v=58').catch(function(){}),
-    import('./js/world/gen/sky.js?v=58').catch(function(){}),
-    import('./js/world/gen/normal.js?v=58').catch(function(){}),
-    import('./js/world/idtable.js?v=58').catch(function(){}),
-    import('./js/world/ids.js?v=58').catch(function(){}),
-    import('./js/game/spider.js?v=58').catch(function(){}),
-    import('./js/game/fishing.js?v=58').catch(function(){}),
-    import('./js/game/gmgrant.js?v=58').catch(function(){}),
-    import('./js/world/textures/util.js?v=58').catch(function(){}),
-    import('./js/world/textures/base_blocks.js?v=58').catch(function(){}),
-    import('./js/world/textures/functional_blocks.js?v=58').catch(function(){}),
-    import('./js/world/textures/building_blocks.js?v=58').catch(function(){}),
-    import('./js/world/textures/minerals.js?v=58').catch(function(){}),
-    import('./js/world/textures/flora_dye.js?v=58').catch(function(){}),
-    import('./js/world/textures/mobs.js?v=58').catch(function(){}),
-    import('./js/world/textures/player.js?v=58').catch(function(){}),
-    import('./js/world/textures/tools.js?v=58').catch(function(){}),
-    import('./js/world/textures/foods.js?v=58').catch(function(){}),
-    import('./js/world/textures/armor.js?v=58').catch(function(){}),
-    import('./js/world/textures/ui_items.js?v=58').catch(function(){}),
-    import('./js/world/textures/extra_items.js?v=58').catch(function(){})
+    import('./js/world/gen/flat.js?v=60').catch(function(){}),
+    import('./js/world/gen/sky.js?v=60').catch(function(){}),
+    import('./js/world/gen/normal.js?v=60').catch(function(){}),
+    import('./js/world/idtable.js?v=60').catch(function(){}),
+    import('./js/world/ids.js?v=60').catch(function(){}),
+    import('./js/game/spider.js?v=60').catch(function(){}),
+    import('./js/game/fishing.js?v=60').catch(function(){}),
+    import('./js/game/gmgrant.js?v=60').catch(function(){}),
+    import('./js/game/arms.js?v=60').catch(function(){}),
+    import('./js/world/textures/util.js?v=60').catch(function(){}),
+    import('./js/world/textures/base_blocks.js?v=60').catch(function(){}),
+    import('./js/world/textures/functional_blocks.js?v=60').catch(function(){}),
+    import('./js/world/textures/building_blocks.js?v=60').catch(function(){}),
+    import('./js/world/textures/minerals.js?v=60').catch(function(){}),
+    import('./js/world/textures/flora_dye.js?v=60').catch(function(){}),
+    import('./js/world/textures/mobs.js?v=60').catch(function(){}),
+    import('./js/world/textures/player.js?v=60').catch(function(){}),
+    import('./js/world/textures/tools.js?v=60').catch(function(){}),
+    import('./js/world/textures/foods.js?v=60').catch(function(){}),
+    import('./js/world/textures/armor.js?v=60').catch(function(){}),
+    import('./js/world/textures/ui_items.js?v=60').catch(function(){}),
+    import('./js/world/textures/extra_items.js?v=60').catch(function(){})
   ]).then(function() {
-    return import('./js/main.js?v=58');
+    return import('./js/main.js?v=60');
   }).catch(function (e) {
     showErr('Yükleme hatası: ' + (e.message || e));
   });
