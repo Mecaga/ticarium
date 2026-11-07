@@ -39,7 +39,8 @@ import './game/eggs.js';
 import './game/library.js';
 import './game/chests.js';
 import './game/spider.js';
-import './game/arms.js'; // Yeni eklenen kol/ekipman modülü
+import './game/arms.js'; // Kol/ekipman modülü
+import './game/bow.js';  // Yay ve ok modülü
 
 // Admin Paneli ve Oda Sahibi GM Modülü
 import './ui/admin.js';
