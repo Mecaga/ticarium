@@ -18,6 +18,7 @@ export const isTool = t => !!TOOLS[t];
 
 // Blok sertliği: [eli boş süre (sn), uygun alet, gereken alet seviyesi]
 const HARD = {
+  [N.RAY]: [0.2, 'pick', 0],
   [N.CIM]: [0.9, 'shovel', 0], [N.TOPRAK]: [0.8, 'shovel', 0], [N.TAS]: [4, 'pick', 0], [N.ODUN]: [3, 'axe', 0], [N.YAPRAK]: [0.3, null, 0],
   [N.KUM]: [0.8, 'shovel', 0], [N.TUGLA]: [4.5, 'pick', 0], [N.KAR]: [0.4, 'shovel', 0], [N.CAM]: [0.5, null, 0],
   [N.ALTIN_BLOK]: [6, 'pick', 3], [N.FIDAN]: [0.05, null, 0], [N.HUS_ODUN]: [3, 'axe', 0], [N.HUS_YAPRAK]: [0.3, null, 0],
