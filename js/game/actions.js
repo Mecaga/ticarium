@@ -399,11 +399,10 @@ function useDye(t) {
 
 export function placeBlock() {
   if (isDead() || uiOpen() || P.ghost) return;
-  const t = eco.sel;
-  if (!isCreative() && (eco.inv[t] || 0) < 1 && t !== N.KOVA) return;
 
-  if (isBook(t)) return openBook(t);
-  if (isEgg(t)) return useEgg(t);
+  // 1. Önce masaya, fırına, sandığa, kapıya veya yatağa tıklama kontrolü (ÖNEMLİ: Envanterden önce olmalı!)
+  if (isBook(eco.sel)) return openBook(eco.sel);
+  if (isEgg(eco.sel)) return useEgg(eco.sel);
   if (target) {
     const tb = get(target[0], target[1], target[2]);
     if (tb === CRAFT) return openCraft(3);
@@ -411,9 +410,12 @@ export function placeBlock() {
     if (tb === BED || tb === BEDH) return useBed(target);
     if (isDoorBlock(tb)) return toggleDoor(target);
     if (tb === CHEST) return openChest(target);
-    if (tb === JUKE) return useJuke(target, t);
+    if (tb === JUKE) return useJuke(target, eco.sel);
     if (tb === BPRINT) return useBlueprint(target);
   }
+
+  const t = eco.sel;
+  if (!isCreative() && (eco.inv[t] || 0) < 1 && t !== N.KOVA) return;
 
   if (t === N.OLTA) return useRod();
   if (t === N.YAY) return shoot();
