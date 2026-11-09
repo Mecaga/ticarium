@@ -14,7 +14,13 @@ import { BED } from './bed.js';
 
 export const DOOR = N.KAPI_BASI, BEDH = N.YATAK_BASI;
 const LO = 240, LOO = 244, UP = 248, UPO = 252;   // kapalı alt, açık alt, kapalı üst, açık üst (her biri 4 yön)
-const PAN = [[0, 0, 0, 1, 1, 0.1875], [0.8125, 0, 0, 1, 1, 1], [0, 0, 0.8125, 1, 1, 1], [0, 0, 0, 0.1875, 1, 1]];
+const PAN = [
+  [0, 0, 0, 1, 1, 0.1875],        // 0: kuzey kenar
+  [0.8125, 0, 0, 1, 1, 1],        // 1: doğu kenar
+  [0, 0, 0.8125, 1, 1, 1],        // 2: güney kenar
+  [0, 0, 0, 0.1875, 1, 1]         // 3: batı kenar
+];
+const OPEN = [3, 0, 1, 2];        // açılınca levhanın gideceği kenar (menteşe sabit kalır)
 const dc = tileOf('doorC');
 
 addFlat(DOOR);
@@ -22,7 +28,7 @@ addFlat(DOOR);
 export const EXTRA_DROPS = { [BEDH]: [] };
 for (let f = 0; f < 4; f++) {
   for (const id of [LO + f, UP + f]) BOXES[id] = PAN[f];
-  for (const id of [LOO + f, UPO + f]) BOXES[id] = PAN[(f + 1) % 4];   // açılınca levha yan kenara döner
+  for (const id of [LOO + f, UPO + f]) BOXES[id] = PAN[OPEN[f]];
   EXTRA_DROPS[LO + f] = [[DOOR, 1]]; EXTRA_DROPS[LOO + f] = [[DOOR, 1]];
   EXTRA_DROPS[UP + f] = []; EXTRA_DROPS[UPO + f] = [];
 }
