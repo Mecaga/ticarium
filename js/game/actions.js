@@ -481,7 +481,8 @@ export function attack() {
   lastAtk = now;
 
   const t = eco.sel;
-  if (!isCreative() && (eco.inv[t] || 0) < 1 && t !== N.KOVA) return;
+  
+  // DÜZELTME: Eşya kısıtlaması kaldırıldı. Boş elle veya blokla da vurulabilir!
 
   const cp = Math.cos(P.pitch);
   const ex = P.x, ey = P.y + 1.6, ez = P.z;
@@ -489,29 +490,38 @@ export function attack() {
   const o = G.online;
   if (o) o.swing();
 
-  const sel = (isCreative() || (eco.inv[eco.sel] || 0) > 0) ? eco.sel : 0;
-  const tl = TOOLS[sel], has = (eco.inv[eco.sel] || 0) > 0 || isCreative();
+  const has = isCreative() || (eco.inv[t] > 0);
+  const tl = TOOLS[t];
   const isSword = !!tl && tl[0] === 'sword' && has;
-  const bonus = isSword ? tl[1] : 0;
   
+  // Hasar hesabı: Kılıçsa kılıç gücü, aletse hafif bonus, boş el/bloksa net 1 hasar!
+  const bonus = isSword ? tl[1] : (tl ? 1 : 0);
+  const finalDmg = 1 + bonus;
+
   if (G.room && !G.room.solo && !G.room.sim && G.online) {
-    import('./spider.js').then(m => m.sendSpiderHit && m.sendSpiderHit(dx, dy, dz, MOB_DMG + bonus));
+    import('./spider.js').then(m => m.sendSpiderHit && m.sendSpiderHit(dx, dy, dz, MOB_DMG + finalDmg - 1));
   }
-  if (hitSpider(dx, dy, dz, MOB_DMG + bonus)) { sfx.hit(); if (isGear(sel) && has) afterWear(sel, isSword ? 1 : 2); return; }
+  if (hitSpider(dx, dy, dz, MOB_DMG + finalDmg - 1)) { 
+    sfx.hit(); 
+    if (isGear(t) && has) afterWear(t, isSword ? 1 : 2); 
+    return; 
+  }
 
   const m = findMob(ex, ey, ez, dx, dy, dz, 4.5);
   const p = (o && room.pvp) ? o.findPlayer(ex, ey, ez, dx, dy, dz, 4.5) : null;
+  
   if (p && (!m || p.t <= m.t)) {
-    o.hitPlayer(p.id, PVP_DMG + bonus);
+    o.hitPlayer(p.id, PVP_DMG + finalDmg - 1);
     sfx.hit();
-    if (isGear(sel) && has) afterWear(sel, isSword ? 1 : 2);
+    if (isGear(t) && has) afterWear(t, isSword ? 1 : 2);
     return toast('Vurdun!');
   }
+  
   if (m) {
     sfx.hit();
-    const dmg = MOB_DMG + bonus;
+    const dmg = MOB_DMG + finalDmg - 1;
     if (room.solo || room.sim) hurtMob(m.id, dmg, P.x, P.z);
     else if (o) o.sendMobHit(m.id, dmg, P.x, P.z);
-    if (isGear(sel) && has) afterWear(sel, isSword ? 1 : 2);
+    if (isGear(t) && has) afterWear(t, isSword ? 1 : 2);
   }
 }
