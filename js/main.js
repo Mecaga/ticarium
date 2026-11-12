@@ -42,7 +42,8 @@ import './game/spider.js';
 import './game/arms.js'; // Kol/ekipman modülü
 import './game/bow.js';  // Yay ve ok modülü
 import './game/rails.js'; // Ray ve vagon modülü
-import './game/doors.js'; // 🚪 Kapı ve Yatak Modülü (Eksik olan buydu!)
+import './game/doors.js'; // 🚪 Kapı ve Yatak Modülü
+import './game/redstone.js'; // 🔌 Şalter ve Redstone Bloğu Modülü (Paket 13)
 
 // Admin Paneli ve Oda Sahibi GM Modülü
 import './ui/admin.js';
