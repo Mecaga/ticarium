@@ -28,7 +28,8 @@ const HARD = {
   [N.DEMIR_BLOK]: [5, 'pick', 2], [N.ELMAS_BLOK]: [5, 'pick', 3], [76]: [0.05, null, 0],
   [N.SANDIK]: [2.5, 'axe', 0], [N.MUZIK_KUTUSU]: [2.5, 'axe', 0], [N.SEMA_BLOGU]: [2.5, 'axe', 0], [N.YATAK_BASI]: [0.8, null, 0], [N.YATAK_SONU]: [0.8, null, 0],
   [N.TNT]: [0.05, null, 0], [N.CAKIL]: [1.5, 'shovel', 0],
-  [N.SALTER]: [0.1, null, 0], [78]: [0.1, null, 0], [N.REDSTONE_BLOK]: [3, 'pick', 1] // 🔌 Paket 13: Şalter ve Redstone Blok Sertlikleri
+  [N.SALTER]: [0.1, null, 0], [78]: [0.1, null, 0], [N.REDSTONE_BLOK]: [3, 'pick', 1],
+  [N.HUNI]: [3, 'pick', 1] // 🔄 Paket 14: Huni sertliği (Demir kazma veya dengi ile kazılır)
 };
 for (let i = N.LAVANTA; i <= N.AMBER; i++) HARD[i] = [0.05, null, 0];
 for (let i = N.BUGDAY_0; i <= N.BUGDAY_3; i++) HARD[i] = [0.05, null, 0];
