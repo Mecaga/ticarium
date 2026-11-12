@@ -36,6 +36,7 @@ import { hitSpider } from './spider.js';
 import { useRod, useFlint } from './fishing.js';
 import { shoot } from './bow.js';
 import { placeRail, useCart } from './rails.js';
+import { placeLever, isLever, toggleLever } from './redstone.js'; // 🔌 Paket 13: Şalter entegrasyonu
 import * as content from './content.js';
 
 // Açlık puanları: et, elma, ekmek, pişmiş et, patates, havuç, domates, biber, soğan, çiğköfte vb.
@@ -88,6 +89,7 @@ function afterWear(t, amt) {
 
 // Blok kırılınca düşen eşyalar [[eşya, adet], ...]
 function dropsOf(t) {
+  if (t === 78) return [[N.SALTER, 1]]; // Açık şalter kırıldığında normal şalter eşyası düşer
   if (t >= N.KAR_1 && t <= N.KAR_3) return [[N.KAR, 1]];
   if (EXTRA_DROPS[t]) return EXTRA_DROPS[t];
   if (t === FARM) return [[N.TOPRAK, 1]];
@@ -400,7 +402,7 @@ function useDye(t) {
 export function placeBlock() {
   if (isDead() || uiOpen() || P.ghost) return;
 
-  // 1. Önce masaya, fırına, sandığa, kapıya veya yatağa tıklama kontrolü (ÖNEMLİ: Envanterden önce olmalı!)
+  // 1. Önce masaya, fırına, sandığa, kapıya, yatağa veya şaltere tıklama kontrolü
   if (isBook(eco.sel)) return openBook(eco.sel);
   if (isEgg(eco.sel)) return useEgg(eco.sel);
   if (target) {
@@ -412,6 +414,7 @@ export function placeBlock() {
     if (tb === CHEST) return openChest(target);
     if (tb === JUKE) return useJuke(target, eco.sel);
     if (tb === BPRINT) return useBlueprint(target);
+    if (isLever(tb)) return toggleLever(target); // 🔌 Şalter açma/kapatma tetikleyicisi
   }
 
   const t = eco.sel;
@@ -425,6 +428,7 @@ export function placeBlock() {
 
   if (t === N.KAPI_BASI || t === DOOR) return placeDoor();
   if (t === N.YATAK_BASI || t === N.YATAK_SONU || t === BED) return placeBed();
+  if (t === N.SALTER) return placeLever(); // 🔌 Şalter yerleştirme
   if (t === SHEARS) return useShears();
   if (isDisc(t)) return toast('Diski müzik kutusuna bakıp Koy ile yerleştir');
 
@@ -481,8 +485,6 @@ export function attack() {
   lastAtk = now;
 
   const t = eco.sel;
-  
-  // DÜZELTME: Eşya kısıtlaması kaldırıldı. Boş elle veya blokla da vurulabilir!
 
   const cp = Math.cos(P.pitch);
   const ex = P.x, ey = P.y + 1.6, ez = P.z;
