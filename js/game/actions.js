@@ -89,7 +89,7 @@ function afterWear(t, amt) {
 
 // Blok kırılınca düşen eşyalar [[eşya, adet], ...]
 function dropsOf(t) {
-  if (t === 78) return [[N.SALTER, 1]]; // Açık şalter kırıldığında normal şalter eşyası düşer
+  if (t === 78) return [[N.SALTER, 1]]; // 🔌 Açık şalter kırıldığında normal şalter eşyası düşer
   if (t >= N.KAR_1 && t <= N.KAR_3) return [[N.KAR, 1]];
   if (EXTRA_DROPS[t]) return EXTRA_DROPS[t];
   if (t === FARM) return [[N.TOPRAK, 1]];
