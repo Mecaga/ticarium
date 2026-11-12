@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>BlokDiyar</title>
-<link rel="stylesheet" href="css/style.css?v=64">
+<link rel="stylesheet" href="css/style.css?v=65">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
-<script src="js/dbg.js?v=64"></script>
+<script src="js/dbg.js?v=65"></script>
 </head>
 <body>
 <div id="flash"></div>
@@ -99,7 +99,7 @@
     </div>
     <div id="mErr"></div>
     <div id="mAuth"></div>
-    <div id="mVer" style="font-size:11px;opacity:.55;text-align:center;margin-top:4px">Sürüm 64</div>
+    <div id="mVer" style="font-size:11px;opacity:.55;text-align:center;margin-top:4px">Sürüm 65</div>
   </div>
 </div>
 
@@ -130,34 +130,35 @@ if (missing.length) {
   showErr('Eksik elemanlar: ' + missing.join(', '));
 } else {
   Promise.all([
-    import('./js/world/gen/flat.js?v=64').catch(function(){}),
-    import('./js/world/gen/sky.js?v=64').catch(function(){}),
-    import('./js/world/gen/normal.js?v=64').catch(function(){}),
-    import('./js/world/idtable.js?v=64').catch(function(){}),
-    import('./js/world/ids.js?v=64').catch(function(){}),
-    import('./js/game/spider.js?v=64').catch(function(){}),
-    import('./js/game/fishing.js?v=64').catch(function(){}),
-    import('./js/game/gmgrant.js?v=64').catch(function(){}),
-    import('./js/game/arms.js?v=64').catch(function(){}),
-    import('./js/game/bow.js?v=64').catch(function(){}),
-    import('./js/game/rails.js?v=64').catch(function(){}),
-    import('./js/game/doors.js?v=64').catch(function(){}),
-    import('./js/game/redstone.js?v=64').catch(function(){}), // 🔌 Şalter ve Redstone Bloğu Modülü eklendi
-    import('./js/world/textures/util.js?v=64').catch(function(){}),
-    import('./js/world/textures/base_blocks.js?v=64').catch(function(){}),
-    import('./js/world/textures/functional_blocks.js?v=64').catch(function(){}),
-    import('./js/world/textures/building_blocks.js?v=64').catch(function(){}),
-    import('./js/world/textures/minerals.js?v=64').catch(function(){}),
-    import('./js/world/textures/flora_dye.js?v=64').catch(function(){}),
-    import('./js/world/textures/mobs.js?v=64').catch(function(){}),
-    import('./js/world/textures/player.js?v=64').catch(function(){}),
-    import('./js/world/textures/tools.js?v=64').catch(function(){}),
-    import('./js/world/textures/foods.js?v=64').catch(function(){}),
-    import('./js/world/textures/armor.js?v=64').catch(function(){}),
-    import('./js/world/textures/ui_items.js?v=64').catch(function(){}),
-    import('./js/world/textures/extra_items.js?v=64').catch(function(){})
+    import('./js/world/gen/flat.js?v=65').catch(function(){}),
+    import('./js/world/gen/sky.js?v=65').catch(function(){}),
+    import('./js/world/gen/normal.js?v=65').catch(function(){}),
+    import('./js/world/idtable.js?v=65').catch(function(){}),
+    import('./js/world/ids.js?v=65').catch(function(){}),
+    import('./js/game/spider.js?v=65').catch(function(){}),
+    import('./js/game/fishing.js?v=65').catch(function(){}),
+    import('./js/game/gmgrant.js?v=65').catch(function(){}),
+    import('./js/game/arms.js?v=65').catch(function(){}),
+    import('./js/game/bow.js?v=65').catch(function(){}),
+    import('./js/game/rails.js?v=65').catch(function(){}),
+    import('./js/game/doors.js?v=65').catch(function(){}),
+    import('./js/game/redstone.js?v=65').catch(function(){}),
+    import('./js/game/hopper.js?v=65').catch(function(){}), // 🔄 Huni Modülü eklendi
+    import('./js/world/textures/util.js?v=65').catch(function(){}),
+    import('./js/world/textures/base_blocks.js?v=65').catch(function(){}),
+    import('./js/world/textures/functional_blocks.js?v=65').catch(function(){}),
+    import('./js/world/textures/building_blocks.js?v=65').catch(function(){}),
+    import('./js/world/textures/minerals.js?v=65').catch(function(){}),
+    import('./js/world/textures/flora_dye.js?v=65').catch(function(){}),
+    import('./js/world/textures/mobs.js?v=65').catch(function(){}),
+    import('./js/world/textures/player.js?v=65').catch(function(){}),
+    import('./js/world/textures/tools.js?v=65').catch(function(){}),
+    import('./js/world/textures/foods.js?v=65').catch(function(){}),
+    import('./js/world/textures/armor.js?v=65').catch(function(){}),
+    import('./js/world/textures/ui_items.js?v=65').catch(function(){}),
+    import('./js/world/textures/extra_items.js?v=65').catch(function(){})
   ]).then(function() {
-    return import('./js/main.js?v=64');
+    return import('./js/main.js?v=65');
   }).catch(function (e) {
     showErr('Yükleme hatası: ' + (e.message || e));
   });
