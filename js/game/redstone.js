@@ -8,6 +8,7 @@ import { G } from '../core/state.js';
 import { isCreative } from './creative.js';
 import { recordChange } from './progress.js';
 import { sfx } from '../core/sound.js';
+import { isDoorBlock, setDoor } from './doors.js'; // 🔌 Paket 14: Kapı modülü entegrasyonu
 
 export const LEVER_ON = 78;   // açık şalter (sadece blok)
 
@@ -40,9 +41,21 @@ export function placeLever() {
 }
 
 export function isLever(t) { return t === N.SALTER || t === LEVER_ON; }
+
 export function toggleLever(p) {
   const [x, y, z] = p, on = get(x, y, z) === LEVER_ON, nt = on ? N.SALTER : LEVER_ON;
   set(x, y, z, nt); commit(x, y, z, nt);
-  sfx.place(); rebuild();
+  sfx.place(); 
+  powerDoors(p, !on); // 🔌 Şalter açılıp kapandığında 3 blok içindeki kapılara sinyal gönderir
+  rebuild();
   toast(on ? 'Şalter kapalı' : '🔴 Şalter açık');
-    }
+}
+
+// Şalter değişince 3 blok içindeki kapıları aynı duruma getirir
+export function powerDoors(p, on) {
+  const [x, y, z] = p;
+  for (let dx = -3; dx <= 3; dx++) for (let dy = -2; dy <= 2; dy++) for (let dz = -3; dz <= 3; dz++) {
+    const bx = x + dx, by = y + dy, bz = z + dz;
+    if (isDoorBlock(get(bx, by, bz))) setDoor([bx, by, bz], on);
+  }
+}
