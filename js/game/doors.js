@@ -75,6 +75,16 @@ export function toggleDoor(t) {
   sfx.place(); rebuild();
 }
 
+// 🔌 Paket 14: Şalterden gelen isteğe göre kapıyı açık/kapalı konuma getiren fonksiyon
+export function setDoor(t, wantOpen) {
+  let y = t[1];
+  if (get(t[0], y, t[2]) >= UP) y--;
+  const lo = get(t[0], y, t[2]);
+  if (lo < LO || lo >= UP) return;
+  if ((lo >= LOO) === wantOpen) return;
+  toggleDoor([t[0], y, t[2]]);
+}
+
 export function placeBed() {
   if (!prev) return;
   const [x, y, z] = prev;
