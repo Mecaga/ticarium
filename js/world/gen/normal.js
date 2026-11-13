@@ -12,7 +12,7 @@ export function genNormal(c, X) {
       if (y === 0) t = BEDROCK;
       else if (y === 1 && hash(x, z, seed + 17) < 0.5) t = BEDROCK;
       else if (y === h) t = h <= SEA ? N.KUM : h >= SNOW_H ? N.KAR : N.CIM;
-      else if (y >= h - 2) t = h <= SEA ? N.KUM : N.TOPRAK;
+      else if (y >= h - 2) t = h <= SEA ? ((y === h - 2 && hash(x, z, seed + 40) < 0.5) ? N.KIL_BLOK : N.KUM) : N.TOPRAK; // 🧱 Paket 15: Su/göl tabanında kumun altında kil bloğu oluşumu
       else {
         t = N.TAS;
         if (y >= 2 && y <= h - 3) {
