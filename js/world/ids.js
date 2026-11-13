@@ -29,7 +29,7 @@ const ATLA = [
   'KIRPI_BALIGI', 'BALON_BALIGI', 'PISMIS_SOMON', 'PISMIS_HAMSI', 'PISMIS_BALON_BALIGI', 'RENK_KITABI', 'DEFTER', 'YENILEYICI',
   'TNT', 'OLTA', 'CANTA_BOGCA', 'ALTIN_MIGFER', 'ALTIN_ZIRH', 'ALTIN_PANTOLON', 
   'ALTIN_BOT', 'AKASYA_ODUN', 'AKASYA_YAPRAK', 'BUYUK_ORMAN_ODUN', 'BUYUK_ORMAN_YAPRAK', 'SAMANLIK', 'ORUMCEK_YUMURTASI'
-  // 🔄 HUNI ATLA listesinden çıkarıldı!
+  // KIL_BLOK, KIL ve PISMIS_TUGLA clay.js'te kayıtlı olduğu için ATLA'ya gerek yok.
 ];
 
 export function denetle() {
