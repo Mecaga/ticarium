@@ -18,7 +18,7 @@ export const N = {
   // --- Malzemeler 60-85 ---
   TAHTA: 60, CUBUK: 61, CALISMA_MASASI: 62, BUGDAY_TOHUMU: 63, BUGDAY: 64, EKMEK: 65, IP: 66, DERI: 67,
   SEKER_KAMISI: 68, KAGIT: 69, SEKER: 70, CAKMAK_TASI: 71,
-  KIL_BLOK: 72, KIL: 73, PISMIS_TUGLA: 74, // 🧱 Paket 15: Kil, Kil Blok ve Pişmiş Tuğla Eklendi
+  KIL_BLOK: 72, KIL: 73, PISMIS_TUGLA: 74, // 🧱 Paket 15: Kil, Kil Blok ve Pişmiş Tuğla Eklendi (Çakışmasız aralık)
   OCAK: 80, KOMUR: 81, DEMIR_KULCE: 82, ALTIN_KULCE: 83, ELMAS: 84, PISMIS_ET: 85,
   
   // --- Yemek 90-116 ---
