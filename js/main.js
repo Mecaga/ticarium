@@ -44,7 +44,8 @@ import './game/bow.js';  // Yay ve ok modülü
 import './game/rails.js'; // Ray ve vagon modülü
 import './game/doors.js'; // 🚪 Kapı ve Yatak Modülü
 import './game/redstone.js'; // 🔌 Şalter ve Redstone Bloğu Modülü
-import './game/hopper.js'; // 🔄 Huni Modülü (Paket 14)
+import './game/hopper.js'; // 🔄 Huni Modülü
+import './game/clay.js'; // 🧱 Kil ve Tuğla Modülü (Paket 15)
 
 // Admin Paneli ve Oda Sahibi GM Modülü
 import './ui/admin.js';
