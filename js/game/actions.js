@@ -36,7 +36,7 @@ import { hitSpider } from './spider.js';
 import { useRod, useFlint } from './fishing.js';
 import { shoot } from './bow.js';
 import { placeRail, useCart } from './rails.js';
-import { placeLever, isLever, toggleLever } from './redstone.js'; // 🔌 Paket 13: Şalter entegrasyonu
+import { placeLever, isLever, toggleLever } from './redstone.js';
 import * as content from './content.js';
 
 // Açlık puanları: et, elma, ekmek, pişmiş et, patates, havuç, domates, biber, soğan, çiğköfte vb.
@@ -89,7 +89,8 @@ function afterWear(t, amt) {
 
 // Blok kırılınca düşen eşyalar [[eşya, adet], ...]
 function dropsOf(t) {
-  if (t === 78) return [[N.SALTER, 1]]; // 🔌 Açık şalter kırıldığında normal şalter eşyası düşer
+  if (t === 78) return [[N.SALTER, 1]]; // Açık şalter kırıldığında normal şalter eşyası düşer
+  if (t === N.KIL_BLOK) return [[N.KIL, 4]]; // 🧱 Paket 15: Kil blok kırılınca 4 adet kil eşyası düşer
   if (t >= N.KAR_1 && t <= N.KAR_3) return [[N.KAR, 1]];
   if (EXTRA_DROPS[t]) return EXTRA_DROPS[t];
   if (t === FARM) return [[N.TOPRAK, 1]];
@@ -414,7 +415,7 @@ export function placeBlock() {
     if (tb === CHEST) return openChest(target);
     if (tb === JUKE) return useJuke(target, eco.sel);
     if (tb === BPRINT) return useBlueprint(target);
-    if (isLever(tb)) return toggleLever(target); // 🔌 Şalter açma/kapatma tetikleyicisi
+    if (isLever(tb)) return toggleLever(target);
   }
 
   const t = eco.sel;
@@ -428,7 +429,7 @@ export function placeBlock() {
 
   if (t === N.KAPI_BASI || t === DOOR) return placeDoor();
   if (t === N.YATAK_BASI || t === N.YATAK_SONU || t === BED) return placeBed();
-  if (t === N.SALTER) return placeLever(); // 🔌 Şalter yerleştirme
+  if (t === N.SALTER) return placeLever();
   if (t === SHEARS) return useShears();
   if (isDisc(t)) return toast('Diski müzik kutusuna bakıp Koy ile yerleştir');
 
