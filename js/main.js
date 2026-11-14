@@ -46,7 +46,8 @@ import './game/doors.js'; // 🚪 Kapı ve Yatak Modülü
 import './game/redstone.js'; // 🔌 Şalter ve Redstone Bloğu Modülü
 import './game/hopper.js'; // 🔄 Huni Modülü
 import './game/clay.js'; // 🧱 Kil ve Tuğla Modülü
-import './game/stairs.js'; // 🪜 Basamak ve Merdiven Modülü (Paket 16)
+import './game/stairs.js'; // 🪜 Basamak ve Merdiven Modülü
+import './game/undead.js'; // 🧟 Zombi ve İskelet Modülü (Paket 17)
 
 // Admin Paneli ve Oda Sahibi GM Modülü
 import './ui/admin.js';
