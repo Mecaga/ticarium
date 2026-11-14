@@ -37,6 +37,7 @@ import { useRod, useFlint } from './fishing.js';
 import { shoot } from './bow.js';
 import { placeRail, useCart } from './rails.js';
 import { placeLever, isLever, toggleLever } from './redstone.js';
+import { placeStair, isSlab, LADDER } from './stairs.js'; // 🪜 Paket 16: Basamak ve merdiven entegrasyonu
 import * as content from './content.js';
 
 // Açlık puanları: et, elma, ekmek, pişmiş et, patates, havuç, domates, biber, soğan, çiğköfte vb.
@@ -90,7 +91,7 @@ function afterWear(t, amt) {
 // Blok kırılınca düşen eşyalar [[eşya, adet], ...]
 function dropsOf(t) {
   if (t === 78) return [[N.SALTER, 1]]; // Açık şalter kırıldığında normal şalter eşyası düşer
-  if (t === N.KIL_BLOK) return [[N.KIL, 4]]; // 🧱 Paket 15: Kil blok kırılınca 4 adet kil eşyası düşer
+  if (t === N.KIL_BLOK) return [[N.KIL, 4]]; // Kil blok kırılınca 4 adet kil eşyası düşer
   if (t >= N.KAR_1 && t <= N.KAR_3) return [[N.KAR, 1]];
   if (EXTRA_DROPS[t]) return EXTRA_DROPS[t];
   if (t === FARM) return [[N.TOPRAK, 1]];
@@ -433,6 +434,8 @@ export function placeBlock() {
   if (t === SHEARS) return useShears();
   if (isDisc(t)) return toast('Diski müzik kutusuna bakıp Koy ile yerleştir');
 
+  if (isSlab(t) || t === LADDER) return placeStair(t); // 🪜 Basamak ve merdiven yerleştirme tetikleyicisi
+
   const tl = TOOLS[t];
   if (tl && tl[0] === 'hoe') return useHoe();
   if (isTool(t)) return toast('Bu bir alet: bloğa basılı tutup kır, kılıçla vur');
@@ -497,7 +500,7 @@ export function attack() {
   const tl = TOOLS[t];
   const isSword = !!tl && tl[0] === 'sword' && has;
   
-  // Hasar hesabı: Kılıçsa kılıç gücü, aletse hafif bonus, boş el/bloksa net 1 hasar!
+  // Hasar hesabı: Kılıçsa kılıç gücü, aletse hafif bonus, boş el/bloksa net 1 hasار!
   const bonus = isSword ? tl[1] : (tl ? 1 : 0);
   const finalDmg = 1 + bonus;
 
