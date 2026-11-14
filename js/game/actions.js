@@ -33,11 +33,12 @@ import { openChest, chestBroken, isChestOpen, CHEST } from './chests.js';
 import { openBook, isBook } from './library.js';
 import { isEgg, useEgg } from './eggs.js';
 import { hitSpider } from './spider.js';
+import { hitUndead, useBoneMeal } from './undead.js'; // 🧟 Paket 17: Zombi, iskelet ve kemik tozu modülü
 import { useRod, useFlint } from './fishing.js';
 import { shoot } from './bow.js';
 import { placeRail, useCart } from './rails.js';
 import { placeLever, isLever, toggleLever } from './redstone.js';
-import { placeStair, isSlab, LADDER } from './stairs.js'; // 🪜 Paket 16: Basamak ve merdiven entegrasyonu
+import { placeStair, isSlab, LADDER } from './stairs.js';
 import * as content from './content.js';
 
 // Açlık puanları: et, elma, ekmek, pişmiş et, patates, havuç, domates, biber, soğan, çiğköfte vb.
@@ -47,7 +48,7 @@ const FOOD = {
 };
 if (content.FOODX) Object.assign(FOOD, content.FOODX);
 
-const NOPLACE = new Set([STICK, WHEAT, COAL, INGOT_I, INGOT_G, GEM, N.OLTA, N.CAKMAK_TASI, N.YAY, N.OK, N.VAGON]);
+const NOPLACE = new Set([STICK, WHEAT, COAL, INGOT_I, INGOT_G, GEM, N.OLTA, N.CAKMAK_TASI, N.YAY, N.OK, N.VAGON, N.KEMIK, N.KEMIK_TOZU]);
 if (content.NOPX) content.NOPX.forEach(i => NOPLACE.add(i));
 
 const MOB_DMG = 3, PVP_DMG = 4;
@@ -434,7 +435,8 @@ export function placeBlock() {
   if (t === SHEARS) return useShears();
   if (isDisc(t)) return toast('Diski müzik kutusuna bakıp Koy ile yerleştir');
 
-  if (isSlab(t) || t === LADDER) return placeStair(t); // 🪜 Basamak ve merdiven yerleştirme tetikleyicisi
+  if (isSlab(t) || t === LADDER) return placeStair(t);
+  if (t === N.KEMIK_TOZU) return useBoneMeal(); // 🦴 Paket 17: Kemik tozu kullanımı
 
   const tl = TOOLS[t];
   if (tl && tl[0] === 'hoe') return useHoe();
@@ -500,12 +502,17 @@ export function attack() {
   const tl = TOOLS[t];
   const isSword = !!tl && tl[0] === 'sword' && has;
   
-  // Hasar hesabı: Kılıçsa kılıç gücü, aletse hafif bonus, boş el/bloksa net 1 hasار!
+  // Hasar hesabı: Kılıçsa kılıç gücü, aletse hafif bonus, boş el/bloksa net 1 hasar!
   const bonus = isSword ? tl[1] : (tl ? 1 : 0);
   const finalDmg = 1 + bonus;
 
   if (G.room && !G.room.solo && !G.room.sim && G.online) {
     import('./spider.js').then(m => m.sendSpiderHit && m.sendSpiderHit(dx, dy, dz, MOB_DMG + finalDmg - 1));
+  }
+  if (hitUndead(dx, dy, dz, MOB_DMG + bonus)) { 
+    sfx.hit(); 
+    if (isGear(t) && has) afterWear(t, isSword ? 1 : 2); 
+    return; 
   }
   if (hitSpider(dx, dy, dz, MOB_DMG + finalDmg - 1)) { 
     sfx.hit(); 
