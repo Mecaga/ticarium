@@ -9,6 +9,7 @@ import { G } from '../core/state.js';
 import { isCreative } from './creative.js';
 import { recordChange } from './progress.js';
 import { sfx } from '../core/sound.js';
+import { input } from '../ui/input.js'; // 🕹️ Doğru input modülü import edildi
 
 const SL = [
   [N.BASAMAK_MESE, 'Meşe basamak', 'woodSide', N.TAHTA],
@@ -57,7 +58,7 @@ let last = performance.now();
   if (!inLad) return;
   P.fallY = P.y;
   if (P.sneak) { P.vy = 0; return; }
-  const up = (window.__fwd || 0) > 0.2;
+  const up = (-input.jy > 0.2) || input.keys.KeyW; // 🕹️ Joystick veya W tuşu kontrolü
   P.vy = up ? 4 : -1.5;
   P.y += P.vy * dt;
 })(last);
