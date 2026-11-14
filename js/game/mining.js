@@ -30,7 +30,11 @@ const HARD = {
   [N.TNT]: [0.05, null, 0], [N.CAKIL]: [1.5, 'shovel', 0],
   [N.SALTER]: [0.1, null, 0], [78]: [0.1, null, 0], [N.REDSTONE_BLOK]: [3, 'pick', 1],
   [N.HUNI]: [3, 'pick', 1],
-  [N.KIL_BLOK]: [0.9, 'shovel', 0] // 🧱 Paket 15: Kil blok sertliği
+  [N.KIL_BLOK]: [0.9, 'shovel', 0],
+  [N.BASAMAK_MESE]: [1.5, 'axe', 0],
+  [N.BASAMAK_HUS]: [1.5, 'axe', 0],
+  [N.BASAMAK_TAS]: [2, 'pick', 0],
+  [N.TIRMANMA_MERDIVEN]: [0.3, null, 0] // 🪜 Paket 16: Basamak ve merdiven sertlikleri eklendi
 };
 for (let i = N.LAVANTA; i <= N.AMBER; i++) HARD[i] = [0.05, null, 0];
 for (let i = N.BUGDAY_0; i <= N.BUGDAY_3; i++) HARD[i] = [0.05, null, 0];
@@ -126,7 +130,7 @@ export function updateMining(dt, active) {
   if (M.cool > 0) M.cool -= dt;
   if (!M.down || !active || isDead() || !target) { if (M.key || M.sent) stop(); return; }
   const [x, y, z] = target;
-  const t = get(x, y, z);
+  let t = get(x, y, z);
   if (t === BEDROCK && !isCreative()) {
     if (M.cool <= 0) { doBreak(true); M.cool = 0.8; }
     stop();
