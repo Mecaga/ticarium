@@ -33,7 +33,7 @@ import { openChest, chestBroken, isChestOpen, CHEST } from './chests.js';
 import { openBook, isBook } from './library.js';
 import { isEgg, useEgg } from './eggs.js';
 import { hitSpider } from './spider.js';
-import { hitUndead, useBoneMeal } from './undead.js'; // 🧟 Paket 17: Zombi, iskelet ve kemik tozu modülü
+import { hitUndead, useBoneMeal, sendUndeadHit } from './undead.js'; // 🧟 Paket 17 & 18: Zombi vuruş senkronizasyonu eklendi
 import { useRod, useFlint } from './fishing.js';
 import { shoot } from './bow.js';
 import { placeRail, useCart } from './rails.js';
@@ -436,7 +436,7 @@ export function placeBlock() {
   if (isDisc(t)) return toast('Diski müzik kutusuna bakıp Koy ile yerleştir');
 
   if (isSlab(t) || t === LADDER) return placeStair(t);
-  if (t === N.KEMIK_TOZU) return useBoneMeal(); // 🦴 Paket 17: Kemik tozu kullanımı
+  if (t === N.KEMIK_TOZU) return useBoneMeal();
 
   const tl = TOOLS[t];
   if (tl && tl[0] === 'hoe') return useHoe();
@@ -509,6 +509,12 @@ export function attack() {
   if (G.room && !G.room.solo && !G.room.sim && G.online) {
     import('./spider.js').then(m => m.sendSpiderHit && m.sendSpiderHit(dx, dy, dz, MOB_DMG + finalDmg - 1));
   }
+
+  // 🧟 Paket 18: Çok oyunculu modda undead vuruş sinyali gönder
+  if (G.room && !G.room.solo && !G.room.sim) {
+    sendUndeadHit(dx, dy, dz, MOB_DMG + bonus);
+  }
+
   if (hitUndead(dx, dy, dz, MOB_DMG + bonus)) { 
     sfx.hit(); 
     if (isGear(t) && has) afterWear(t, isSword ? 1 : 2); 
