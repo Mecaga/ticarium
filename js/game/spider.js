@@ -192,3 +192,12 @@ setInterval(() => {   // yönetici: gelen vuruşları uygula
     });
   });
 }, 1500);
+
+// --- Paket 19: Uzak cihazda gece yakındaki örümceğin oyuncuya hasar vermesi ---
+setInterval(() => {
+  if (!G.room || G.room.solo || mine() || P.ghost || !night() || isCreative()) return;
+  remote.forEach(g => {
+    const d = Math.hypot(P.x - g.position.x, P.z - g.position.z);
+    if (d < 1.4 && Math.abs(P.y - g.position.y) < 2) hurt(2, { name: 'Örümcek' });
+  });
+}, 1000);
