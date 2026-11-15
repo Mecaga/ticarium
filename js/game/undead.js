@@ -163,8 +163,8 @@ setInterval(() => {   // diğerleri: oku ve çiz
     for (const id in v) {
       let g = remoteU.get(id);
       if (!g) { g = build(v[id].k === 0 ? 'zombi' : 'iskelet'); grp.add(g); remoteU.set(id, g); }
-      g.position.set(v[id].x, v[id].y, v[id].z);
-      g.rotation.y = v[id].r;
+      g.userData.tx = v[id].x; g.userData.ty = v[id].y; g.userData.tz = v[id].z; g.userData.tr = v[id].r;
+      if (!g.userData.init) { g.position.set(v[id].x, v[id].y, v[id].z); g.userData.init = 1; }
     }
     for (const [id, g] of remoteU) if (!(id in v)) { grp.remove(g); remoteU.delete(id); }
   });
@@ -201,3 +201,16 @@ setInterval(() => {
     if (d < 1.3 && Math.abs(P.y - g.position.y) < 2) hurt(2, { name: 'Zombi' });
   });
 }, 1000);
+
+// --- Uzak cihaz için yumuşak hareket (smooth) döngüsü ---
+(function smooth(t) {
+  requestAnimationFrame(smooth);
+  remoteU.forEach(g => {
+    const u = g.userData;
+    if (u.tx === undefined) return;
+    g.position.x += (u.tx - g.position.x) * 0.2;
+    g.position.y += (u.ty - g.position.y) * 0.2;
+    g.position.z += (u.tz - g.position.z) * 0.2;
+    g.rotation.y += (u.tr - g.rotation.y) * 0.2;
+  });
+})();
