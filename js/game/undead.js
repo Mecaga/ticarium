@@ -192,3 +192,12 @@ setInterval(() => {   // yönetici: gelen vuruşları uygula
     });
   });
 }, 1500);
+
+// --- Paket 19: Uzak cihazda yakındaki canavarın oyuncuya hasar vermesi ---
+setInterval(() => {
+  if (!G.room || G.room.solo || mineU() || P.ghost || isCreative()) return;
+  remoteU.forEach(g => {
+    const d = Math.hypot(P.x - g.position.x, P.z - g.position.z);
+    if (d < 1.3 && Math.abs(P.y - g.position.y) < 2) hurt(2, { name: 'Zombi' });
+  });
+}, 1000);
