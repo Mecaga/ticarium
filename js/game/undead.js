@@ -13,6 +13,8 @@ import { isCreative } from './creative.js';
 import { toast, drawHud } from '../ui/ui.js';
 import { recordChange } from './progress.js';
 import { sfx } from '../core/sound.js';
+import { db, ref, set as fbSet, update, onValue } from '../core/firebase.js';
+import { uid } from '../core/auth.js';
 
 function reg(id, name, color, base, tile, cat) {
   TYPES[id] = { name, color, base };
@@ -135,4 +137,58 @@ export function useBoneMeal() {
   if (!window.__boneMeal || !window.__boneMeal()) return toast('Kemik tozunu büyüyen ekine bakarak kullan');
   if (!isCreative()) eco.inv[N.KEMIK_TOZU]--;
   sfx.place(); drawHud();
+}
+
+// --- Paket 18: Çok oyunculu zombi ve iskelet senkronizasyonu ---
+const rkey = () => G.room && !G.room.solo && G.room.code;
+const mineU = () => G.room && (G.room.solo || G.room.sim);
+const remoteU = new Map();
+
+setInterval(() => {   // yönetici: konumları yaz
+  const k = rkey();
+  if (!k || !mineU()) return;
+  const o = {};
+  mobs.forEach((m, i) => { o['u' + i] = { x: +m.x.toFixed(2), y: +m.y.toFixed(2), z: +m.z.toFixed(2), r: +m.g.rotation.y.toFixed(2), k: m.kind === 'zombi' ? 0 : 1 }; });
+  fbSet(ref(db, 'rooms/' + k + '/undead'), mobs.length ? o : null).catch(() => {});
+}, 500);
+
+let subU = '';
+setInterval(() => {   // diğerleri: oku ve çiz
+  const k = rkey();
+  if (!k || mineU()) { remoteU.forEach(g => grp.remove(g)); remoteU.clear(); subU = ''; return; }
+  if (subU === k) return;
+  subU = k;
+  onValue(ref(db, 'rooms/' + k + '/undead'), s => {
+    const v = s.val() || {};
+    for (const id in v) {
+      let g = remoteU.get(id);
+      if (!g) { g = build(v[id].k === 0 ? 'zombi' : 'iskelet'); grp.add(g); remoteU.set(id, g); }
+      g.position.set(v[id].x, v[id].y, v[id].z);
+      g.rotation.y = v[id].r;
     }
+    for (const [id, g] of remoteU) if (!(id in v)) { grp.remove(g); remoteU.delete(id); }
+  });
+}, 1500);
+
+export function sendUndeadHit(dx, dy, dz, d) {
+  const k = rkey();
+  if (!k) return;
+  update(ref(db, 'rooms/' + k + '/undeadhits/' + uid), { dx, dy, dz, d, px: P.x, py: P.y, pz: P.z, n: Date.now() }).catch(() => {});
+}
+
+let hitU = '';
+setInterval(() => {   // yönetici: gelen vuruşları uygula
+  const k = rkey();
+  if (!k || !mineU() || hitU === k) return;
+  hitU = k;
+  onValue(ref(db, 'rooms/' + k + '/undeadhits'), s => {
+    s.forEach(c => {
+      const v = c.val();
+      if (!v || Date.now() - v.n > 1500 || c.key === uid) return;
+      const ox = P.x, oy = P.y, oz = P.z;
+      P.x = v.px; P.y = v.py; P.z = v.pz;
+      hitUndead(v.dx, v.dy, v.dz, v.d);
+      P.x = ox; P.y = oy; P.z = oz;
+    });
+  });
+}, 1500);
