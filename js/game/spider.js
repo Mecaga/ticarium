@@ -163,8 +163,8 @@ setInterval(() => {   // diğerleri: oku ve çiz
     for (const id in v) {
       let g = remote.get(id);
       if (!g) { g = mk(v[id].x, v[id].y, v[id].z).g; remote.set(id, g); }
-      g.position.set(v[id].x, v[id].y, v[id].z);
-      g.rotation.y = v[id].r;
+      g.userData.tx = v[id].x; g.userData.ty = v[id].y; g.userData.tz = v[id].z; g.userData.tr = v[id].r;
+      if (!g.userData.init) { g.position.set(v[id].x, v[id].y, v[id].z); g.userData.init = 1; }
     }
     for (const [id, g] of remote) if (!(id in v)) { ob.remove(g); remote.delete(id); }
   });
@@ -173,31 +173,4 @@ setInterval(() => {   // diğerleri: oku ve çiz
 export function sendSpiderHit(dx, dy, dz, d) {
   const k = rkey();
   if (!k) return;
-  update(ref(db, 'rooms/' + k + '/spiderhits/' + uid), { dx, dy, dz, d, px: P.x, py: P.y, pz: P.z, n: Date.now() }).catch(() => {});
-}
-
-let hitKey = '';
-setInterval(() => {   // yönetici: gelen vuruşları uygula
-  const k = rkey();
-  if (!k || !mine() || hitKey === k) return;
-  hitKey = k;
-  onValue(ref(db, 'rooms/' + k + '/spiderhits'), s => {
-    s.forEach(c => {
-      const v = c.val();
-      if (!v || Date.now() - v.n > 1500 || c.key === uid) return;
-      const ox = P.x, oy = P.y, oz = P.z;
-      P.x = v.px; P.y = v.py; P.z = v.pz;   // vuranın konumundan hesapla
-      hitSpider(v.dx, v.dy, v.dz, v.d);
-      P.x = ox; P.y = oy; P.z = oz;
-    });
-  });
-}, 1500);
-
-// --- Paket 19: Uzak cihazda gece yakındaki örümceğin oyuncuya hasar vermesi ---
-setInterval(() => {
-  if (!G.room || G.room.solo || mine() || P.ghost || !night() || isCreative()) return;
-  remote.forEach(g => {
-    const d = Math.hypot(P.x - g.position.x, P.z - g.position.z);
-    if (d < 1.4 && Math.abs(P.y - g.position.y) < 2) hurt(2, { name: 'Örümcek' });
-  });
-}, 1000);
+  update(
