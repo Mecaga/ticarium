@@ -59,6 +59,9 @@ export function denetle() {
 }
 
 setTimeout(() => {
+  // Kategorilerdeki mükerrer (tekrar eden) ID'leri temizle
+  CATS.forEach(c => { c[1] = [...new Set(c[1])]; });
+
   const sil = yetimTarifleriSil();
   if (sil.length) console.warn('ids.js: eski eşyaya ait ' + sil.length + ' yetim tarif silindi (çıktı numaraları: ' + sil.join(', ') + ')');
   const s = denetle();
