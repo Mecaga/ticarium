@@ -146,7 +146,7 @@ if (missing.length) {
     import('./js/game/hopper.js?v=70').catch(function(){}),
     import('./js/game/clay.js?v=70').catch(function(){}),
     import('./js/game/stairs.js?v=70').catch(function(){}),
-    import('./js/game/undead.js?v=70').catch(function(){}), // 🧟 Zombi ve İskelet Modülü
+    import('./js/game/undead.js?v=70').catch(function(){}),
     import('./js/world/textures/util.js?v=70').catch(function(){}),
     import('./js/world/textures/base_blocks.js?v=70').catch(function(){}),
     import('./js/world/textures/functional_blocks.js?v=70').catch(function(){}),
@@ -161,4 +161,11 @@ if (missing.length) {
     import('./js/world/textures/ui_items.js?v=70').catch(function(){}),
     import('./js/world/textures/extra_items.js?v=70').catch(function(){})
   ]).then(function() {
-    return import('./js/main.
+    return import('./js/main.js?v=70');
+  }).catch(function (e) {
+    showErr('Yükleme hatası: ' + (e.message || e));
+  });
+}
+</script>
+</body>
+</html>
