@@ -6,6 +6,7 @@ import { clock } from '../world/sky.js';
 import { toast } from '../ui/ui.js';
 import { tgtOpts } from '../world/world.js';
 import { toSpawn } from './death.js';
+import { db, ref, update } from '../core/firebase.js';
 
 const $ = id => document.getElementById(id);
 function mk(id, txt, css) {
@@ -72,7 +73,13 @@ function confetti() {
     setTimeout(() => d.remove(), 5000);
   }
 }
-const setTime = hr => { clock.off = (((hr - 6 + 24) % 24) / 24 * 480) - ((Date.now() / 1000) % 480); };
+
+const setTime = hr => {
+  const off = (((hr - 6 + 24) % 24) / 24 * 480) - ((Date.now() / 1000) % 480);
+  clock.off = off;
+  const r = G.room;
+  if (r && !r.solo && r.code) update(ref(db, 'rooms/' + r.code + '/time'), { off }).catch(() => {});
+};
 
 export function extraCmd(cmd) {
   if (cmd === '/gm2') {
@@ -80,8 +87,8 @@ export function extraCmd(cmd) {
     setGhost(true);
     return ['👻 Hayalet modu: kimse seni göremez, her yerden geçersin.', 'Normale dönmek için /gm1 ya da /gm0'];
   }
-  if (cmd === '/gunduz') { setTime(12); return ['☀️ Gündüz oldu (sadece sende)']; }
-  if (cmd === '/gece') { setTime(0); return ['🌙 Gece oldu (sadece sende)']; }
+  if (cmd === '/gunduz') { setTime(12); return ['☀️ Gündüz oldu (herkeste)']; }
+  if (cmd === '/gece') { setTime(0); return ['🌙 Gece oldu (herkeste)']; }
   if (cmd === '/ev') { toSpawn(); return ['🏠 Eve döndün']; }
   if (cmd === '/hiz') { P.fast = !P.fast; return [P.fast ? '⚡ Hız 2 kat' : 'Hız normal']; }
   if (cmd === '/konfeti') { confetti(); return ['🎉']; }
