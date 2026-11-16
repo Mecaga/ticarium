@@ -1,5 +1,5 @@
 import { N } from '../world/idtable.js';
-import { TYPES, CATS } from '../world/world.js';
+import { TYPES, CATS, solid } from '../world/world.js';
 import { FACE_TILES, tileOf, addFlat } from '../world/textures.js';
 import { eco } from './economy.js';
 import { RECIPES } from './recipes.js';
@@ -45,7 +45,7 @@ function mk(x, y, z) {
   }
   g.position.set(x, y, z);
   ob.add(g);
-  return { g, x, y, z, hp: 5, cd: 0 };
+  return { g, x, y, z, hp: 5, cd: 0, climb: 0 };
 }
 function spawnOne() {
   const a = Math.random() * 6.28, d = 14 + Math.random() * 10;
@@ -72,12 +72,28 @@ function tick(now) {
   import('../world/world.js').then(w => {
     for (const s of spiders) {
       const dx = P.x - s.x, dz = P.z - s.z, d = Math.hypot(dx, dz);
-      if (nt && d < 20 && d > 0.9 && !P.ghost && !isCreative()) {   // gece ve yaratıcı/hayalet değilse: saldırır
-        s.x += dx / d * 2.4 * dt; s.z += dz / d * 2.4 * dt;
+      if (nt && d < 20 && d > 0.9 && !P.ghost && !isCreative()) {   // gece ve yaratıcı/hayalet değilse: saldırır ve tırmanır
+        const ux = dx / (d || 1), uz = dz / (d || 1);
+        const fx = Math.floor(s.x + ux * 0.7), fz = Math.floor(s.z + uz * 0.7), fy = Math.floor(s.y);
+        const wall = solid(fx, fy, fz);
+        const roof = solid(Math.floor(s.x), fy + 2, Math.floor(s.z)) || solid(fx, fy + 2, fz);
+        if (wall && !roof) {
+          s.climb = Math.min((s.climb || 0) + 3 * dt, 60);
+          s.y += 3 * dt;
+        } else {
+          s.x += ux * 2.4 * dt; s.z += uz * 2.4 * dt;
+          if (!wall) s.climb = 0;
+        }
         s.g.rotation.y = Math.atan2(-dx, -dz);
       }
       const gy = w.surfaceY(Math.floor(s.x), Math.floor(s.z));
-      if (gy >= 0) s.y = gy + 1.05;
+      if (gy >= 0) {
+        if (!s.climb) s.y = gy + 1.05;
+        else if (s.y < gy + 1.05) s.y = gy + 1.05;
+      }
+      if (s.climb && !solid(Math.floor(s.x + (dx / (d || 1)) * 0.7), Math.floor(s.y), Math.floor(s.z + (dz / (d || 1)) * 0.7))) {
+        s.climb = 0;
+      }
       s.g.position.set(s.x, s.y, s.z);
       s.cd -= dt;
       if (nt && d < 1.4 && s.cd <= 0 && Math.abs(P.y - s.y) < 2 && !P.ghost && !isCreative()) { 
@@ -173,4 +189,44 @@ setInterval(() => {   // diğerleri: oku ve çiz
 export function sendSpiderHit(dx, dy, dz, d) {
   const k = rkey();
   if (!k) return;
-  update(
+  update(ref(db, 'rooms/' + k + '/spiderhits/' + uid), { dx, dy, dz, d, px: P.x, py: P.y, pz: P.z, n: Date.now() }).catch(() => {});
+}
+
+let hitKey = '';
+setInterval(() => {   // yönetici: gelen vuruşları uygula
+  const k = rkey();
+  if (!k || !mine() || hitKey === k) return;
+  hitKey = k;
+  onValue(ref(db, 'rooms/' + k + '/spiderhits'), s => {
+    s.forEach(c => {
+      const v = c.val();
+      if (!v || Date.now() - v.n > 1500 || c.key === uid) return;
+      const ox = P.x, oy = P.y, oz = P.z;
+      P.x = v.px; P.y = v.py; P.z = v.pz;   // vuranın konumundan hesapla
+      hitSpider(v.dx, v.dy, v.dz, v.d);
+      P.x = ox; P.y = oy; P.z = oz;
+    });
+  });
+}, 1500);
+
+// --- Paket 19: Uzak cihazda gece yakındaki örümceğin oyuncuya hasar vermesi ---
+setInterval(() => {
+  if (!G.room || G.room.solo || mine() || P.ghost || !night() || isCreative()) return;
+  remote.forEach(g => {
+    const d = Math.hypot(P.x - g.position.x, P.z - g.position.z);
+    if (d < 1.4 && Math.abs(P.y - g.position.y) < 2) hurt(2, { name: 'Örümcek' });
+  });
+}, 1000);
+
+// --- Uzak cihaz için yumuşak hareket (smooth) döngüsü ---
+(function smooth(t) {
+  requestAnimationFrame(smooth);
+  remote.forEach(g => {
+    const u = g.userData;
+    if (u.tx === undefined) return;
+    g.position.x += (u.tx - g.position.x) * 0.2;
+    g.position.y += (u.ty - g.position.y) * 0.2;
+    g.position.z += (u.tz - g.position.z) * 0.2;
+    g.rotation.y += (u.tr - g.rotation.y) * 0.2;
+  });
+})();
