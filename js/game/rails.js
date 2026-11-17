@@ -1,5 +1,5 @@
 import { N } from '../world/idtable.js';
-import { TYPES, CATS, BOXES, get, set, rebuild, prev, target, solid } from '../world/world.js';
+import { TYPES, CATS, BOXES, get, set, rebuild, prev, target, solid, isLoaded, TALL } from '../world/world.js';
 import { FACE_TILES, tileOf, addFlat } from '../world/textures.js';
 import { eco } from './economy.js';
 import { RECIPES } from './recipes.js';
@@ -9,6 +9,12 @@ import { G } from '../core/state.js';
 import { isCreative } from './creative.js';
 import { recordChange } from './progress.js';
 import { sfx } from '../core/sound.js';
+import { input } from '../ui/input.js';
+import { isDead } from '../entities/health.js';
+import { setSneak } from './modes.js';
+
+// Sadece blok olan numaralar: doğu-batı ray, vagonlu kuzey-güney ray, vagonlu doğu-batı ray
+export const RAY_X = 156, CART_Z = 157, CART_X = 158;
 
 function reg(id, name, color, base, tile, flat, cat) {
   TYPES[id] = { name, color, base };
@@ -19,41 +25,89 @@ function reg(id, name, color, base, tile, flat, cat) {
 }
 reg(N.RAY, 'Ray', 0x9a9aa0, 20, 'ingotI', false, 0);
 reg(N.VAGON, 'Vagon', 0xb0b0b8, 80, 'ironB', true, 3);
-BOXES[N.RAY] = [0, 0, 0, 1, 0.1, 1];   // ince levha: üstünden yürünür
+BOXES[N.RAY] = BOXES[RAY_X] = [0, 0, 0, 1, 0.1, 1];
+BOXES[CART_Z] = BOXES[CART_X] = [0.06, 0, 0.06, 0.94, 0.5, 0.94];
 
 const I = N.DEMIR_KULCE, S = N.CUBUK;
 RECIPES.push({ out: [N.RAY, 16], pat: [[I, 0, I], [I, S, I], [I, 0, I]] });
 RECIPES.push({ out: [N.VAGON, 1], pat: [[I, 0, I], [I, I, I]] });
 
 const commit = (x, y, z, t) => { recordChange(x, y, z, t); if (G.online) G.online.sendBlock(x, y, z, t); };
+const isRail = t => t === N.RAY || t === RAY_X;
+export const isCartBlock = t => t === CART_Z || t === CART_X;
+const axisOf = t => (t === RAY_X || t === CART_X ? 'x' : 'z');
+const plain = a => (a === 'x' ? RAY_X : N.RAY);
+const withCart = a => (a === 'x' ? CART_X : CART_Z);
 
+// Ray: baktığın yöne göre doğu-batı (x) ya da kuzey-güney (z) konur
 export function placeRail() {
   if (!prev) return;
-  const [x, y, z] = prev;
-  if (get(x, y, z) !== 0 || !solid(x, y - 1, z)) return toast('Ray sağlam zemine konur');
+  const [x, y, z] = prev, o = get(x, y, z);
+  if ((o !== 0 && o !== TALL) || !solid(x, y - 1, z)) return toast('Ray sağlam zemine konur');
   if (!isCreative() && (eco.inv[N.RAY] || 0) < 1) return toast('Ray yok');
-  set(x, y, z, N.RAY); commit(x, y, z, N.RAY);
+  const t = Math.abs(Math.sin(P.yaw)) > Math.abs(Math.cos(P.yaw)) ? RAY_X : N.RAY;
+  set(x, y, z, t); commit(x, y, z, t);
   if (!isCreative()) eco.inv[N.RAY]--;
   sfx.place(); rebuild(); drawHud();
 }
 
-// Vagon: raya bakıp Koy ile biner, ray boyunca ilerler, eğilince iner
-let ride = null;
-export function useCart() {
-  if (ride) return;
-  if (!target || get(target[0], target[1], target[2]) !== N.RAY) return toast('Vagonu raya bakarak kullan');
-  ride = { x: target[0] + 0.5, y: target[1], z: target[2] + 0.5, dx: -Math.sin(P.yaw), dz: -Math.cos(P.yaw) };
-  if (Math.abs(ride.dx) > Math.abs(ride.dz)) { ride.dx = Math.sign(ride.dx); ride.dz = 0; } else { ride.dz = Math.sign(ride.dz); ride.dx = 0; }
-  toast('🚃 Vagondasın. İnmek için 🧎');
+// Vagon: rayın üstüne konur (ray eksenine uyar)
+export function placeCart() {
+  if (!target) return toast('Vagonu rayın üstüne bakarak koy');
+  const [x, y, z] = target, t = get(x, y, z);
+  if (!isRail(t)) return toast('Vagonu raya bakarak koy');
+  if (!isCreative() && (eco.inv[N.VAGON] || 0) < 1) return toast('Vagon yok');
+  const nt = withCart(axisOf(t));
+  set(x, y, z, nt); commit(x, y, z, nt);
+  if (!isCreative()) eco.inv[N.VAGON]--;
+  sfx.place(); rebuild(); drawHud();
 }
-let last = performance.now();
-(function loop(t) {
-  requestAnimationFrame(loop);
-  const dt = Math.min(0.05, (t - last) / 1000); last = t;
+export const useCart = placeCart;   // eski import bozulmasın
+
+let ride = null;   // { x, y, z: hücre, px, pz: konum, sign }
+export function rideCart(p) {
+  if (ride || !isCartBlock(get(p[0], p[1], p[2]))) return;
+  ride = { x: p[0], y: p[1], z: p[2], px: p[0] + 0.5, pz: p[2] + 0.5, sign: 1 };
+  P.riding = true; P.kx = P.kz = 0;
+  toast('🚃 Vagondasın: ileri tuşuyla ilerle, 🧎 ile in');
+}
+function dismount() {
   if (!ride) return;
-  if (P.sneak || !G.room) { ride = null; return; }
-  const nx = ride.x + ride.dx * 6 * dt, nz = ride.z + ride.dz * 6 * dt;
-  if (get(Math.floor(nx), Math.floor(ride.y), Math.floor(nz)) !== N.RAY) { ride = null; toast('Ray bitti'); return; }
-  ride.x = nx; ride.z = nz;
-  P.x = nx; P.z = nz; P.y = ride.y + 0.15; P.vy = 0; P.fallY = P.y;
+  P.riding = false;
+  P.x = ride.px; P.z = ride.pz; P.y = ride.y + 0.7; P.vy = 0; P.fallY = P.y; P.ground = false;
+  ride = null;
+  setSneak(false);
+}
+
+let last = performance.now();
+(function loop(now) {
+  requestAnimationFrame(loop);
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (!ride) return;
+  if (!G.room || isDead() || P.sneak) return dismount();
+  const cur = get(ride.x, ride.y, ride.z);
+  if (!isCartBlock(cur)) return dismount();   // vagon kırıldı
+  const ax = axisOf(cur);
+  const comp = ax === 'x' ? -Math.sin(P.yaw) : -Math.cos(P.yaw);   // bakış yönünün ray eksenindeki bileşeni
+  if (Math.abs(comp) > 0.15) ride.sign = comp > 0 ? 1 : -1;
+  const f = -input.jy + (input.keys.KeyW ? 1 : 0) - (input.keys.KeyS ? 1 : 0);
+  let nx = ride.px, nz = ride.pz;
+  if (Math.abs(f) > 0.2) {
+    const step = 5 * dt * (f > 0 ? 1 : -1) * ride.sign;
+    if (ax === 'x') nx += step; else nz += step;
+    const cx = Math.floor(nx), cz = Math.floor(nz);
+    if (cx !== ride.x || cz !== ride.z) {
+      const nt = get(cx, ride.y, cz);
+      if (isRail(nt) && isLoaded(cx, cz)) {   // vagonu yeni hücreye taşı
+        const a2 = axisOf(nt);
+        set(ride.x, ride.y, ride.z, plain(ax)); commit(ride.x, ride.y, ride.z, plain(ax));
+        set(cx, ride.y, cz, withCart(a2)); commit(cx, ride.y, cz, withCart(a2));
+        ride.x = cx; ride.z = cz;
+        if (a2 !== ax) { nx = cx + 0.5; nz = cz + 0.5; }
+      } else { nx = ride.px; nz = ride.pz; }   // ray bitti: dur
+    }
+  }
+  if (axisOf(get(ride.x, ride.y, ride.z)) === 'x') nz = ride.z + 0.5; else nx = ride.x + 0.5;
+  ride.px = nx; ride.pz = nz;
+  P.x = nx; P.z = nz; P.y = ride.y + 0.12; P.vy = 0; P.fallY = P.y; P.ground = true;
 })(last);
