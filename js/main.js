@@ -53,6 +53,9 @@ import './game/undead.js'; // 🧟 Zombi ve İskelet Modülü (Paket 17)
 import './ui/admin.js';
 import './game/gmgrant.js';
 
+// Paket 21: Ek doku yükleyici
+import './game/looks2.js';
+
 const $ = id => document.getElementById(id);
 
 const scene = new THREE.Scene();
