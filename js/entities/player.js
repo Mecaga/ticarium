@@ -13,11 +13,12 @@ export const P = {
   sx: sp0.x, sy: sp0.y, sz: sp0.z,
   fallY: sp0.y,
   inWater: false, underWater: false,
-  sneak: false, fly: false, ghost: false, up: false, down: false, fast: false
+  sneak: false, fly: false, ghost: false, up: false, down: false, fast: false,
+  riding: false // ✨ Paket 22: Vagon sürüş durumu eklendi
 };
 
 export function collides(x, y, z) {
-  if (P.ghost) return false;
+  if (P.ghost || P.riding) return false; // ✨ Paket 22: Vagondayken çarpışma kapatıldı
   for (const dx of [-R, R]) for (const dz of [-R, R]) for (const dy of [0.05, 0.9, PH - 0.05])
     if (solid(Math.floor(x + dx), Math.floor(y + dy), Math.floor(z + dz)) || pointHit(x + dx, y + dy, z + dz)) return true;
   return false;
@@ -51,6 +52,7 @@ function mv(nx, nz) {
 
 export function updatePlayer(dt, frozen) {
   if (frozen) return;
+  if (P.riding) return; // ✨ Paket 22: Vagondayken normal oyuncu hareketi dondurulur
   if (!isLoaded(Math.floor(P.x), Math.floor(P.z))) return;
   if (collides(P.x, P.y, P.z)) {   // üstümüze blok konduysa dışarı çık
     let ok = false;
