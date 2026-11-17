@@ -34,7 +34,11 @@ const HARD = {
   [N.BASAMAK_MESE]: [1.5, 'axe', 0],
   [N.BASAMAK_HUS]: [1.5, 'axe', 0],
   [N.BASAMAK_TAS]: [2, 'pick', 0],
-  [N.TIRMANMA_MERDIVEN]: [0.3, null, 0] // 🪜 Paket 16: Basamak ve merdiven sertlikleri eklendi
+  [N.TIRMANMA_MERDIVEN]: [0.3, null, 0],
+  // ✨ Paket 22: Ray ve vagon sertlikleri eklendi
+  [156]: [0.2, 'pick', 0],
+  [157]: [0.4, 'pick', 0],
+  [158]: [0.4, 'pick', 0]
 };
 for (let i = N.LAVANTA; i <= N.AMBER; i++) HARD[i] = [0.05, null, 0];
 for (let i = N.BUGDAY_0; i <= N.BUGDAY_3; i++) HARD[i] = [0.05, null, 0];
