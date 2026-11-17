@@ -40,6 +40,7 @@ import { placeRail, useCart } from './rails.js';
 import { placeLever, isLever, toggleLever } from './redstone.js';
 import { placeStair, isSlab, LADDER } from './stairs.js';
 import * as content from './content.js';
+import { isFlat } from '../world/textures.js'; // ✨ Paket 22: Düz eşya kontrolü eklendi
 
 // Açlık puanları: et, elma, ekmek, pişmiş et, patates, havuç, domates, biber, soğan, çiğköfte vb.
 const FOOD = {
@@ -49,6 +50,7 @@ const FOOD = {
 if (content.FOODX) Object.assign(FOOD, content.FOODX);
 
 const NOPLACE = new Set([STICK, WHEAT, COAL, INGOT_I, INGOT_G, GEM, N.OLTA, N.CAKMAK_TASI, N.YAY, N.OK, N.VAGON, N.KEMIK, N.KEMIK_TOZU]);
+[N.IP, N.DERI, N.KIL, N.PISMIS_TUGLA, N.KEMIK, N.KEMIK_TOZU, N.CAKMAK_TASI, N.OLTA, N.YAY, N.OK, N.MAKAS, N.VAGON].forEach(i => NOPLACE.add(i)); // ✨ Paket 22: Yasaklı eşyalar listesi genişletildi
 if (content.NOPX) content.NOPX.forEach(i => NOPLACE.add(i));
 
 const MOB_DMG = 3, PVP_DMG = 4;
@@ -461,6 +463,9 @@ export function placeBlock() {
   if (t === BUCKET) return useBucket();
   if (t === WBUCKET || t === LBUCKET) return pour(t);
   if (t === CANVAS) return useCanvas();
+
+  if (isFlat(t) && !isPlant(t)) return toast('Bu bir eşya, blok gibi yerleştirilemez'); // ✨ Paket 22: Düz eşya koruması
+
   const pc = prev;
   if (!pc) return;
   if (eco.inv[t] < 1) return toast(TYPES[t].name + ' yok.');
