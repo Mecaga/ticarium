@@ -1,4 +1,4 @@
-import { N } from '../idtable.js';
+import { N } from '../world/idtable.js';
 import { hash, ell } from './util.js';
 
 const S = (c, px) => ({ c, spr: true, px });
@@ -125,7 +125,19 @@ export const tiles = {
     if (h < 0.25) return [150, 70, 60];
     if (h > 0.8) return [78, 96, 48];
     return [112, 134, 72];
-  })
+  }),
+  // ✨ Paket 22: Doğu-batı ray ve vagon blok dokuları eklendi
+  railX: { c: [190, 190, 196], px: (x, y, i, k) => {
+    const fn = tiles.rail.px;
+    return fn ? fn(y, x, i, k) : null;
+  }},
+  cartTop: { c: [120, 120, 128], px: (x, y) => ((x < 2 || x > 13 || y < 2 || y > 13) ? [190, 190, 198, 1] : [52, 52, 60, 0.9 + hash(x, y, 212) * 0.2]) },
+  cartSide: { c: [160, 160, 168], px: (x, y) => {
+    if (y < 2) return [205, 205, 212, 1];
+    if (y > 12) return [90, 90, 98, 1];
+    if ((x === 3 || x === 12) && (y === 5 || y === 9)) return [100, 100, 108, 1];
+    return [160, 160, 168, 0.92 + hash(x, y, 213) * 0.14];
+  }}
 };
 
 export const faces = {
@@ -135,8 +147,13 @@ export const faces = {
   [N.BASAMAK_MESE]: 'planks', [N.BASAMAK_HUS]: 'birchPlanks', [N.BASAMAK_TAS]: 'stone', [N.TIRMANMA_MERDIVEN]: 'ladder',
   [N.YAY]: 'bow', [N.OK]: 'arrow',
   [N.DERI_MIGFER]: 'lhelm', [N.DERI_ZIRH]: 'lchest', [N.DERI_PANTOLON]: 'lleg', [N.DERI_BOT]: 'lboot',
-  [N.KEMIK]: 'bone', [N.KEMIK_TOZU]: 'bonemeal', [N.ZOMBI_ETI]: 'rotten'
+  [N.KEMIK]: 'bone', [N.KEMIK_TOZU]: 'bonemeal', [N.ZOMBI_ETI]: 'rotten',
+  // ✨ Paket 22: Ray ve vagon yüzey eşlemeleri
+  156: 'railX',
+  157: ['cartTop', 'cartSide', 'cartSide'],
+  158: ['cartTop', 'cartSide', 'cartSide']
 };
+
 export const flat = [
   N.KIL, N.PISMIS_TUGLA, N.VAGON, N.TIRMANMA_MERDIVEN, N.YAY, N.OK,
   N.DERI_MIGFER, N.DERI_ZIRH, N.DERI_PANTOLON, N.DERI_BOT, N.KEMIK, N.KEMIK_TOZU, N.ZOMBI_ETI
