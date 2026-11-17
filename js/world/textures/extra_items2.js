@@ -1,4 +1,4 @@
-import { N } from '../world/idtable.js';
+import { N } from '../idtable.js';
 import { hash, ell } from './util.js';
 
 const S = (c, px) => ({ c, spr: true, px });
