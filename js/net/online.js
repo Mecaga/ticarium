@@ -396,3 +396,9 @@ export function stopOnline() {
   cb = {};
   code = null; last = ''; ownerId = null; outB = {}; plist = [];
 }
+
+// Mini harita ve uzaktaki oyuncu konum takibi için eklenen fonksiyon:
+export function playerPos(id) {
+  const o = others[id];
+  return o && o.init ? { x: o.mesh.position.x, z: o.mesh.position.z } : null;
+}
