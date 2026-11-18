@@ -1,5 +1,5 @@
 import { eco, startPriceTicker } from './game/economy.js';
-import { generate, initRender, rebuild, updateTarget, isWater, updateChunks, chunksReady } from './world/world.js';
+import { generate, initRender, rebuild, updateTarget, isWater, updateChunks, chunksReady, get, target } from './world/world.js';
 import { P, updatePlayer, jump } from './entities/player.js';
 import { initInput } from './ui/input.js';
 import { drawHud, drawMarket, toggleMarket, isMarketOpen, hooks, MARKET_ON } from './ui/ui.js';
@@ -41,7 +41,7 @@ import './game/chests.js';
 import './game/spider.js';
 import './game/arms.js'; // Kol/ekipman modülü
 import './game/bow.js';  // Yay ve ok modülü
-import './game/rails.js'; // Ray ve vagon modülü
+import { isCartBlock, rideCart } from './game/rails.js'; // Ray ve vagon modülü
 import './game/doors.js'; // 🚪 Kapı ve Yatak Modülü
 import './game/redstone.js'; // 🔌 Şalter ve Redstone Bloğu Modülü
 import './game/hopper.js'; // 🔄 Huni Modülü
@@ -91,6 +91,19 @@ bDrop.className = 'btn';
 bDrop.id = 'bDrop';
 bDrop.textContent = '⬇️';
 document.body.appendChild(bDrop);
+
+// 🚃 Vagon için "Otur" Düğmesi
+const sitB = document.createElement('div');
+sitB.className = 'btn';
+sitB.textContent = '🚃 Otur';
+sitB.style.cssText = 'right:18px;bottom:306px;display:none';
+document.body.appendChild(sitB);
+setInterval(() => {
+  const on = G.room && target && isCartBlock(get(target[0], target[1], target[2]));
+  sitB.style.display = on ? 'flex' : 'none';
+}, 150);
+sitB.addEventListener('touchstart', e => { e.preventDefault(); if (target) rideCart(target); }, { passive: false });
+sitB.addEventListener('mousedown', () => { if (target) rideCart(target); });
 
 const loadEl = document.createElement('div');
 loadEl.textContent = '🌍 Dünya yükleniyor...';
