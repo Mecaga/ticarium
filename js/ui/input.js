@@ -69,43 +69,51 @@ export function initInput(canvas, actions) {
   joy.addEventListener('touchend', endJoy);
   joy.addEventListener('touchcancel', endJoy);
 
-  // Bakınma (sağ alan)
+  // Bakınma + dokunma: kısa dokunuş koyar, basılı tutup kaydırmak kırar/bakar
   const look = document.getElementById('look');
-  let lookId = null, lx = 0, ly = 0;
+  const LOOKTAP = { id: null, sx: 0, sy: 0, moved: false, t0: 0, holdT: null };
+  
   look.addEventListener('touchstart', e => {
     e.preventDefault();
     const t = e.changedTouches[0];
-    lookId = t.identifier; lx = t.clientX; ly = t.clientY;
+    Object.assign(LOOKTAP, { id: t.identifier, sx: t.clientX, sy: t.clientY, lx: t.clientX, ly: t.clientY, moved: false, t0: Date.now() });
+    // 350 ms basılı kalırsa kırma başlar (hareket etmediyse)
+    LOOKTAP.holdT = setTimeout(() => { if (!LOOKTAP.moved) actions.breakDown(); }, 350);
   }, { passive: false });
+
   look.addEventListener('touchmove', e => {
     e.preventDefault();
-    for (const t of e.changedTouches) if (t.identifier === lookId) {
-      P.yaw -= (t.clientX - lx) * 0.006;
-      P.pitch = Math.max(-1.5, Math.min(1.5, P.pitch - (t.clientY - ly) * 0.006));
-      lx = t.clientX; ly = t.clientY;
+    for (const t of e.changedTouches) if (t.identifier === LOOKTAP.id) {
+      if (Math.hypot(t.clientX - LOOKTAP.sx, t.clientY - LOOKTAP.sy) > 8) {
+        if (!LOOKTAP.moved) { LOOKTAP.moved = true; clearTimeout(LOOKTAP.holdT); actions.breakUp(); }
+      }
+      if (LOOKTAP.moved) {
+        P.yaw -= (t.clientX - LOOKTAP.lx) * 0.006;
+        P.pitch = Math.max(-1.5, Math.min(1.5, P.pitch - (t.clientY - LOOKTAP.ly) * 0.006));
+      }
+      LOOKTAP.lx = t.clientX; LOOKTAP.ly = t.clientY;
     }
   }, { passive: false });
-  look.addEventListener('touchend', e => {
-    for (const t of e.changedTouches) if (t.identifier === lookId) lookId = null;
-  });
+
+  const lookEnd = e => {
+    for (const t of e.changedTouches) if (t.identifier === LOOKTAP.id) {
+      clearTimeout(LOOKTAP.holdT);
+      if (!LOOKTAP.moved && Date.now() - LOOKTAP.t0 < 350) actions.placeBlock();   // kısa dokunuş: koy
+      else actions.breakUp();
+      LOOKTAP.id = null;
+    }
+  };
+  look.addEventListener('touchend', lookEnd);
+  look.addEventListener('touchcancel', lookEnd);
 
   // Tek dokunuşluk butonlar
   const bind = (id, fn) => {
     const el = document.getElementById(id);
+    if (!el) return;
     el.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); fn(); }, { passive: false });
     el.addEventListener('mousedown', e => { e.stopPropagation(); fn(); });
   };
-  // Basılı tutulan buton (kırma)
-  const hold = (id, down, up) => {
-    const el = document.getElementById(id);
-    el.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); down(); }, { passive: false });
-    el.addEventListener('touchend', e => { e.preventDefault(); up(); }, { passive: false });
-    el.addEventListener('touchcancel', e => { e.preventDefault(); up(); }, { passive: false });
-    el.addEventListener('mousedown', e => { e.stopPropagation(); down(); });
-    addEventListener('mouseup', up);
-  };
+  
   bind('bJump', actions.jump);
-  hold('bBreak', actions.breakDown, actions.breakUp);
-  bind('bPlace', actions.placeBlock);
   bind('bMarket', actions.market);
 }
