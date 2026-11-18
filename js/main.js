@@ -112,6 +112,7 @@ document.body.appendChild(loadEl);
 
 function bindBtn(id, fn) {
   const el = $(id);
+  if (!el) return;
   el.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); fn(); }, { passive: false });
   el.addEventListener('mousedown', e => { e.stopPropagation(); fn(); });
 }
@@ -153,7 +154,6 @@ initInput(renderer.domElement, {
 });
 
 bindBtn('bLeave', requestLeave);
-bindBtn('bAttack', attack);
 bindBtn('bSettings', toggleSettings);
 bindBtn('bPlayers', togglePlayers);
 bindBtn('bDrop', () => { if (!isDead()) dropFromInventory(eco.sel, 1); });
