@@ -56,6 +56,9 @@ import './game/gmgrant.js';
 // Paket 21: Ek doku yükleyici
 import './game/looks2.js';
 
+// Paket 22: Mini harita ve pusula modülü
+import './ui/minimap.js';
+
 const $ = id => document.getElementById(id);
 
 const scene = new THREE.Scene();
