@@ -13,6 +13,7 @@ import * as arm from './textures/armor.js';
 import * as ui from './textures/ui_items.js';
 import * as ext from './textures/extra_items.js';
 import * as ext2 from './textures/extra_items2.js';
+import { TOOL_MAP, toolImage } from './textures/map.js';
 
 export { hash };
 // [klasör adı, Türkçe ad, modül]. PNG yolu: textures/<klasör>/<doku adı>.png
@@ -83,9 +84,43 @@ function buildAtlas() {
 export function initAtlas() { atlas.tex = buildAtlas(); return atlas.tex; }
 
 const icons = new Map();
+const toolImgs = new Map();
+const pendingTools = new Set();
 export const clearIcons = () => icons.clear();
+export const iconHooks = { onToolLoaded: null };
+
+function queueToolIcon(t) {
+  const numT = Number(t);
+  if (!TOOL_MAP[numT] || toolImgs.has(numT) || pendingTools.has(numT)) return;
+  pendingTools.add(numT);
+  toolImage(numT).then(img => {
+    pendingTools.delete(numT);
+    if (!img) return;
+    toolImgs.set(numT, img);
+    icons.delete(numT);
+    icons.delete(t);
+    if (iconHooks.onToolLoaded) iconHooks.onToolLoaded(numT);
+  }).catch(() => {
+    pendingTools.delete(numT);
+  });
+}
+
 export function iconURL(t) {
   if (icons.has(t)) return icons.get(t);
+  const numT = Number(t);
+  if (TOOL_MAP[numT]) {
+    if (toolImgs.has(numT)) {
+      const c = document.createElement('canvas');
+      c.width = c.height = 32;
+      const g = c.getContext('2d');
+      g.imageSmoothingEnabled = false;
+      g.drawImage(toolImgs.get(numT), 0, 0, 32, 32);
+      const u = c.toDataURL();
+      icons.set(t, u);
+      return u;
+    }
+    queueToolIcon(numT);
+  }
   if (!atlas.cv || !FACE_TILES[t]) return '';
   const c = document.createElement('canvas');
   c.width = c.height = 32;
