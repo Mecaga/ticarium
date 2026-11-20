@@ -1,5 +1,6 @@
 import { solid, atlas, TYPES, isLoaded } from '../world/world.js';
 import { isFlat, FACE_TILES } from '../world/textures.js';
+import { TOOL_MAP, toolImage } from '../world/textures/map.js';
 import { eco } from '../game/economy.js';
 import { P } from './player.js';
 import { drawHud, toast } from '../ui/ui.js';
@@ -18,6 +19,10 @@ let group, cubeMat, sprMat, lastFull = 0;
 const cubeGeo = {}, sprGeo = {};
 const list = new Map();
 let seq = 0;
+
+// PNG düzlem önbelleği: eşya numarası -> THREE.Mesh şablonu (materyal + geometri)
+const pngPlane = new Map();
+const pngLoading = new Set();
 
 // Doku numarası bozuksa 0 kullanır (oyun çökmesin)
 const sideTile = t => { const f = FACE_TILES[t], v = f ? f[1] : undefined; return Number.isInteger(v) ? v : 0; };
@@ -57,8 +62,8 @@ function spriteGeometry(t) {
     if (!on(x, y)) continue;
     const i = (y * 16 + x) * 4, r = px[i] / 255, g = px[i + 1] / 255, b = px[i + 2] / 255;
     const x0 = (x - 8) * S, x1 = x0 + S, y1 = (8 - y) * S, y0 = y1 - S, z0 = -D / 2, z1 = D / 2;
-    quad([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], r, g, b, 1);        // ön
-    quad([x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0], r, g, b, 0.75);     // arka
+    quad([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], r, g, b, 1);
+    quad([x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0], r, g, b, 0.75);
     if (!on(x - 1, y)) quad([x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0], r, g, b, 0.85);
     if (!on(x + 1, y)) quad([x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1], r, g, b, 0.85);
     if (!on(x, y - 1)) quad([x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [x0, y1, z0], r, g, b, 0.95);
@@ -70,6 +75,43 @@ function spriteGeometry(t) {
   geo.setIndex(ind);
   geo.computeVertexNormals();
   return (sprGeo[t] = geo);
+}
+
+// PNG aletler için düzlem şablonu. Dosya yüklü değilse null.
+function pngPlaneFor(t) {
+  if (pngPlane.has(t)) return pngPlane.get(t);
+  if (!TOOL_MAP[t]) return null;
+  if (!pngLoading.has(t)) {
+    pngLoading.add(t);
+    toolImage(t).then(img => {
+      pngLoading.delete(t);
+      if (!img) return;
+      const tex = new THREE.Texture(img);
+      tex.magFilter = THREE.NearestFilter;
+      tex.minFilter = THREE.LinearFilter;
+      tex.needsUpdate = true;
+      const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide });
+      const geo = new THREE.PlaneGeometry(0.42, 0.42);
+      pngPlane.set(t, { mat, geo });
+      // Yerde bekleyen aynı türdeki eşyaları düzleme geçir
+      for (const it of list.values()) if (it.t === t && !it.png) swapToPlane(it);
+    }).catch(() => { pngLoading.delete(t); });
+  }
+  return null;
+}
+
+// Atlas sprite'ını PNG düzlemiyle değiştirir (konum ve dönüş korunur)
+function swapToPlane(it) {
+  const p = pngPlane.get(it.t);
+  if (!p || it.png) return;
+  const pm = new THREE.Mesh(p.geo, p.mat);
+  pm.position.copy(it.mesh.position);
+  pm.rotation.copy(it.mesh.rotation);
+  pm.scale.copy(it.mesh.scale);
+  group.remove(it.mesh);
+  group.add(pm);
+  it.mesh = pm;
+  it.png = true;
 }
 
 // Aletin dayanıklılığı, ağ üzerinden giden "c" sayısına gömülür (c >= 100000 → alet, kalan dayanıklılık = c - 100000)
@@ -85,11 +127,17 @@ export function spawnItem(id, d) {
   if (c > 1) mesh.scale.setScalar(1.3);
   mesh.position.set(d.x, d.y, d.z);
   group.add(mesh);
-  list.set(id, {
-    id, mesh, flat, t: d.t, c, dur, by: d.by || '',
+  const it = {
+    id, mesh, flat, t: d.t, c, dur, by: d.by || '', png: false,
     x: d.x, y: d.y, z: d.z, vx: d.vx || 0, vy: d.vy || 0, vz: d.vz || 0,
     born: Date.now(), n: d.n || Date.now(), ground: false, taking: false, cool: 0, ph: Math.random() * 6.28
-  });
+  };
+  list.set(id, it);
+  // PNG'si varsa (ya da şimdi yükleniyorsa) düzleme geç
+  if (TOOL_MAP[+d.t]) {
+    const p = pngPlaneFor(+d.t);
+    if (p) swapToPlane(it);
+  }
 }
 
 export function removeItem(id) {
@@ -139,7 +187,7 @@ export function dropFromInventory(t, n, p = 0) {
 
 async function tryTake(it) {
   const cre = isCreative();
-  if (!cre && !canAdd(it.t, it.c)) {   // çanta doluysa eşya yerde kalır
+  if (!cre && !canAdd(it.t, it.c)) {
     it.cool = Date.now() + 1500;
     if (Date.now() - lastFull > 2500) { lastFull = Date.now(); toast('🎒 Çanta dolu'); }
     return;
@@ -161,7 +209,6 @@ async function tryTake(it) {
 export function updateItems(dt, canPick) {
   const now = Date.now(), tm = now / 1000, R = 0.16;
   for (const it of list.values()) {
-    // Yüklü olmayan chunk'taki eşya donar: düşüp yok olmaz
     if (!isLoaded(Math.floor(it.x), Math.floor(it.z))) { it.mesh.visible = false; continue; }
     it.mesh.visible = true;
 
@@ -181,7 +228,7 @@ export function updateItems(dt, canPick) {
     }
     it.x = nx; it.y = ny; it.z = nz;
     it.mesh.position.set(it.x, it.y + (it.flat ? 0.1 : 0) + (it.ground ? 0.06 + Math.sin(tm * 2 + it.ph) * 0.05 : 0), it.z);
-    it.mesh.rotation.y += dt * 1.6;   // kendi etrafında döner
+    it.mesh.rotation.y += dt * 1.6;
 
     if (it.y < -15 || now - it.n > 300000) {
       if (hooks.expire) hooks.expire(it.id);
@@ -193,4 +240,4 @@ export function updateItems(dt, canPick) {
       if (dx * dx + dy * dy + dz * dz < 2.25) tryTake(it);
     }
   }
-}
+                }
