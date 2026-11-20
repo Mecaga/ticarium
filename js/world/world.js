@@ -1,5 +1,3 @@
-Window.BASE = window.BASE || 10;
-
 import { N } from './idtable.js';
 import { hash, atlas, FACE_TILES, T, initAtlas, tileOf } from './textures.js';
 import {
@@ -49,10 +47,7 @@ export const getRaw = (x, y, z) => {
 export const isWater = (x, y, z) => get(x, y, z) === WATER;
 export const isLava = (x, y, z) => get(x, y, z) === LAVA;
 export const BOXES = {};   // ince bloklar: id -> [x0,y0,z0,x1,y1,z1] (yatak, kapı)
-for (let i = 0; i < 3; i++) { 
-  BOXES[N.KAR_1 + i] = [0, 0, 0, 1, 0.25 * (i + 1), 1]; 
-  if (FACE_TILES) FACE_TILES[N.KAR_1 + i] = FACE_TILES[N.KAR] || [0,0,0]; 
-}   // kar katmanları 1/4, 2/4, 3/4
+for (let i = 0; i < 3; i++) BOXES[N.KAR_1 + i] = [0, 0, 0, 1, 0.25 * (i + 1), 1];
 
 export const solid = (x, y, z) => { const t = get(x, y, z); return t !== 0 && !BOXES[t] && !isPlant(t) && t !== WATER && t !== LAVA; };
 // Kesin nokta çarpışması (ince bloklar için)
