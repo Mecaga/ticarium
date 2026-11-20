@@ -8,7 +8,6 @@ import { canAdd, addItem } from '../game/inventory.js';
 import { isCreative } from '../game/creative.js';
 import { isGear, MAXDUR, takeInstance } from '../game/gear.js';
 
-// online.js bunları doldurur; boşsa eşyalar sadece bu cihazda yaşar
 export const hooks = { push: null, take: null, expire: null, myId: '' };
 
 const st = document.createElement('style');
@@ -20,11 +19,10 @@ const cubeGeo = {}, sprGeo = {};
 const list = new Map();
 let seq = 0;
 
-// PNG düzlem önbelleği: eşya numarası -> THREE.Mesh şablonu (materyal + geometri)
+// PNG önbelleği: eşya numarası -> { mat, geo } (hacimli geometri, bir kez üretilir)
 const pngPlane = new Map();
 const pngLoading = new Set();
 
-// Doku numarası bozuksa 0 kullanır (oyun çökmesin)
 const sideTile = t => { const f = FACE_TILES[t], v = f ? f[1] : undefined; return Number.isInteger(v) ? v : 0; };
 
 export function initItems(scene) {
@@ -34,7 +32,6 @@ export function initItems(scene) {
   sprMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
 }
 
-// Bloklar: küçük küp
 function cubeGeometry(t) {
   if (cubeGeo[t]) return cubeGeo[t];
   const g = new THREE.BoxGeometry(0.32, 0.32, 0.32);
@@ -45,7 +42,6 @@ function cubeGeometry(t) {
   return (cubeGeo[t] = g);
 }
 
-// Aletler, yiyecekler, çiçekler: 16x16 pikselden çıkarılmış ince sprite (MCPE gibi)
 function spriteGeometry(t) {
   if (sprGeo[t]) return sprGeo[t];
   const tile = sideTile(t);
@@ -77,7 +73,60 @@ function spriteGeometry(t) {
   return (sprGeo[t] = geo);
 }
 
-// PNG aletler için düzlem şablonu. Dosya yüklü değilse null.
+// PNG piksellerinden kalınlıklı (1 piksel derinlikli) geometri üretir.
+// Ön ve arka yüz PNG dokusunu kullanır (UV piksel merkezine hizalı), kenar yüzler renksiz gölgeli.
+function buildThickGeometry(img) {
+  const W = 128, H = 128;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const g2 = cv.getContext('2d');
+  g2.drawImage(img, 0, 0, W, H);
+  const px = g2.getImageData(0, 0, W, H).data;
+  const on = (x, y) => x >= 0 && y >= 0 && x < W && y < H && px[(y * W + x) * 4 + 3] > 100;
+
+  const S = 0.42 / W;           // bir piksel dünya birimi
+  const D = S;                  // kalınlık: 1 piksel
+  const pos = [], uv = [], ind = [];
+  let n = 0;
+  const quad = (a, b, c, d, u0, v0, u1, v1, flip) => {
+    // a,b,c,d sırası: sol-alt, sağ-alt, sağ-üst, sol-üst (CCW)
+    const ps = [a, b, c, d];
+    const uvs = flip
+      ? [[u1, v1], [u0, v1], [u0, v0], [u1, v0]]
+      : [[u0, v1], [u1, v1], [u1, v0], [u0, v0]];
+    for (let k = 0; k < 4; k++) { pos.push(ps[k][0], ps[k][1], ps[k][2]); uv.push(uvs[k][0], uvs[k][1]); }
+    ind.push(n, n + 1, n + 2, n, n + 2, n + 3);
+    n += 4;
+  };
+  const shade = [];
+
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (!on(x, y)) continue;
+    const x0 = (x - W / 2) * S, x1 = x0 + S;
+    const y1 = (H / 2 - y) * S, y0 = y1 - S;
+    const z0 = -D / 2, z1 = D / 2;
+    const u0 = x / W, u1 = (x + 1) / W, v0 = 1 - (y + 1) / H, v1 = 1 - y / H;
+
+    // Ön yüz (+z) ve arka yüz (-z): PNG dokusu
+    quad([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], u0, v0, u1, v1, false);
+    quad([x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0], u0, v0, u1, v1, true);
+    shade.push(1, 1);
+    // Kenar yüzler: sadece komşu şeffafsa. Doku aynı piksel, çok koyu gölge.
+    const sideUV = [u0 + 0.001, v0 + 0.001, u1 - 0.001, v1 - 0.001];
+    if (!on(x - 1, y)) quad([x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0], sideUV[0], sideUV[1], sideUV[2], sideUV[3], false);
+    if (!on(x + 1, y)) quad([x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1], sideUV[0], sideUV[1], sideUV[2], sideUV[3], false);
+    if (!on(x, y - 1)) quad([x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [x0, y1, z0], sideUV[0], sideUV[1], sideUV[2], sideUV[3], false);
+    if (!on(x, y + 1)) quad([x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1], sideUV[0], sideUV[1], sideUV[2], sideUV[3], false);
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.setIndex(ind);
+  geo.computeVertexNormals();
+  return geo;
+}
+
 function pngPlaneFor(t) {
   if (pngPlane.has(t)) return pngPlane.get(t);
   if (!TOOL_MAP[t]) return null;
@@ -90,17 +139,15 @@ function pngPlaneFor(t) {
       tex.magFilter = THREE.NearestFilter;
       tex.minFilter = THREE.LinearFilter;
       tex.needsUpdate = true;
-      const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide });
-      const geo = new THREE.PlaneGeometry(0.42, 0.42);
+      const mat = new THREE.MeshLambertMaterial({ map: tex, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide });
+      const geo = buildThickGeometry(img);
       pngPlane.set(t, { mat, geo });
-      // Yerde bekleyen aynı türdeki eşyaları düzleme geçir
       for (const it of list.values()) if (it.t === t && !it.png) swapToPlane(it);
     }).catch(() => { pngLoading.delete(t); });
   }
   return null;
 }
 
-// Atlas sprite'ını PNG düzlemiyle değiştirir (konum ve dönüş korunur)
 function swapToPlane(it) {
   const p = pngPlane.get(it.t);
   if (!p || it.png) return;
@@ -114,7 +161,6 @@ function swapToPlane(it) {
   it.png = true;
 }
 
-// Aletin dayanıklılığı, ağ üzerinden giden "c" sayısına gömülür (c >= 100000 → alet, kalan dayanıklılık = c - 100000)
 const encC = a => ((a.d != null && isGear(a.t)) ? 100000 + Math.max(1, Math.round(a.d)) : a.c);
 
 export function spawnItem(id, d) {
@@ -133,11 +179,7 @@ export function spawnItem(id, d) {
     born: Date.now(), n: d.n || Date.now(), ground: false, taking: false, cool: 0, ph: Math.random() * 6.28
   };
   list.set(id, it);
-  // PNG'si varsa (ya da şimdi yükleniyorsa) düzleme geç
-  if (TOOL_MAP[+d.t]) {
-    const p = pngPlaneFor(+d.t);
-    if (p) swapToPlane(it);
-  }
+  if (TOOL_MAP[+d.t]) pngPlaneFor(+d.t);
 }
 
 export function removeItem(id) {
@@ -151,14 +193,12 @@ export function clearItems() {
   for (const id of [...list.keys()]) removeItem(id);
 }
 
-// arr: [{t, c, x, y, z, vx, vy, vz, d?}]  (d: aletin dayanıklılığı)
 export function dropItems(arr) {
   const by = hooks.myId;
   if (hooks.push) hooks.push(arr.map(a => ({ ...a, by, c: encC(a) })));
   else arr.forEach(a => spawnItem('l' + (++seq), { ...a, by, c: encC(a), n: Date.now() }));
 }
 
-// Envanterden eşyayı önüne atar (yaratıcı modda eşya harcanmaz). p: aletin çantadaki sırası.
 export function dropFromInventory(t, n, p = 0) {
   const cre = isCreative();
   n = Math.min(n, cre ? 64 : (eco.inv[t] || 0));
@@ -240,4 +280,4 @@ export function updateItems(dt, canPick) {
       if (dx * dx + dy * dy + dz * dz < 2.25) tryTake(it);
     }
   }
-                }
+    }
