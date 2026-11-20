@@ -10,10 +10,8 @@ import { isGear, MAXDUR, takeInstance } from '../game/gear.js';
 
 export const hooks = { push: null, take: null, expire: null, myId: '' };
 
-// Eşya numarası -> PNG yolu (js/world/textures/ altına göre). Yeni eşya PNG'sini buraya ekle.
-// Alet tabloları (TOOL_MAP) otomatik eklenir, aşağıda birleştirilir.
+// Eşya numarası -> PNG yolu (js/world/textures/ altına göre, uzantısız). Alet tabloları otomatik eklenir.
 const ITEM_PNG = {
-  // Örnek (yolunu kendi dosyana göre düzelt):
   // [N.KEMIK]: 'bones/bone',
 };
 const pngPath = t => {
@@ -31,7 +29,6 @@ const cubeGeo = {}, sprGeo = {};
 const list = new Map();
 let seq = 0;
 
-// PNG önbelleği: eşya numarası -> { mat, geo } | null (yok)
 const pngCache = new Map();
 const pngLoading = new Set();
 
@@ -85,8 +82,9 @@ function spriteGeometry(t) {
   return (sprGeo[t] = geo);
 }
 
-// PNG piksellerinden 1 piksel kalınlıklı hacim. Ön/arka yüz PNG dokusuyla, kenarlar koyu gölgeli.
-// Boyut PNG'nin kendi genişliğine göre ölçeklenir (128 ya da 16 fark etmez).
+// PNG'den 1 piksel kalınlıklı hacim.
+// Ön yüz (+z) renk 1.0, arka yüz (-z) 0.8, şeffaf komşulu kenarlar 0.6 (üst/alt 0.55 ve 0.65 gibi ayrım).
+// Renk attribute'u geometriye yazılır; materyal vertexColors + map ile çarpım yapar.
 function buildThickGeometry(img) {
   const W = img.width, H = img.height;
   const cv = document.createElement('canvas');
@@ -96,14 +94,18 @@ function buildThickGeometry(img) {
   const px = g2.getImageData(0, 0, W, H).data;
   const on = (x, y) => x >= 0 && y >= 0 && x < W && y < H && px[(y * W + x) * 4 + 3] > 100;
 
-  const S = 0.42 / Math.max(W, H);   // bir piksel dünya birimi
-  const D = S;                       // kalınlık: 1 piksel
-  const pos = [], uv = [], ind = [];
+  const S = 0.42 / Math.max(W, H);
+  const D = S;
+  const pos = [], uv = [], col = [], ind = [];
   let n = 0;
-  const quad = (a, b, c, d, u0, v0, u1, v1, flip) => {
+  const quad = (a, b, c, d, u0, v0, u1, v1, sh, flip) => {
     const ps = [a, b, c, d];
     const uvs = flip ? [[u1, v1], [u0, v1], [u0, v0], [u1, v0]] : [[u0, v1], [u1, v1], [u1, v0], [u0, v0]];
-    for (let k = 0; k < 4; k++) { pos.push(ps[k][0], ps[k][1], ps[k][2]); uv.push(uvs[k][0], uvs[k][1]); }
+    for (let k = 0; k < 4; k++) {
+      pos.push(ps[k][0], ps[k][1], ps[k][2]);
+      uv.push(uvs[k][0], uvs[k][1]);
+      col.push(sh, sh, sh);
+    }
     ind.push(n, n + 1, n + 2, n, n + 2, n + 3);
     n += 4;
   };
@@ -114,26 +116,26 @@ function buildThickGeometry(img) {
     const y1 = (H / 2 - y) * S, y0 = y1 - S;
     const z0 = -D / 2, z1 = D / 2;
     const u0 = x / W, u1 = (x + 1) / W, v0 = 1 - (y + 1) / H, v1 = 1 - y / H;
-    // Ön ve arka yüz: PNG dokusu
-    quad([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], u0, v0, u1, v1, false);
-    quad([x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0], u0, v0, u1, v1, true);
-    // Kenar yüzler: sadece şeffaf komşuda
+    // Ön yüz tam parlak, arka yüz hafif koyu
+    quad([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], u0, v0, u1, v1, 1.0, false);
+    quad([x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0], u0, v0, u1, v1, 0.8, true);
     const su0 = u0 + 0.001, sv0 = v0 + 0.001, su1 = u1 - 0.001, sv1 = v1 - 0.001;
-    if (!on(x - 1, y)) quad([x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0], su0, sv0, su1, sv1, false);
-    if (!on(x + 1, y)) quad([x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1], su0, sv0, su1, sv1, false);
-    if (!on(x, y - 1)) quad([x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [x0, y1, z0], su0, sv0, su1, sv1, false);
-    if (!on(x, y + 1)) quad([x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1], su0, sv0, su1, sv1, false);
+    // Kenarlar: sol/sağ 0.6, üst 0.65, alt 0.55 (köşe hacmi okunur)
+    if (!on(x - 1, y)) quad([x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0], su0, sv0, su1, sv1, 0.6, false);
+    if (!on(x + 1, y)) quad([x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1], su0, sv0, su1, sv1, 0.6, false);
+    if (!on(x, y - 1)) quad([x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [x0, y1, z0], su0, sv0, su1, sv1, 0.65, false);
+    if (!on(x, y + 1)) quad([x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1], su0, sv0, su1, sv1, 0.55, false);
   }
 
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
   geo.setIndex(ind);
   geo.computeVertexNormals();
   return geo;
 }
 
-// PNG'yi bir kez yükler ve önbelleğe alır. Yüklü değilse null döner, yükleme arka planda sürer.
 function pngFor(t) {
   if (pngCache.has(t)) return pngCache.get(t);
   const path = pngPath(t);
@@ -147,7 +149,8 @@ function pngFor(t) {
       tex.magFilter = THREE.NearestFilter;
       tex.minFilter = THREE.LinearFilter;
       tex.needsUpdate = true;
-      const mat = new THREE.MeshLambertMaterial({ map: tex, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide });
+      // vertexColors: geometri renkleri gölgeyi, map dokuyu taşır
+      const mat = new THREE.MeshLambertMaterial({ map: tex, vertexColors: true, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide });
       const entry = { mat, geo: buildThickGeometry(img) };
       pngCache.set(t, entry);
       for (const it of list.values()) if (it.t === t && !it.png) swapToPlane(it);
@@ -291,4 +294,4 @@ export function updateItems(dt, canPick) {
       if (dx * dx + dy * dy + dz * dz < 2.25) tryTake(it);
     }
   }
-    }
+                                                                }
