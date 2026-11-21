@@ -4,19 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>BlokDiyar</title>
-<link rel="stylesheet" href="css/style.css?v=83">
-<style>
-  #bBreak, #bPlace {
-    position: fixed;
-    bottom: 112px;
-    font-size: 20px;
-    z-index: 20;
-  }
-  #bBreak { left: 18px; }
-  #bPlace { left: 92px; }
-</style>
+<link rel="stylesheet" href="css/style.css?v=82">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
-<script src="js/dbg.js?v=83"></script>
+<script src="js/dbg.js?v=82"></script>
 </head>
 <body>
 <div id="flash"></div>
@@ -32,8 +22,6 @@
 <div id="joyBase"><div id="joyKnob"></div></div>
 <div class="btn" id="bJump">Zıpla</div>
 <div class="btn" id="bAttack">⚔️</div>
-<div class="btn" id="bBreak">⛏️ Kır</div>
-<div class="btn" id="bPlace">🧱 Koy</div>
 <div class="btn" id="bMarket">🏪 Pazar</div>
 <div class="btn" id="bPlayers">👥</div>
 <div class="btn" id="bSettings">⚙️ Ayarlar</div>
@@ -109,7 +97,7 @@
     </div>
     <div id="mErr"></div>
     <div id="mAuth"></div>
-    <div id="mVer" style="font-size:11px;opacity:.55;text-align:center;margin-top:4px">Sürüm 83</div>
+    <div id="mVer" style="font-size:11px;opacity:.55;text-align:center;margin-top:4px">Sürüm 82</div>
   </div>
 </div>
 
@@ -129,7 +117,7 @@ window.addEventListener('unhandledrejection', function (e) {
 });
 
 var ids = ['flash','coord','coins','roomInfo','msg','hearts','hotbar','look','joy','joyBase','joyKnob','bJump',
-  'bAttack','bBreak','bPlace','bMarket','bPlayers','bLeave','bSettings','market','panel','settings','setBox','players','plBox','menu','nameIn',
+  'bAttack','bMarket','bPlayers','bLeave','bSettings','market','panel','settings','setBox','players','plBox','menu','nameIn',
   'sAuth','auHint','auUser','auPass','auLogin','auReg','mUser','mLogout',
   'mWorlds','mCreate','mList','mJoin','mMine','sWorlds','sNew','wInfo','worldList','wNew','nwName','nwKind','nwDo','nwBack',
   'cName','cWorld','cPublic','cPvp','cKeep','cMax','cDo','sMain','sCreate','sList','sJoin','sMine','roomList','mineList',
@@ -140,44 +128,44 @@ if (missing.length) {
   showErr('Eksik elemanlar: ' + missing.join(', '));
 } else {
   Promise.all([
-    import('./js/world/gen/flat.js?v=83').catch(function(){}),
-    import('./js/world/gen/sky.js?v=83').catch(function(){}),
-    import('./js/world/gen/normal.js?v=83').catch(function(){}),
-    import('./js/world/idtable.js?v=83').catch(function(){}),
-    import('./js/world/ids.js?v=83').catch(function(){}),
-    import('./js/game/spider.js?v=83').catch(function(){}),
-    import('./js/game/fishing.js?v=83').catch(function(){}),
-    import('./js/game/gmgrant.js?v=83').catch(function(){}),
-    import('./js/game/arms.js?v=83').catch(function(){}),
-    import('./js/game/bow.js?v=83').catch(function(){}),
-    import('./js/game/rails.js?v=83').catch(function(){}),
-    import('./js/game/doors.js?v=83').catch(function(){}),
-    import('./js/game/redstone.js?v=83').catch(function(){}),
-    import('./js/game/hopper.js?v=83').catch(function(){}),
-    import('./js/game/clay.js?v=83').catch(function(){}),
-    import('./js/game/stairs.js?v=83').catch(function(){}),
-    import('./js/game/undead.js?v=83').catch(function(){}),
-    import('./js/game/looks2.js?v=83').catch(function(){}),
-    import('./js/ui/minimap.js?v=83').catch(function(){}),
-    import('./js/world/textures/util.js?v=83').catch(function(){}),
-    import('./js/world/textures/base_blocks.js?v=83').catch(function(){}),
-    import('./js/world/textures/functional_blocks.js?v=83').catch(function(){}),
-    import('./js/world/textures/building_blocks.js?v=83').catch(function(){}),
-    import('./js/world/textures/minerals.js?v=83').catch(function(){}),
-    import('./js/world/textures/flora_dye.js?v=83').catch(function(){}),
-    import('./js/world/textures/mobs.js?v=83').catch(function(){}),
-    import('./js/world/textures/player.js?v=83').catch(function(){}),
-    import('./js/world/textures/tools.js?v=83').catch(function(){}),
-    import('./js/world/textures/food.js?v=83').catch(function(){}),
-    import('./js/world/textures/armor.js?v=83').catch(function(){}),
-    import('./js/world/textures/ui_items.js?v=83').catch(function(){}),
-    import('./js/world/textures/extra_items.js?v=83').catch(function(){}),
-    import('./js/world/textures/extra_items2.js?v=83').catch(function(){}),
-    import('./js/world/textures/loader.js?v=83').catch(function(){}),
-    import('./js/world/textures/map.js?v=83').catch(function(){}),
-    import('./js/world/textures/blockmap.js?v=83').catch(function(){})
+    import('./js/world/gen/flat.js?v=82').catch(function(){}),
+    import('./js/world/gen/sky.js?v=82').catch(function(){}),
+    import('./js/world/gen/normal.js?v=82').catch(function(){}),
+    import('./js/world/idtable.js?v=82').catch(function(){}),
+    import('./js/world/ids.js?v=82').catch(function(){}),
+    import('./js/game/spider.js?v=82').catch(function(){}),
+    import('./js/game/fishing.js?v=82').catch(function(){}),
+    import('./js/game/gmgrant.js?v=82').catch(function(){}),
+    import('./js/game/arms.js?v=82').catch(function(){}),
+    import('./js/game/bow.js?v=82').catch(function(){}),
+    import('./js/game/rails.js?v=82').catch(function(){}),
+    import('./js/game/doors.js?v=82').catch(function(){}),
+    import('./js/game/redstone.js?v=82').catch(function(){}),
+    import('./js/game/hopper.js?v=82').catch(function(){}),
+    import('./js/game/clay.js?v=82').catch(function(){}),
+    import('./js/game/stairs.js?v=82').catch(function(){}),
+    import('./js/game/undead.js?v=82').catch(function(){}),
+    import('./js/game/looks2.js?v=82').catch(function(){}),
+    import('./js/ui/minimap.js?v=82').catch(function(){}),
+    import('./js/world/textures/util.js?v=82').catch(function(){}),
+    import('./js/world/textures/base_blocks.js?v=82').catch(function(){}),
+    import('./js/world/textures/functional_blocks.js?v=82').catch(function(){}),
+    import('./js/world/textures/building_blocks.js?v=82').catch(function(){}),
+    import('./js/world/textures/minerals.js?v=82').catch(function(){}),
+    import('./js/world/textures/flora_dye.js?v=82').catch(function(){}),
+    import('./js/world/textures/mobs.js?v=82').catch(function(){}),
+    import('./js/world/textures/player.js?v=82').catch(function(){}),
+    import('./js/world/textures/tools.js?v=82').catch(function(){}),
+    import('./js/world/textures/food.js?v=82').catch(function(){}),
+    import('./js/world/textures/armor.js?v=82').catch(function(){}),
+    import('./js/world/textures/ui_items.js?v=82').catch(function(){}),
+    import('./js/world/textures/extra_items.js?v=82').catch(function(){}),
+    import('./js/world/textures/extra_items2.js?v=82').catch(function(){}),
+    import('./js/world/textures/loader.js?v=82').catch(function(){}),
+    import('./js/world/textures/map.js?v=82').catch(function(){}),
+    import('./js/world/textures/blockmap.js?v=82').catch(function(){})
   ]).then(function() {
-    return import('./js/main.js?v=83');
+    return import('./js/main.js?v=82');
   }).catch(function (e) {
     showErr('Yükleme hatası: ' + (e.message || e));
   });
