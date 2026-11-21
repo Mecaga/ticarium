@@ -1,5 +1,5 @@
 import { N } from './idtable.js';
-import { hash, atlas, FACE_TILES, T, initAtlas, tileOf } from './textures.js';
+import { hash, atlas, FACE_TILES, T, initAtlas, tileOf, clearIcons } from './textures.js';
 import { faceTexture, BLOCK_FACES, hooks as blockHooks, PNG_NAME } from './textures/blockmap.js';
 import {
   BEDROCK, SAPLING, BIRCH_LOG, BIRCH_LEAF, WATER, GLASS, WATER_MAX, LAVA, LAVA_MAX, OBSIDIAN,
@@ -371,7 +371,10 @@ export function initRender(scene) {
   );
   hl.visible = false;
   scene.add(hl);
-  blockHooks.onLoad = () => { for (const c of chunks.values()) c.dirty = 1; };
+  blockHooks.onLoad = () => {
+    clearIcons();
+    for (const c of chunks.values()) c.dirty = 1;
+  };
 }
 
 function putMesh(c, f, pos, uv, col, ind, mat, order) {
