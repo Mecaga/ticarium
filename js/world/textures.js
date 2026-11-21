@@ -14,6 +14,7 @@ import * as ui from './textures/ui_items.js';
 import * as ext from './textures/extra_items.js';
 import * as ext2 from './textures/extra_items2.js';
 import { TOOL_MAP, toolImage } from './textures/map.js';
+import { iconTexture, PNG_NAME } from './textures/blockmap.js';
 
 export { hash };
 // [klasör adı, Türkçe ad, modül]. PNG yolu: textures/<klasör>/<doku adı>.png
@@ -106,6 +107,20 @@ function queueToolIcon(t) {
 }
 
 export function iconURL(t) {
+  const bn = PNG_NAME[Number(t)];
+  if (bn) {
+    const it = iconTexture(bn);
+    if (it && it.image) {
+      const c = document.createElement('canvas');
+      c.width = c.height = 32;
+      const g = c.getContext('2d');
+      g.imageSmoothingEnabled = false;
+      g.drawImage(it.image, 0, 0, 32, 32);
+      const u = c.toDataURL();
+      icons.set(t, u);
+      return u;
+    }
+  }
   if (icons.has(t)) return icons.get(t);
   const numT = Number(t);
   if (TOOL_MAP[numT]) {
