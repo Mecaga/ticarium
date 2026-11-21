@@ -1,6 +1,6 @@
 import { N } from './idtable.js';
-import { hash, atlas, FACE_TILES, T, initAtlas, tileOf, clearIcons } from './textures.js';
-import { faceTexture, BLOCK_FACES, hooks as blockHooks, PNG_NAME } from './textures/blockmap.js';
+import { hash, atlas, FACE_TILES, T, initAtlas, tileOf } from './textures.js';
+import { faceTexture, PNG_NAME, onBlockLoad } from './textures/blockmap.js';
 import {
   BEDROCK, SAPLING, BIRCH_LOG, BIRCH_LEAF, WATER, GLASS, WATER_MAX, LAVA, LAVA_MAX, OBSIDIAN,
   COAL_ORE, IRON_ORE, GOLD_ORE, DIAMOND_ORE, FLOWER_MIN, TALL, isPlant, isCrop
@@ -331,14 +331,17 @@ export function chunksReady(px, pz) {
   return true;
 }
 
-Object.assign(PNG_NAME, {
-  [N.ODUN]: 'oak_log', [N.YAPRAK]: 'oak_leaves', [N.TAHTA]: 'oak_planks',
-  [N.HUS_ODUN]: 'birch_log', [N.HUS_YAPRAK]: 'birch_leaves',
-  [N.KUM]: 'sand', [N.KAR]: 'snow', [N.TUGLA]: 'brick',
-  [N.KOMUR_CEVHERI]: 'coal_ore', [N.DEMIR_CEVHERI]: 'iron_ore', [N.ALTIN_CEVHERI]: 'gold_ore', [N.ELMAS_CEVHERI]: 'diamond_ore',
-  [N.SANDIK]: 'chest', [N.OCAK]: 'furnace', [N.MUZIK_KUTUSU]: 'jukebox',
-  [N.DEMIR_BLOK]: 'iron_block', [N.ELMAS_BLOK]: 'diamond_block', [N.REDSTONE_BLOK]: 'redstone_block'
-});
+// PNG yüz yüklenince chunk'ları yeniden çizdirir (arka arkaya gelen yüklemeler 300 ms'de birleşir)
+let refreshQueued = false;
+export function refreshAllChunks() {
+  if (refreshQueued) return;
+  refreshQueued = true;
+  setTimeout(() => {
+    refreshQueued = false;
+    for (const [k, c] of chunks) if (c.dirty === 0) { c.dirty = 2; urgent.add(k); }
+  }, 300);
+}
+onBlockLoad(k => { if (!k.endsWith('/icon')) refreshAllChunks(); });
 
 const AOV = [0.5, 0.68, 0.84, 1.0];
 const ORD_P = [[0, 0], [1, 0], [1, 1], [0, 1]];
@@ -346,10 +349,25 @@ const ORD_N = [[0, 0], [0, 1], [1, 1], [1, 0]];
 const D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const occ = (x, y, z) => opaque(get(x, y, z)) ? 1 : 0;
 
+let worldLight = 1;                 // gece/gündüz parlaklığı, setWorldLight günceller
+const pngMats = new Map();          // blok adı/yüz -> MeshBasicMaterial (atlas ile aynı ışık mantığı)
+function pngMat(name, face) {
+  const key = name + '/' + face;
+  if (pngMats.has(key)) return pngMats.get(key);
+  const tex = faceTexture(name, face);
+  if (!tex) return null;            // henüz yüklenmedi ya da yok
+  const m = new THREE.MeshBasicMaterial({ map: tex, vertexColors: true, alphaTest: 0.5, side: THREE.DoubleSide });
+  m.color.setScalar(worldLight);
+  pngMats.set(key, m);
+  return m;
+}
+
 export function setWorldLight(v) {
+  worldLight = v;
   if (material) material.color.setScalar(v);
   if (waterMat) waterMat.color.setScalar(v);
   if (glassMat) glassMat.color.setRGB(0.81 * v, 0.92 * v, 0.95 * v);
+  for (const m of pngMats.values()) m.color.setScalar(v);
   if (wlHook.fn) wlHook.fn(v);
 }
 
@@ -371,10 +389,6 @@ export function initRender(scene) {
   );
   hl.visible = false;
   scene.add(hl);
-  blockHooks.onLoad = () => {
-    clearIcons();
-    for (const c of chunks.values()) c.dirty = 1;
-  };
 }
 
 function putMesh(c, f, pos, uv, col, ind, mat, order) {
@@ -405,17 +419,6 @@ function fluidH(x, y, z, t) {
 }
 
 const sink = () => ({ pos: [], uv: [], col: [], ind: [], n: 0 });
-
-const pngMats = new Map();   // blok adı+yüz -> THREE.MeshLambertMaterial
-function pngMat(name, face) {
-  const key = name + '/' + face;
-  if (pngMats.has(key)) return pngMats.get(key);
-  const tex = faceTexture(name, face);
-  if (!tex) return null;           // henüz yüklenmedi ya da yok
-  const m = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5, side: THREE.DoubleSide });
-  pngMats.set(key, m);
-  return m;
-}
 
 function pushPngQ(s, pts, brs, uvs, flipInd) {
   for (let k = 0; k < 4; k++) {
@@ -575,7 +578,7 @@ function buildChunk(c) {
 
         if (S2) {
           qPts.push(p);
-          qBrs.push(AOV[ao]);
+          qBrs.push(AOV[ao] * shade);
           qUvs.push([tu, tv]);
         } else {
           const br = AOV[ao] * shade;
@@ -603,6 +606,11 @@ function buildChunk(c) {
   for (const [key, s] of pngS) {
     const m = pngMat(...key.split('/'));
     putMesh(c, 'p_' + key, s.pos, s.uv, s.col, s.ind, m, 0);
+  }
+  for (const k of Object.keys(c)) {
+    if (k.startsWith('p_') && c[k] && !pngS.has(k.slice(2))) {
+      group.remove(c[k]); c[k].geometry.dispose(); c[k] = null;
+    }
   }
 }
 
