@@ -1,6 +1,6 @@
 import { N } from './idtable.js';
 import { hash, atlas, FACE_TILES, T, initAtlas, tileOf } from './textures.js';
-import { faceTexture, BLOCK_FACES, hooks as blockHooks } from './textures/blockmap.js';
+import { faceTexture, BLOCK_FACES, hooks as blockHooks, PNG_NAME } from './textures/blockmap.js';
 import {
   BEDROCK, SAPLING, BIRCH_LOG, BIRCH_LEAF, WATER, GLASS, WATER_MAX, LAVA, LAVA_MAX, OBSIDIAN,
   COAL_ORE, IRON_ORE, GOLD_ORE, DIAMOND_ORE, FLOWER_MIN, TALL, isPlant, isCrop
@@ -331,14 +331,14 @@ export function chunksReady(px, pz) {
   return true;
 }
 
-const PNG_NAME = {
+Object.assign(PNG_NAME, {
   [N.ODUN]: 'oak_log', [N.YAPRAK]: 'oak_leaves', [N.TAHTA]: 'oak_planks',
   [N.HUS_ODUN]: 'birch_log', [N.HUS_YAPRAK]: 'birch_leaves',
   [N.KUM]: 'sand', [N.KAR]: 'snow', [N.TUGLA]: 'brick',
   [N.KOMUR_CEVHERI]: 'coal_ore', [N.DEMIR_CEVHERI]: 'iron_ore', [N.ALTIN_CEVHERI]: 'gold_ore', [N.ELMAS_CEVHERI]: 'diamond_ore',
   [N.SANDIK]: 'chest', [N.OCAK]: 'furnace', [N.MUZIK_KUTUSU]: 'jukebox',
   [N.DEMIR_BLOK]: 'iron_block', [N.ELMAS_BLOK]: 'diamond_block', [N.REDSTONE_BLOK]: 'redstone_block'
-};
+});
 
 const AOV = [0.5, 0.68, 0.84, 1.0];
 const ORD_P = [[0, 0], [1, 0], [1, 1], [0, 1]];
@@ -417,7 +417,7 @@ function pngMat(name, face) {
 function pushPngQ(s, pts, brs, uvs, flipInd) {
   for (let k = 0; k < 4; k++) {
     s.pos.push(pts[k][0], pts[k][1], pts[k][2]);
-    const br = brs[k];
+    const br = Math.min(1, brs[k]);
     s.col.push(br, br, br);
     s.uv.push(uvs[k][0], uvs[k][1]);
   }
