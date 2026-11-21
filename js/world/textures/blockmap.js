@@ -5,7 +5,6 @@ const BASE = 'js/world/textures/blocks/';
 const cache = new Map();   // "ad/yuz" -> THREE.Texture | null
 const loading = new Set();
 
-// Blok adı -> hangi yüzler dosya olarak var olabilir (ön yükleme için)
 export const BLOCK_FACES = {
   oak_log: ['top', 'side'], oak_planks: ['side'], oak_slab: ['side'], oak_leaves: ['side'],
   birch_log: ['top', 'side'], birch_planks: ['side'], birch_slab: ['side'], birch_leaves: ['side'],
@@ -22,7 +21,6 @@ export const BLOCK_FACES = {
   wool_brown: ['side'], wool_green: ['side'], wool_red: ['side'], wool_black: ['side']
 };
 
-// Ikon dosyaları (2.5D envanter için). Blok adı -> icon.png var mı
 export const ICON_BLOCKS = Object.keys(BLOCK_FACES);
 
 function load(key, path) {
@@ -37,6 +35,7 @@ function load(key, path) {
       tex.minFilter = THREE.LinearFilter;
       tex.needsUpdate = true;
       cache.set(key, tex);
+      if (hooks.onLoad) hooks.onLoad(key);
     };
     img.onerror = () => { loading.delete(key); cache.set(key, null); };
     img.src = path;
@@ -44,7 +43,9 @@ function load(key, path) {
   return null;
 }
 
-// Tek yüz: önce istenen yüz, yoksa side. Yüklü değilse null (ilk çağrıda yükleme başlar).
+// Yükleme bitince çağrılır. world.js bunu chunk'ları yeniden çizmek için kullanır.
+export const hooks = { onLoad: null };
+
 export function faceTexture(block, face) {
   const tryKey = f => {
     const key = block + '/' + f;
@@ -55,7 +56,7 @@ export function faceTexture(block, face) {
   };
   const primary = tryKey(face);
   if (primary) return primary;
-  if (primary === undefined) return null;   // henüz yükleniyor
+  if (primary === undefined) return null;
   if (face !== 'side') {
     const side = tryKey('side');
     if (side) return side;
@@ -63,12 +64,10 @@ export function faceTexture(block, face) {
   return null;
 }
 
-// Blok ikonu (envanter / slot). Yüklü değilse null.
 export function iconTexture(block) {
   return faceTexture(block, 'icon');
 }
 
-// Ön yükleme: tüm bilinen blok yüzlerini ve ikonları arka planda yükler
 export function preloadBlocks() {
   for (const b in BLOCK_FACES) {
     for (const f of BLOCK_FACES[b]) load(b + '/' + f, BASE + b + '/' + f + '.png');
