@@ -1,10 +1,31 @@
-// Blok yüz PNG'lerini yükler. Her dosya ayrı THREE.Texture olarak önbelleğe alınır.
-// Dosya yoksa null döner; çağıran taraf mevcut atlas dokusunu kullanır.
+import { N } from '../idtable.js';
+
+// Blok yüz ve ikon PNG'lerini yükler. Her dosya ayrı THREE.Texture olarak önbelleğe alınır.
+// Dosya yoksa null döner; çağıran taraf atlas dokusunu kullanır.
 
 const BASE = 'js/world/textures/blocks/';
-const cache = new Map();   // "ad/yuz" -> THREE.Texture | null
+const cache = new Map();   // "ad/yuz" -> THREE.Texture | null (404 ise null)
 const loading = new Set();
+const listeners = [];
 
+// Bir dosya yüklendiğinde (ya da yüklenemediğinde) fn(anahtar) çağrılır
+export function onBlockLoad(fn) { listeners.push(fn); }
+
+// Oyun blok numarası -> PNG klasör adı
+export const PNG_NAME = {
+  [N.ODUN]: 'oak_log', [N.YAPRAK]: 'oak_leaves', [N.TAHTA]: 'oak_planks',
+  [N.HUS_ODUN]: 'birch_log', [N.HUS_YAPRAK]: 'birch_leaves',
+  [N.KUM]: 'sand', [N.CAKIL]: 'gravel', [N.TUGLA]: 'brick', [N.KAR]: 'snow',
+  [N.KOMUR_CEVHERI]: 'coal_ore', [N.DEMIR_CEVHERI]: 'iron_ore', [N.ALTIN_CEVHERI]: 'gold_ore', [N.ELMAS_CEVHERI]: 'diamond_ore',
+  [N.ALTIN_BLOK]: 'gold_block', [N.DEMIR_BLOK]: 'iron_block', [N.ELMAS_BLOK]: 'diamond_block', [N.REDSTONE_BLOK]: 'redstone_block',
+  [N.SANDIK]: 'chest', [N.OCAK]: 'furnace', [N.MUZIK_KUTUSU]: 'jukebox',
+  // Oyunun 8 yün rengi, 16 renkli dosya listesinden eşlendi (istersen buradan değiştirebilirsin)
+  [N.YUN]: 'wool_white', [N.BEYAZ_YUN]: 'wool_white', [N.MOR_YUN]: 'wool_purple', [N.SARI_YUN]: 'wool_yellow',
+  [N.KIRMIZI_YUN]: 'wool_red', [N.MAVI_YUN]: 'wool_blue', [N.TURUNCU_YUN]: 'wool_orange',
+  [N.PEMBE_YUN]: 'wool_pink', [N.YESIL_YUN]: 'wool_green'
+};
+
+// Blok adı -> dosyası olabilecek yüzler (ön yükleme için)
 export const BLOCK_FACES = {
   oak_log: ['top', 'side'], oak_planks: ['side'], oak_slab: ['side'], oak_leaves: ['side'],
   birch_log: ['top', 'side'], birch_planks: ['side'], birch_slab: ['side'], birch_leaves: ['side'],
@@ -21,8 +42,6 @@ export const BLOCK_FACES = {
   wool_brown: ['side'], wool_green: ['side'], wool_red: ['side'], wool_black: ['side']
 };
 
-export const ICON_BLOCKS = Object.keys(BLOCK_FACES);
-
 function load(key, path) {
   if (cache.has(key)) return cache.get(key);
   if (!loading.has(key)) {
@@ -35,44 +54,49 @@ function load(key, path) {
       tex.minFilter = THREE.LinearFilter;
       tex.needsUpdate = true;
       cache.set(key, tex);
-      if (hooks.onLoad) hooks.onLoad(key);
+      listeners.forEach(f => f(key));
     };
-    img.onerror = () => { loading.delete(key); cache.set(key, null); };
+    img.onerror = () => {
+      loading.delete(key);
+      cache.set(key, null);
+      listeners.forEach(f => f(key));
+    };
     img.src = path;
   }
   return null;
 }
 
-// Yükleme bitince çağrılır. world.js bunu chunk'ları yeniden çizmek için kullanır.
-export const hooks = { onLoad: null };
-
+// Tek yüz: önce istenen yüz, yoksa side. Yükleniyorsa null, yoksa side ya da null.
 export function faceTexture(block, face) {
-  const tryKey = f => {
+  const get = f => {
     const key = block + '/' + f;
     const v = cache.get(key);
     if (v !== undefined) return v;
-    load(key, BASE + block + '/' + f + '.png');
+    load(key, BASE + key + '.png');
     return undefined;
   };
-  const primary = tryKey(face);
+  const primary = get(face);
   if (primary) return primary;
   if (primary === undefined) return null;
   if (face !== 'side') {
-    const side = tryKey('side');
+    const side = get('side');
     if (side) return side;
   }
   return null;
 }
 
+// Blok ikonu (envanter). İkon dosyası yoksa yan yüze DÜŞMEZ, null döner.
 export function iconTexture(block) {
-  return faceTexture(block, 'icon');
+  const key = block + '/icon';
+  const v = cache.get(key);
+  if (v !== undefined) return v;
+  load(key, BASE + key + '.png');
+  return null;
 }
 
 export function preloadBlocks() {
   for (const b in BLOCK_FACES) {
-    for (const f of BLOCK_FACES[b]) load(b + '/' + f, BASE + b + '/' + f + '.png');
-    load(b + '/icon', BASE + b + '/icon.png');
+    for (const f of BLOCK_FACES[b]) faceTexture(b, f);
+    iconTexture(b);
   }
 }
-
-export const PNG_NAME = {};
