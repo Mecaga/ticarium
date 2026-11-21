@@ -107,21 +107,21 @@ function queueToolIcon(t) {
 }
 
 export function iconURL(t) {
+  if (icons.has(t)) return icons.get(t);
   const bn = PNG_NAME[Number(t)];
   if (bn) {
-    const it = iconTexture(bn);
-    if (it && it.image) {
+    const tex = iconTexture(bn);
+    if (tex && tex.image) {
       const c = document.createElement('canvas');
       c.width = c.height = 32;
       const g = c.getContext('2d');
       g.imageSmoothingEnabled = false;
-      g.drawImage(it.image, 0, 0, 32, 32);
+      g.drawImage(tex.image, 0, 0, 32, 32);
       const u = c.toDataURL();
       icons.set(t, u);
       return u;
     }
   }
-  if (icons.has(t)) return icons.get(t);
   const numT = Number(t);
   if (TOOL_MAP[numT]) {
     if (toolImgs.has(numT)) {
