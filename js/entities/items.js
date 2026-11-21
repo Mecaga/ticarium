@@ -1,6 +1,7 @@
 import { solid, atlas, TYPES, isLoaded } from '../world/world.js';
 import { isFlat, FACE_TILES } from '../world/textures.js';
 import { TOOL_MAP } from '../world/textures/map.js';
+import { PNG_NAME, BLOCK_FACES, faceTexture, onBlockLoad } from '../world/textures/blockmap.js';
 import { eco } from '../game/economy.js';
 import { P } from './player.js';
 import { drawHud, toast } from '../ui/ui.js';
@@ -10,7 +11,8 @@ import { isGear, MAXDUR, takeInstance } from '../game/gear.js';
 
 export const hooks = { push: null, take: null, expire: null, myId: '' };
 
-// Eşya numarası -> PNG yolu (js/world/textures/ altına göre, uzantısız). Alet tabloları otomatik eklenir.
+// Düz PNG eşyalar: eşya numarası -> js/world/textures/ altındaki yol (uzantısız).
+// Alet tabloları (TOOL_MAP) otomatik eklenir. Yeni düz eşyanın PNG'sini buraya yaz.
 const ITEM_PNG = {
   // [N.KEMIK]: 'bones/bone',
 };
@@ -29,8 +31,13 @@ const cubeGeo = {}, sprGeo = {};
 const list = new Map();
 let seq = 0;
 
+// Düz PNG önbelleği: eşya numarası -> { mat, geo } | null
 const pngCache = new Map();
 const pngLoading = new Set();
+
+// Blok PNG önbelleği: eşya numarası -> 6 materyal | null (hazır değilse null, sonra tekrar denenir)
+const boxCache = new Map();
+let boxGeo = null;
 
 const sideTile = t => { const f = FACE_TILES[t], v = f ? f[1] : undefined; return Number.isInteger(v) ? v : 0; };
 
@@ -39,6 +46,14 @@ export function initItems(scene) {
   scene.add(group);
   cubeMat = new THREE.MeshLambertMaterial({ map: atlas.tex, alphaTest: 0.5 });
   sprMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+  // Bir blok yüzü PNG'si yüklenince, yerdeki aynı türdeki blok eşyaları PNG yüzlerine geçer
+  onBlockLoad(key => {
+    if (key.endsWith('/icon')) return;
+    const name = key.split('/')[0];
+    for (const it of list.values()) {
+      if (!it.flat && !it.png && PNG_NAME[it.t] === name) swapToBox(it);
+    }
+  });
 }
 
 function cubeGeometry(t) {
@@ -82,9 +97,7 @@ function spriteGeometry(t) {
   return (sprGeo[t] = geo);
 }
 
-// PNG'den 1 piksel kalınlıklı hacim.
-// Ön yüz (+z) renk 1.0, arka yüz (-z) 0.8, şeffaf komşulu kenarlar 0.6 (üst/alt 0.55 ve 0.65 gibi ayrım).
-// Renk attribute'u geometriye yazılır; materyal vertexColors + map ile çarpım yapar.
+// PNG piksellerinden 1 piksel kalınlıklı hacim. Ön yüz 1.0, arka 0.8, kenarlar 0.55–0.65.
 function buildThickGeometry(img) {
   const W = img.width, H = img.height;
   const cv = document.createElement('canvas');
@@ -116,11 +129,9 @@ function buildThickGeometry(img) {
     const y1 = (H / 2 - y) * S, y0 = y1 - S;
     const z0 = -D / 2, z1 = D / 2;
     const u0 = x / W, u1 = (x + 1) / W, v0 = 1 - (y + 1) / H, v1 = 1 - y / H;
-    // Ön yüz tam parlak, arka yüz hafif koyu
     quad([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], u0, v0, u1, v1, 1.0, false);
     quad([x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0], u0, v0, u1, v1, 0.8, true);
     const su0 = u0 + 0.001, sv0 = v0 + 0.001, su1 = u1 - 0.001, sv1 = v1 - 0.001;
-    // Kenarlar: sol/sağ 0.6, üst 0.65, alt 0.55 (köşe hacmi okunur)
     if (!on(x - 1, y)) quad([x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0], su0, sv0, su1, sv1, 0.6, false);
     if (!on(x + 1, y)) quad([x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1], su0, sv0, su1, sv1, 0.6, false);
     if (!on(x, y - 1)) quad([x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [x0, y1, z0], su0, sv0, su1, sv1, 0.65, false);
@@ -149,10 +160,8 @@ function pngFor(t) {
       tex.magFilter = THREE.NearestFilter;
       tex.minFilter = THREE.LinearFilter;
       tex.needsUpdate = true;
-      // vertexColors: geometri renkleri gölgeyi, map dokuyu taşır
       const mat = new THREE.MeshLambertMaterial({ map: tex, vertexColors: true, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide });
-      const entry = { mat, geo: buildThickGeometry(img) };
-      pngCache.set(t, entry);
+      pngCache.set(t, { mat, geo: buildThickGeometry(img) });
       for (const it of list.values()) if (it.t === t && !it.png) swapToPlane(it);
     };
     img.onerror = () => { pngLoading.delete(t); pngCache.set(t, null); };
@@ -168,9 +177,48 @@ function swapToPlane(it) {
   pm.position.copy(it.mesh.position);
   pm.rotation.copy(it.mesh.rotation);
   pm.scale.copy(it.mesh.scale);
+  pm.visible = it.mesh.visible;
   group.remove(it.mesh);
   group.add(pm);
   it.mesh = pm;
+  it.png = true;
+}
+
+// Blok PNG'leri: BoxGeometry yüz sırası (+x, -x, +y, -y, +z, -z). Ön yüz -z tarafında, dünyadaki sandık ile aynı.
+const BOX_ORDER = ['side', 'side', 'top', 'bottom', 'side', 'front'];
+function boxMatsFor(t) {
+  if (boxCache.has(t)) return boxCache.get(t);
+  const name = PNG_NAME[t];
+  if (!name) { boxCache.set(t, null); return null; }
+  const have = BLOCK_FACES[name] || [];
+  const texs = BOX_ORDER.map(f => faceTexture(name, have.includes(f) ? f : 'side'));
+  if (texs.some(tx => !tx)) return null;   // yükleniyor ya da dosya yok: atlas küpü kalır, yükleme bitince tekrar denenir
+  const byTex = new Map();
+  const mats = texs.map(tx => {
+    if (!byTex.has(tx)) byTex.set(tx, new THREE.MeshLambertMaterial({ map: tx, alphaTest: 0.5 }));
+    return byTex.get(tx);
+  });
+  boxCache.set(t, mats);
+  return mats;
+}
+
+function boxGeometry() {
+  return boxGeo || (boxGeo = new THREE.BoxGeometry(0.32, 0.32, 0.32));
+}
+
+// Blok eşyasını PNG yüzlerine çevirir (konum, dönüş ve ölçek korunur)
+function swapToBox(it) {
+  if (it.flat || it.png) return;
+  const mats = boxMatsFor(+it.t);
+  if (!mats) return;
+  const m = new THREE.Mesh(boxGeometry(), mats);
+  m.position.copy(it.mesh.position);
+  m.rotation.copy(it.mesh.rotation);
+  m.scale.copy(it.mesh.scale);
+  m.visible = it.mesh.visible;
+  group.remove(it.mesh);
+  group.add(m);
+  it.mesh = m;
   it.png = true;
 }
 
@@ -179,21 +227,30 @@ const encC = a => ((a.d != null && isGear(a.t)) ? 100000 + Math.max(1, Math.roun
 export function spawnItem(id, d) {
   if (!d || !FACE_TILES[d.t]) return;
   if (!group || list.has(id) || !TYPES[d.t]) return;
+  const t = +d.t;
   let c = d.c, dur = null;
   if (c >= 100000) { dur = c - 100000; c = 1; }
-  const flat = isFlat(+d.t);
-  const mesh = new THREE.Mesh(flat ? spriteGeometry(+d.t) : cubeGeometry(+d.t), flat ? sprMat : cubeMat);
+  const flat = isFlat(t);
+  let mesh;
+  if (flat) {
+    mesh = new THREE.Mesh(spriteGeometry(t), sprMat);
+  } else {
+    const mats = PNG_NAME[t] ? boxMatsFor(t) : null;
+    mesh = mats ? new THREE.Mesh(boxGeometry(), mats) : new THREE.Mesh(cubeGeometry(t), cubeMat);
+  }
   if (c > 1) mesh.scale.setScalar(1.3);
   mesh.position.set(d.x, d.y, d.z);
   group.add(mesh);
   const it = {
-    id, mesh, flat, t: d.t, c, dur, by: d.by || '', png: false,
+    id, mesh, flat, t, c, dur, by: d.by || '', png: !flat && Array.isArray(mesh.material),
     x: d.x, y: d.y, z: d.z, vx: d.vx || 0, vy: d.vy || 0, vz: d.vz || 0,
     born: Date.now(), n: d.n || Date.now(), ground: false, taking: false, cool: 0, ph: Math.random() * 6.28
   };
   list.set(id, it);
-  pngFor(+d.t);
-  if (pngCache.get(+d.t)) swapToPlane(it);
+  if (pngPath(t)) {
+    pngFor(t);
+    if (pngCache.get(t)) swapToPlane(it);
+  }
 }
 
 export function removeItem(id) {
@@ -294,4 +351,4 @@ export function updateItems(dt, canPick) {
       if (dx * dx + dy * dy + dz * dz < 2.25) tryTake(it);
     }
   }
-                                                                }
+            }
