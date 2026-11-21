@@ -4,7 +4,7 @@ import {
   BEDROCK, SAPLING, WATER, LAVA, BUCKET, WBUCKET, LBUCKET, CANVAS, APPLE, OBSIDIAN,
   CRAFT, FARM, FURNACE, SEEDS, WHEAT, STICK, COAL, INGOT_I, INGOT_G, GEM, COAL_ORE, DIAMOND_ORE,
   CROP_MIN, CROP_MAX, TALL, VEG, VCROP_MIN, VCROP_MAX, DYE_MIN, DYE_MAX,
-  isCrop, planTree, isPlant
+  isCrop, planTree, isPlant, placeVal
 } from '../world/world.js';
 import { P, collides } from '../entities/player.js';
 import { eco } from './economy.js';
@@ -479,9 +479,9 @@ export function placeBlock() {
     if (t === SAPLING && ![N.CIM, N.TOPRAK, N.KUM, N.KAR].includes(g)) return toast('Fidan çimene, toprağa, kuma ya da kara dikilir');
     if (t !== SAPLING && ![N.CIM, N.TOPRAK].includes(g)) return toast('Çiçek çimene ya da toprağa dikilir');
   }
-  set(x, y, z, t);
+  set(x, y, z, placeVal(t));
   if (collides(P.x, P.y, P.z)) { set(x, y, z, old); return; }
-  commit(x, y, z, t);
+  commit(x, y, z, placeVal(t));
   if (isFalling(t)) queueFall(x, y, z);
   take(t);
   sfx.place();
