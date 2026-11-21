@@ -1,5 +1,6 @@
 import { N } from './idtable.js';
 import { hash, atlas, FACE_TILES, T, initAtlas, tileOf } from './textures.js';
+import { faceTexture, BLOCK_FACES } from './textures/blockmap.js';
 import {
   BEDROCK, SAPLING, BIRCH_LOG, BIRCH_LEAF, WATER, GLASS, WATER_MAX, LAVA, LAVA_MAX, OBSIDIAN,
   COAL_ORE, IRON_ORE, GOLD_ORE, DIAMOND_ORE, FLOWER_MIN, TALL, isPlant, isCrop
@@ -266,6 +267,13 @@ function disposeChunk(c) {
   for (const f of ['mt', 'mw', 'ml', 'mg']) {
     if (c[f]) { if (group) group.remove(c[f]); c[f].geometry.dispose(); c[f] = null; }
   }
+  for (const k of Object.keys(c)) {
+    if (k.startsWith('p_') && c[k]) {
+      if (group) group.remove(c[k]);
+      c[k].geometry.dispose();
+      c[k] = null;
+    }
+  }
 }
 
 export function generate(seed = 1, kind = 'normal') {
@@ -322,6 +330,15 @@ export function chunksReady(px, pz) {
   }
   return true;
 }
+
+const PNG_NAME = {
+  [N.ODUN]: 'oak_log', [N.YAPRAK]: 'oak_leaves', [N.TAHTA]: 'oak_planks',
+  [N.HUS_ODUN]: 'birch_log', [N.HUS_YAPRAK]: 'birch_leaves',
+  [N.KUM]: 'sand', [N.KAR]: 'snow', [N.TUGLA]: 'brick',
+  [N.KOMUR_CEVHERI]: 'coal_ore', [N.DEMIR_CEVHERI]: 'iron_ore', [N.ALTIN_CEVHERI]: 'gold_ore', [N.ELMAS_CEVHERI]: 'diamond_ore',
+  [N.SANDIK]: 'chest', [N.OCAK]: 'furnace', [N.MUZIK_KUTUSU]: 'jukebox',
+  [N.DEMIR_BLOK]: 'iron_block', [N.ELMAS_BLOK]: 'diamond_block', [N.REDSTONE_BLOK]: 'redstone_block'
+};
 
 const AOV = [0.5, 0.68, 0.84, 1.0];
 const ORD_P = [[0, 0], [1, 0], [1, 1], [0, 1]];
@@ -384,6 +401,30 @@ function fluidH(x, y, z, t) {
 }
 
 const sink = () => ({ pos: [], uv: [], col: [], ind: [], n: 0 });
+
+const pngMats = new Map();   // blok adı+yüz -> THREE.MeshBasicMaterial
+function pngMat(name, face) {
+  const key = name + '/' + face;
+  if (pngMats.has(key)) return pngMats.get(key);
+  const tex = faceTexture(name, face);
+  if (!tex) return null;           // henüz yüklenmedi ya da yok
+  const m = new THREE.MeshBasicMaterial({ map: tex, vertexColors: true, alphaTest: 0.5, side: THREE.DoubleSide });
+  pngMats.set(key, m);
+  return m;
+}
+
+function pushPngQ(s, pts, brs, uvs, flipInd) {
+  for (let k = 0; k < 4; k++) {
+    s.pos.push(pts[k][0], pts[k][1], pts[k][2]);
+    const br = brs[k];
+    s.col.push(br, br, br);
+    s.uv.push(uvs[k][0], uvs[k][1]);
+  }
+  if (!flipInd) s.ind.push(s.n, s.n + 1, s.n + 2, s.n, s.n + 2, s.n + 3);
+  else s.ind.push(s.n + 1, s.n + 2, s.n + 3, s.n + 1, s.n + 3, s.n);
+  s.n += 4;
+}
+
 function pushQ(s, tile, p, sh) {
   for (let k = 0; k < 4; k++) {
     s.pos.push(p[k][0], p[k][1], p[k][2]);
@@ -407,6 +448,7 @@ function boxMesh(mq, ft, b, x, y, z) {
 function buildChunk(c) {
   const pos = [], uv = [], col = [], ind = [];
   const wS = sink(), lS = sink(), gS = sink();
+  const pngS = new Map();   // blok adı -> sink (her yüz için ayrı)
   let vc = 0;
   const WT = FACE_TILES[WATER] ? FACE_TILES[WATER][0] : 0;
   const LT = FACE_TILES[LAVA] ? FACE_TILES[LAVA][0] : 0;
@@ -497,6 +539,8 @@ function buildChunk(c) {
       continue;
     }
 
+    const pn = PNG_NAME[t];
+
     for (let a = 0; a < 3; a++) for (let s = -1; s <= 1; s += 2) {
       const b = [x, y, z]; b[a] += s;
       if (opaque(get(b[0], b[1], b[2]))) continue;
@@ -505,6 +549,16 @@ function buildChunk(c) {
       const u = (a + 1) % 3, v = (a + 2) % 3;
       const order = s > 0 ? ORD_P : ORD_N;
       const aoS = [];
+      const qPts = [], qBrs = [], qUvs = [];
+
+      let pface = a === 1 ? (s > 0 ? 'top' : 'bottom') : 'side';
+      let pm = pn ? pngMat(pn, pface) : null;
+      if (!pm && pn && a !== 1 && s > 0 && a === 2) {
+        const frontMat = pngMat(pn, 'front');
+        if (frontMat) { pface = 'front'; pm = frontMat; }
+      }
+      const S2 = pm ? (pngS.get(pn + '/' + pface) || (pngS.set(pn + '/' + pface, sink()), pngS.get(pn + '/' + pface))) : null;
+
       for (let k = 0; k < 4; k++) {
         const cu = order[k][0], cv = order[k][1];
         const p = [x, y, z];
@@ -518,14 +572,27 @@ function buildChunk(c) {
         const ao = (s1 && s2) ? 0 : 3 - (s1 + s2 + s3);
         aoS.push(ao);
         const br = AOV[ao] * shade;
-        pos.push(p[0], p[1], p[2]);
-        col.push(br, br, br);
         const tu = a === 0 ? cv : cu, tv = a === 0 ? cu : cv;
-        uv.push((tile + 0.02 + tu * 0.96) / T, 0.02 + tv * 0.96);
+
+        if (S2) {
+          qPts.push(p);
+          qBrs.push(br);
+          qUvs.push([tu, tv]);
+        } else {
+          pos.push(p[0], p[1], p[2]);
+          col.push(br, br, br);
+          uv.push((tile + 0.02 + tu * 0.96) / T, 0.02 + tv * 0.96);
+        }
       }
-      if (aoS[0] + aoS[2] >= aoS[1] + aoS[3]) ind.push(vc, vc + 1, vc + 2, vc, vc + 2, vc + 3);
-      else ind.push(vc + 1, vc + 2, vc + 3, vc + 1, vc + 3, vc);
-      vc += 4;
+
+      const flipInd = !(aoS[0] + aoS[2] >= aoS[1] + aoS[3]);
+      if (S2) {
+        pushPngQ(S2, qPts, qBrs, qUvs, flipInd);
+      } else {
+        if (!flipInd) ind.push(vc, vc + 1, vc + 2, vc, vc + 2, vc + 3);
+        else ind.push(vc + 1, vc + 2, vc + 3, vc + 1, vc + 3, vc);
+        vc += 4;
+      }
     }
   }
   c.dirty = 0;
@@ -533,6 +600,10 @@ function buildChunk(c) {
   putMesh(c, 'ml', lS.pos, lS.uv, lS.col, lS.ind, lavaMat, 1);
   putMesh(c, 'mw', wS.pos, wS.uv, wS.col, wS.ind, waterMat, 2);
   putMesh(c, 'mg', gS.pos, gS.uv, gS.col, gS.ind, glassMat, 3);
+  for (const [key, s] of pngS) {
+    const m = pngMat(...key.split('/'));
+    putMesh(c, 'p_' + key, s.pos, s.uv, s.col, s.ind, m, 0);
+  }
 }
 
 export function rebuild(max = 2) {
