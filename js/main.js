@@ -29,7 +29,8 @@ import { updateFurnace, isFurnaceOpen } from './ui/furnace.js';
 import { isChestOpen } from './game/chests.js';
 import { tickVitals } from './entities/vitals.js';
 import { initPack } from './world/texturepack.js';
-import { preloadBlocks } from './world/textures/blockmap.js';
+import { preloadBlocks, onBlockLoad } from './world/textures/blockmap.js';
+import { clearIcons } from './world/textures.js';
 import './game/looks.js';
 import './game/modes.js';
 import './game/content.js'; // İçerik tanımlarının erkenden yüklenmesini sağlar
@@ -137,6 +138,12 @@ addEventListener('keydown', e => {
 generate(1);
 initRender(scene);
 initPack();
+let iconT = 0;
+onBlockLoad(k => {
+  if (!k.endsWith('/icon')) return;
+  clearTimeout(iconT);
+  iconT = setTimeout(() => { clearIcons(); drawHud(); }, 200);
+});
 preloadBlocks();
 initItems(scene);
 initMobs(scene);
