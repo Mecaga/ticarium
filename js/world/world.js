@@ -82,12 +82,12 @@ export const set = (x, y, z, t) => {
   m.set(i, t);
   const c = chunks.get(k);
   if (!c) return;
-  let tt = t, lv = 0;
+  let tt = t & 255, fc = t >> 8, lv = 0;
   if (tt > WATER && tt <= WATER_MAX) { lv = tt - WATER; tt = WATER; }
   else if (tt >= LAVA && tt <= LAVA_MAX) { lv = tt - LAVA; tt = LAVA; }
-  if (c.b[i] === tt && c.l[i] === lv) return;
+  if (c.b[i] === tt && c.l[i] === lv && c.f[i] === fc) return;
   const old = c.b[i];
-  c.b[i] = tt; c.l[i] = lv;
+  c.b[i] = tt; c.l[i] = lv; c.f[i] = fc;
   markDirty(c, lx, lz);
   if (old && isPlant(old) && (tt === WATER || tt === LAVA) && ph.fn) ph.fn(x, y, z, old);
   if (wh.fn) wh.fn(x, y, z);
@@ -221,7 +221,7 @@ export function losBlocked(ex, ey, ez, dx, dy, dz, t) {
 }
 
 function newChunk(cx, cz) {
-  return { cx, cz, b: new Uint8Array(CW * H * CW), l: new Uint8Array(CW * H * CW), dirty: 1, mt: null, mw: null, ml: null, mg: null };
+  return { cx, cz, b: new Uint8Array(CW * H * CW), l: new Uint8Array(CW * H * CW), f: new Uint8Array(CW * H * CW), dirty: 1, mt: null, mw: null, ml: null, mg: null };
 }
 
 function genChunk(c) {
@@ -253,10 +253,11 @@ function genChunk(c) {
   const m = mods.get(ck(c.cx, c.cz));
   if (m) {
     m.forEach((raw, i) => {
-      let tt = raw, lv = 0;
+      let tt = raw & 255, lv = 0;
+      const fc = raw >> 8;
       if (tt > WATER && tt <= WATER_MAX) { lv = tt - WATER; tt = WATER; }
       else if (tt >= LAVA && tt <= LAVA_MAX) { lv = tt - LAVA; tt = LAVA; }
-      b[i] = tt; c.l[i] = lv;
+      b[i] = tt; c.l[i] = lv; c.f[i] = fc;
       if (lv > 0) flows.push(i);
     });
   }
@@ -547,6 +548,7 @@ function buildChunk(c) {
     }
 
     const pn = PNG_NAME[t];
+    const fcur = c.f[(y * CW + lz) * CW + lx];
 
     for (let a = 0; a < 3; a++) for (let s = -1; s <= 1; s += 2) {
       const b = [x, y, z]; b[a] += s;
@@ -558,7 +560,7 @@ function buildChunk(c) {
       const aoS = [];
       const qPts = [], qBrs = [], qUvs = [];
 
-      const pface = a === 1 ? (s > 0 ? 'top' : 'bottom') : ((a === 2 && s === -1) ? 'front' : 'side');
+      const pface = a === 1 ? (s > 0 ? 'top' : 'bottom') : (isFront(t, fcur, a, s) ? 'front' : 'side');
       const pm = pn ? pngMat(pn, pface) : null;
       const S2 = pm ? (pngS.get(pn + '/' + pface) || (pngS.set(pn + '/' + pface, sink()), pngS.get(pn + '/' + pface))) : null;
 
@@ -629,6 +631,7 @@ export let target = null, prev = null, wtarget = null, stgt = null;
 export function updateTarget(camera) {
   if (!camera || !FACE_TILES) return;
   const d = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
+  facX = -d.x; facZ = -d.z;   // ön yüz oyuncuya bakar (bakışın tersi)
   const o = camera.position;
   let lx = -1e9, ly = -1e9, lz = -1e9;
   target = prev = wtarget = stgt = null;
@@ -657,3 +660,23 @@ export function updateTarget(camera) {
   hl.visible = !!target;
   if (target) hl.position.set(target[0] + 0.5, target[1] + 0.5, target[2] + 0.5);
 }
+
+// --- Sandık ve ocak ön yüzü (bakış yönü) ---
+let facX = 0, facZ = 1;   // oyuncuya dönük yatay yön (updateTarget her karede günceller)
+const FRONT = [[2, -1], [0, 1], [2, 1], [0, -1]];   // 0 kuzey (-z), 1 doğu (+x), 2 güney (+z), 3 batı (-x)
+const isFront = (t, f, a, s) => (t === N.SANDIK || t === N.OCAK) && a === FRONT[f & 3][0] && s === FRONT[f & 3][1];
+
+// Sandık ve ocak koyulurken ön yüzü oyuncuya çevirir. Diğer numaralar olduğu gibi döner.
+export function placeVal(t) {
+  if (t !== N.SANDIK && t !== N.OCAK) return t;
+  let f;
+  if (Math.abs(facX) > Math.abs(facZ)) f = facX > 0 ? 1 : 3;
+  else f = facZ > 0 ? 2 : 0;
+  return t | (f << 8);
+}
+
+export const faceAt = (x, y, z) => {
+  if (y < 0 || y >= H) return 0;
+  const c = chunkAt(x, z);
+  return c ? c.f[(y * CW + (z - c.cz * CW)) * CW + (x - c.cx * CW)] : 0;
+};
