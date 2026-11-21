@@ -402,13 +402,13 @@ function fluidH(x, y, z, t) {
 
 const sink = () => ({ pos: [], uv: [], col: [], ind: [], n: 0 });
 
-const pngMats = new Map();   // blok adı+yüz -> THREE.MeshBasicMaterial
+const pngMats = new Map();   // blok adı+yüz -> THREE.MeshLambertMaterial
 function pngMat(name, face) {
   const key = name + '/' + face;
   if (pngMats.has(key)) return pngMats.get(key);
   const tex = faceTexture(name, face);
   if (!tex) return null;           // henüz yüklenmedi ya da yok
-  const m = new THREE.MeshBasicMaterial({ map: tex, vertexColors: true, alphaTest: 0.5, side: THREE.DoubleSide });
+  const m = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5, side: THREE.DoubleSide });
   pngMats.set(key, m);
   return m;
 }
@@ -551,12 +551,8 @@ function buildChunk(c) {
       const aoS = [];
       const qPts = [], qBrs = [], qUvs = [];
 
-      let pface = a === 1 ? (s > 0 ? 'top' : 'bottom') : 'side';
-      let pm = pn ? pngMat(pn, pface) : null;
-      if (!pm && pn && a !== 1 && s > 0 && a === 2) {
-        const frontMat = pngMat(pn, 'front');
-        if (frontMat) { pface = 'front'; pm = frontMat; }
-      }
+      const pface = a === 1 ? (s > 0 ? 'top' : 'bottom') : ((a === 2 && s === -1) ? 'front' : 'side');
+      const pm = pn ? pngMat(pn, pface) : null;
       const S2 = pm ? (pngS.get(pn + '/' + pface) || (pngS.set(pn + '/' + pface, sink()), pngS.get(pn + '/' + pface))) : null;
 
       for (let k = 0; k < 4; k++) {
@@ -571,14 +567,14 @@ function buildChunk(c) {
         const s1 = occ(q1[0], q1[1], q1[2]), s2 = occ(q2[0], q2[1], q2[2]), s3 = occ(q3[0], q3[1], q3[2]);
         const ao = (s1 && s2) ? 0 : 3 - (s1 + s2 + s3);
         aoS.push(ao);
-        const br = AOV[ao] * shade;
         const tu = a === 0 ? cv : cu, tv = a === 0 ? cu : cv;
 
         if (S2) {
           qPts.push(p);
-          qBrs.push(br);
+          qBrs.push(AOV[ao]);
           qUvs.push([tu, tv]);
         } else {
+          const br = AOV[ao] * shade;
           pos.push(p[0], p[1], p[2]);
           col.push(br, br, br);
           uv.push((tile + 0.02 + tu * 0.96) / T, 0.02 + tv * 0.96);
