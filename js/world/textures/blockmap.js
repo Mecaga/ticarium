@@ -74,3 +74,5 @@ export function preloadBlocks() {
     load(b + '/icon', BASE + b + '/icon.png');
   }
 }
+
+export const PNG_NAME = {};
