@@ -5,6 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>BlokDiyar</title>
 <link rel="stylesheet" href="css/style.css?v=83">
+<style>
+  #bBreak, #bPlace {
+    position: fixed;
+    bottom: 112px;
+    font-size: 20px;
+    z-index: 20;
+  }
+  #bBreak { left: 18px; }
+  #bPlace { left: 92px; }
+</style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
 <script src="js/dbg.js?v=83"></script>
 </head>
@@ -22,8 +32,8 @@
 <div id="joyBase"><div id="joyKnob"></div></div>
 <div class="btn" id="bJump">Zıpla</div>
 <div class="btn" id="bAttack">⚔️</div>
-<div class="btn" id="bBreak" style="right:18px;bottom:162px;font-size:20px">⛏️ Kır</div>
-<div class="btn" id="bPlace" style="right:92px;bottom:162px;font-size:20px">🧱 Koy</div>
+<div class="btn" id="bBreak">⛏️ Kır</div>
+<div class="btn" id="bPlace">🧱 Koy</div>
 <div class="btn" id="bMarket">🏪 Pazar</div>
 <div class="btn" id="bPlayers">👥</div>
 <div class="btn" id="bSettings">⚙️ Ayarlar</div>
