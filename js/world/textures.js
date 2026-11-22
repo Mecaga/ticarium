@@ -13,6 +13,7 @@ import * as arm from './textures/armor.js';
 import * as ui from './textures/ui_items.js';
 import * as ext from './textures/extra_items.js';
 import * as ext2 from './textures/extra_items2.js';
+import * as spr from './textures/spruce_blocks.js';
 import { TOOL_MAP, toolImage } from './textures/map.js';
 import { iconTexture, PNG_NAME } from './textures/blockmap.js';
 
@@ -24,7 +25,8 @@ const MODS = [
   ['mobs', 'Mob görünümleri', mob], ['player', 'Oyuncu görünümü', ply], ['tools', 'Aletler ve ekipmanlar', tls],
   ['foods', 'Yemekler', fod], ['crops', 'Tarla ürünleri', crp], ['armor', 'Zırhlar', arm], ['ui_items', 'Kitaplar ve arayüz', ui],
   ['extra_items', 'Ek eşyalar', ext],
-  ['extra_items2', 'Ek eşyalar 2', ext2]
+  ['extra_items2', 'Ek eşyalar 2', ext2],
+  ['spruce_blocks', 'Çam ve kömür blokları', spr]
 ];
 
 const TILE_NAMES = [], DEF = {}, CAT = {}, TI = {};
