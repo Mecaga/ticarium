@@ -76,5 +76,6 @@ Object.assign(N, {
 });
 
 Object.assign(N, { KOMUR_BLOK: 56, SPRUCE_ODUN: 57, SPRUCE_TAHTA: 58, SPRUCE_YAPRAK: 59, SPRUCE_BASAMAK: 166 });
+Object.assign(N, { KAR_TOPU: 313 });
 
 export const ESKI = {};
