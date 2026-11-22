@@ -1,3 +1,4 @@
+import { N } from '../world/idtable.js';
 import { solid, atlas, TYPES, isLoaded } from '../world/world.js';
 import { isFlat, FACE_TILES } from '../world/textures.js';
 import { TOOL_MAP } from '../world/textures/map.js';
@@ -14,7 +15,10 @@ export const hooks = { push: null, take: null, expire: null, myId: '' };
 // Düz PNG eşyalar: eşya numarası -> js/world/textures/ altındaki yol (uzantısız).
 // Alet tabloları (TOOL_MAP) otomatik eklenir. Yeni düz eşyanın PNG'sini buraya yaz.
 const ITEM_PNG = {
-  // [N.KEMIK]: 'bones/bone',
+  [N.KOMUR]: 'blocks/coal/icon',
+  [N.DEMIR_KULCE]: 'blocks/iron_ingot/icon',
+  [N.ALTIN_KULCE]: 'blocks/gold_ingot/icon',
+  [N.ELMAS]: 'blocks/diamond/icon',
 };
 const pngPath = t => {
   if (ITEM_PNG[t]) return 'js/world/textures/' + ITEM_PNG[t] + '.png';
@@ -351,4 +355,4 @@ export function updateItems(dt, canPick) {
       if (dx * dx + dy * dy + dz * dz < 2.25) tryTake(it);
     }
   }
-            }
+}
