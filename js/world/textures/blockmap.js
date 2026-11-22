@@ -22,7 +22,9 @@ export const PNG_NAME = {
   // Oyunun 8 yün rengi, 16 renkli dosya listesinden eşlendi (istersen buradan değiştirebilirsin)
   [N.YUN]: 'wool_white', [N.BEYAZ_YUN]: 'wool_white', [N.MOR_YUN]: 'wool_purple', [N.SARI_YUN]: 'wool_yellow',
   [N.KIRMIZI_YUN]: 'wool_red', [N.MAVI_YUN]: 'wool_blue', [N.TURUNCU_YUN]: 'wool_orange',
-  [N.PEMBE_YUN]: 'wool_pink', [N.YESIL_YUN]: 'wool_green'
+  [N.PEMBE_YUN]: 'wool_pink', [N.YESIL_YUN]: 'wool_green',
+  [N.BASAMAK_MESE]: 'oak_slab', [N.BASAMAK_HUS]: 'birch_slab',
+  [N.KAR_1]: 'snow', [N.KAR_2]: 'snow', [N.KAR_3]: 'snow'
 };
 
 // Blok adı -> dosyası olabilecek yüzler (ön yükleme için)
@@ -66,22 +68,20 @@ function load(key, path) {
   return null;
 }
 
-// Tek yüz: önce istenen yüz, yoksa side. Yükleniyorsa null, yoksa side ya da null.
 export function faceTexture(block, face) {
-  const get = f => {
-    const key = block + '/' + f;
+  const have = BLOCK_FACES[block] || ['side'];
+  const f = have.includes(face) ? face : 'side';
+  const get = k => {
+    const key = block + '/' + k;
     const v = cache.get(key);
     if (v !== undefined) return v;
     load(key, BASE + key + '.png');
     return undefined;
   };
-  const primary = get(face);
-  if (primary) return primary;
-  if (primary === undefined) return null;
-  if (face !== 'side') {
-    const side = get('side');
-    if (side) return side;
-  }
+  const v = get(f);
+  if (v) return v;
+  if (v === undefined) return null;                               // yükleniyor
+  if (f !== 'side') { const s = get('side'); if (s) return s; }   // dosya yok: yan yüze düş
   return null;
 }
 
