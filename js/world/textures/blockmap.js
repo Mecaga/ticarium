@@ -102,3 +102,8 @@ export function preloadBlocks() {
     iconTexture(b);
   }
 }
+
+// Blok olmayan eşyaların 2.5D ikon klasörleri: eşya numarası -> klasör adı
+export const ICON_ITEM = {
+  [N.KOMUR]: 'coal', [N.DEMIR_KULCE]: 'iron_ingot', [N.ALTIN_KULCE]: 'gold_ingot', [N.ELMAS]: 'diamond'
+};
