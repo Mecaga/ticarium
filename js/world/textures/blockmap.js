@@ -24,7 +24,9 @@ export const PNG_NAME = {
   [N.KIRMIZI_YUN]: 'wool_red', [N.MAVI_YUN]: 'wool_blue', [N.TURUNCU_YUN]: 'wool_orange',
   [N.PEMBE_YUN]: 'wool_pink', [N.YESIL_YUN]: 'wool_green',
   [N.BASAMAK_MESE]: 'oak_slab', [N.BASAMAK_HUS]: 'birch_slab',
-  [N.KAR_1]: 'snow', [N.KAR_2]: 'snow', [N.KAR_3]: 'snow'
+  [N.KAR_1]: 'snow', [N.KAR_2]: 'snow', [N.KAR_3]: 'snow',
+  [N.KOMUR_BLOK]: 'coal_block', [N.SPRUCE_ODUN]: 'spruce_log', [N.SPRUCE_TAHTA]: 'spruce_planks',
+  [N.SPRUCE_YAPRAK]: 'spruce_leaves', [N.SPRUCE_BASAMAK]: 'spruce_slab'
 };
 
 // Blok adı -> dosyası olabilecek yüzler (ön yükleme için)
