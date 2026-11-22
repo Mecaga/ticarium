@@ -95,7 +95,10 @@ function afterWear(t, amt) {
 function dropsOf(t) {
   if (t === 78) return [[N.SALTER, 1]]; // Açık şalter kırıldığında normal şalter eşyası düşer
   if (t === N.KIL_BLOK) return [[N.KIL, 4]]; // Kil blok kırılınca 4 adet kil eşyası düşer
-  if (t >= N.KAR_1 && t <= N.KAR_3) return [[N.KAR, 1]];
+  if (t >= N.KAR_1 && t <= N.KAR_3) {
+    const kurek = [N.AHSAP_KUREK, N.TAS_KUREK, N.DEMIR_KUREK, N.ELMAS_KUREK].includes(eco.sel);
+    return kurek ? [[N.KAR_TOPU, t - N.KAR_1 + 1]] : [];
+  }
   if (EXTRA_DROPS[t]) return EXTRA_DROPS[t];
   if (t === FARM) return [[N.TOPRAK, 1]];
   if (t === COAL_ORE) return [[COAL, 1]];
