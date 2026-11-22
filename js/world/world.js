@@ -48,7 +48,10 @@ export const getRaw = (x, y, z) => {
 export const isWater = (x, y, z) => get(x, y, z) === WATER;
 export const isLava = (x, y, z) => get(x, y, z) === LAVA;
 export const BOXES = {};   // ince bloklar: id -> [x0,y0,z0,x1,y1,z1] (yatak, kapı)
-for (let i = 0; i < 3; i++) BOXES[N.KAR_1 + i] = [0, 0, 0, 1, 0.25 * (i + 1), 1];
+for (let i = 0; i < 3; i++) {
+  BOXES[N.KAR_1 + i] = [0, 0, 0, 1, 0.25 * (i + 1), 1];
+  FACE_TILES[N.KAR_1 + i] = FACE_TILES[N.KAR];   // atlas yedeği: kar dokusu
+}
 
 export const solid = (x, y, z) => { const t = get(x, y, z); return t !== 0 && !BOXES[t] && !isPlant(t) && t !== WATER && t !== LAVA; };
 // Kesin nokta çarpışması (ince bloklar için)
@@ -433,6 +436,22 @@ function pushPngQ(s, pts, brs, uvs, flipInd) {
   s.n += 4;
 }
 
+// Kutu bloklar (basamak, kar): atlas boxMesh ile aynı 6 yüz, PNG materyalleriyle.
+// PNG hazır değilse false döner, çağıran atlas kutusunu kullanır.
+const BOX_UV = [[0, 0], [1, 0], [1, 1], [0, 1]];
+function boxPng(sinkFor, name, b, x, y, z) {
+  if (!pngMat(name, 'top') || !pngMat(name, 'bottom') || !pngMat(name, 'side')) return false;
+  const X0 = x + b[0], Y0 = y + b[1], Z0 = z + b[2], X1 = x + b[3], Y1 = y + b[4], Z1 = z + b[5];
+  const q = (f, p, sh) => pushPngQ(sinkFor(name + '/' + f), p, [sh, sh, sh, sh], BOX_UV, false);
+  q('top', [[X0, Y1, Z0], [X1, Y1, Z0], [X1, Y1, Z1], [X0, Y1, Z1]], 1);
+  if (!opaque(get(x, y - 1, z))) q('bottom', [[X0, Y0, Z0], [X1, Y0, Z0], [X1, Y0, Z1], [X0, Y0, Z1]], 0.55);
+  q('side', [[X0, Y0, Z0], [X1, Y0, Z0], [X1, Y1, Z0], [X0, Y1, Z0]], 0.68);
+  q('side', [[X0, Y0, Z1], [X1, Y0, Z1], [X1, Y1, Z1], [X0, Y1, Z1]], 0.68);
+  q('side', [[X0, Y0, Z0], [X0, Y0, Z1], [X0, Y1, Z1], [X0, Y1, Z0]], 0.82);
+  q('side', [[X1, Y0, Z0], [X1, Y0, Z1], [X1, Y1, Z1], [X1, Y1, Z0]], 0.82);
+  return true;
+}
+
 function pushQ(s, tile, p, sh) {
   for (let k = 0; k < 4; k++) {
     s.pos.push(p[k][0], p[k][1], p[k][2]);
@@ -457,6 +476,7 @@ function buildChunk(c) {
   const pos = [], uv = [], col = [], ind = [];
   const wS = sink(), lS = sink(), gS = sink();
   const pngS = new Map();   // blok adı -> sink (her yüz için ayrı)
+  const sinkFor = key => pngS.get(key) || (pngS.set(key, sink()), pngS.get(key));
   let vc = 0;
   const WT = FACE_TILES[WATER] ? FACE_TILES[WATER][0] : 0;
   const LT = FACE_TILES[LAVA] ? FACE_TILES[LAVA][0] : 0;
@@ -529,7 +549,11 @@ function buildChunk(c) {
 
     if (t === GLASS) { glass(x, y, z); continue; }
 
-    if (BOXES[t] && FACE_TILES[t]) { boxMesh(mq, FACE_TILES[t], BOXES[t], x, y, z); continue; }
+    if (BOXES[t] && FACE_TILES[t]) {
+      const bn = PNG_NAME[t];
+      if (!(bn && boxPng(sinkFor, bn, BOXES[t], x, y, z))) boxMesh(mq, FACE_TILES[t], BOXES[t], x, y, z);
+      continue;
+    }
 
     const ft = FACE_TILES[t];
     if (!ft) continue;
