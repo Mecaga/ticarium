@@ -75,4 +75,6 @@ Object.assign(N, {
   KEMIK: 310, KEMIK_TOZU: 311, ZOMBI_ETI: 312 // 🦴 Paket 17: Ölümsüzler için yeni eşyalar eklendi
 });
 
+Object.assign(N, { KOMUR_BLOK: 56, SPRUCE_ODUN: 57, SPRUCE_TAHTA: 58, SPRUCE_YAPRAK: 59, SPRUCE_BASAMAK: 166 });
+
 export const ESKI = {};
