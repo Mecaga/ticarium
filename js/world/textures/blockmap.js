@@ -107,3 +107,20 @@ export function preloadBlocks() {
 export const ICON_ITEM = {
   [N.KOMUR]: 'coal', [N.DEMIR_KULCE]: 'iron_ingot', [N.ALTIN_KULCE]: 'gold_ingot', [N.ELMAS]: 'diamond'
 };
+
+// Tanı: hangi PNG yüklü, hangisi eksik, hangisi hâlâ yükleniyor
+export function blockStatus() {
+  const s = { yuklu: [], yok: [], bekliyor: [] };
+  const look = key => {
+    const v = cache.get(key);
+    if (v === undefined) { load(key, BASE + key + '.png'); s.bekliyor.push(key); }
+    else if (v) s.yuklu.push(key);
+    else s.yok.push(key);
+  };
+  for (const b in BLOCK_FACES) {
+    for (const f of BLOCK_FACES[b]) look(b + '/' + f);
+    look(b + '/icon');
+  }
+  for (const k in ICON_ITEM) look(ICON_ITEM[k] + '/icon');
+  return s;
+}
