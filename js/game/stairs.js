@@ -14,7 +14,8 @@ import { input } from '../ui/input.js'; // 🕹️ Doğru input modülü import 
 const SL = [
   [N.BASAMAK_MESE, 'Meşe basamak', 'woodSide', N.TAHTA],
   [N.BASAMAK_HUS, 'Huş basamak', 'birchSide', N.HUS_ODUN],
-  [N.BASAMAK_TAS, 'Taş basamak', 'stone', N.TAS]
+  [N.BASAMAK_TAS, 'Taş basamak', 'stone', N.TAS],
+  [N.SPRUCE_BASAMAK, 'Çam basamak', 'sprucePlanks', N.SPRUCE_TAHTA]
 ];
 for (const [id, name, tile, src] of SL) {
   TYPES[id] = { name, color: 0x999999, base: 6 };
