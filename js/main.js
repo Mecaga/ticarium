@@ -102,7 +102,7 @@ document.body.appendChild(bDrop);
 const sitB = document.createElement('div');
 sitB.className = 'btn';
 sitB.textContent = '🚃 Otur';
-sitB.style.cssText = 'right:18px;bottom:306px;display:none';
+sitB.style.cssText = 'right:92px;bottom:216px;display:none';
 document.body.appendChild(sitB);
 setInterval(() => {
   const on = G.room && target && isCartBlock(get(target[0], target[1], target[2]));
