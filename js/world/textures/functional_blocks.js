@@ -38,7 +38,7 @@ export const tiles = {
     const k = 0.92 + hash(x, y, 140) * 0.16;
     return [150, 100, 52, (y === 7 || y === 8) ? k * 0.7 : k];
   } },
-  doorO: { c: [150, 100, 52], px: (x, y) => x > 3 ? null : [150, 100, 52, 0.92 + hash(x, y, 141) * 0.16] },
+  doorO: { c: [165, 115, 62], px: (x, y) => [165, 115, 62, 0.92 + hash(x, y, 141) * 0.16] },
   jukeTop: { c: [88, 58, 38], px: (x, y) => {
     const d = Math.hypot(x - 7.5, y - 7.5);
     if (d < 1.4) return [200, 60, 60, 1];
@@ -78,7 +78,8 @@ export const faces = {
   [N.MUZIK_KUTUSU]: ['jukeTop', 'jukeSide', 'jukeSide'],
   [N.SANDIK]: ['chestTop', 'chestSide', 'chestTop']
 };
-for (let i = 0; i < 16; i++) faces[240 + i] = (i & 2) ? 'doorO' : 'doorC';
+// 240..255 = grup*4 + yön (doors.js ile aynı). Grup 1 ve 3 açık kapı.
+for (let i = 0; i < 16; i++) faces[240 + i] = ((i >> 2) & 1) ? 'doorO' : 'doorC';
 export const flat = [];
 
 faces[N.KAPI_BASI] = 'doorC';
