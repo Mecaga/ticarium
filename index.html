@@ -4,9 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>BlokDiyar</title>
-<link rel="stylesheet" href="css/style.css?v=86">
+<link rel="stylesheet" href="css/style.css?v=87">
+<style>
+/* Dokunma düğmeleri: ekran görüntüsündeki düzen (sağ ve alt kenardan, CSS px) */
+#bJump, #bAttack, #bPlace, #bBreak { position: fixed; z-index: 25; }
+#bJump   { right: 18px; bottom: 90px; }
+#bAttack { right: 92px; bottom: 144px; }
+#bPlace, #bBreak {
+  width: 64px; height: 64px; border-radius: 50%; box-sizing: border-box;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 700; font-size: 16px; text-shadow: 0 1px 2px #000;
+  border: 3px solid rgba(255, 255, 255, .45);
+  user-select: none; -webkit-user-select: none; touch-action: none;
+}
+#bPlace { right: 18px; bottom: 162px; background: rgba(46, 125, 50, .88); }
+#bBreak { right: 92px; bottom: 72px;  background: rgba(160, 82, 45, .88); }
+</style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
-<script src="js/dbg.js?v=86"></script>
+<script src="js/dbg.js?v=87"></script>
 </head>
 <body>
 <div id="flash"></div>
@@ -22,6 +37,8 @@
 <div id="joyBase"><div id="joyKnob"></div></div>
 <div class="btn" id="bJump">Zıpla</div>
 <div class="btn" id="bAttack">⚔️</div>
+<div class="btn" id="bBreak">Kır</div>
+<div class="btn" id="bPlace">Koy</div>
 <div class="btn" id="bMarket">🏪 Pazar</div>
 <div class="btn" id="bPlayers">👥</div>
 <div class="btn" id="bSettings">⚙️ Ayarlar</div>
@@ -47,7 +64,7 @@
       <button id="mCreate">🏠 Oda Kur</button>
       <button id="mList">🌐 Açık Odalar</button>
       <button id="mJoin">🔑 Kodla Katıl</button>
-      <button id="mMine">⭐ Odalarım (Herkese Açık)</button>
+      <button id="mMine" style="display:none">⭐ Odalarım (Herkese Açık)</button>
       <button id="mLogout" class="alt">🚪 Hesaptan çık</button>
     </div>
     <div id="sWorlds" style="display:none">
@@ -97,7 +114,7 @@
     </div>
     <div id="mErr"></div>
     <div id="mAuth"></div>
-    <div id="mVer" style="font-size:11px;opacity:.55;text-align:center;margin-top:4px">Sürüm 86</div>
+    <div id="mVer" style="font-size:11px;opacity:.55;text-align:center;margin-top:4px">Sürüm 87</div>
   </div>
 </div>
 
@@ -127,7 +144,7 @@ var missing = ids.filter(function (i) { return !document.getElementById(i); });
 if (missing.length) {
   showErr('Eksik elemanlar: ' + missing.join(', '));
 } else {
-  import('./js/main.js?v=86').catch(function (e) {
+  import('./js/main.js?v=87').catch(function (e) {
     showErr('Yükleme hatası: ' + (e.message || e));
   });
 }
