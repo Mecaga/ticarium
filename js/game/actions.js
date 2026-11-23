@@ -411,7 +411,7 @@ export function placeBlock() {
   if (isDead() || uiOpen() || P.ghost) return;
 
   // 1. Önce masaya, fırına, sandığa, kapıya, yatağa veya şaltere tıklama kontrolü
-  if (isBook(eco.sel)) return openBook(eco.sel);
+  if (isBook(eco.sel)) { if (P.sneak) openBook(eco.sel); return; }
   if (isEgg(eco.sel)) return useEgg(eco.sel);
   if (target) {
     const tb = get(target[0], target[1], target[2]);
