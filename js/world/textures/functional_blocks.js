@@ -78,8 +78,8 @@ export const faces = {
   [N.MUZIK_KUTUSU]: ['jukeTop', 'jukeSide', 'jukeSide'],
   [N.SANDIK]: ['chestTop', 'chestSide', 'chestTop']
 };
-// 240..255 = grup*4 + yön (doors.js ile aynı). Grup 1 ve 3 açık kapı.
-for (let i = 0; i < 16; i++) faces[240 + i] = ((i >> 2) & 1) ? 'doorO' : 'doorC';
+// Kapı: açık da kapalı da aynı kapı dokusu (açık kapı toprağa benzemesin)
+for (let i = 0; i < 16; i++) faces[240 + i] = 'doorC';
 export const flat = [];
 
 faces[N.KAPI_BASI] = 'doorC';
