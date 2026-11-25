@@ -63,6 +63,22 @@ export function pointHit(px, py, pz) {
 }
 const opaque = t => t !== 0 && !BOXES[t] && !isPlant(t) && t !== WATER && t !== LAVA && t !== GLASS;
 
+// Görüşü kesen bloklar: tam bloklar ile KAPALI kapı parçaları (240-243 alt, 248-251 üst).
+// Bitki, su, lav, cam, yatak, ray, kar katmanı, merdiven gibi alçak ya da şeffaf şeyler görüşü kesmez.
+const shutDoor = t => (t >= 240 && t <= 243) || (t >= 248 && t <= 251);
+export const blocksSight = t => t !== 0 && t !== GLASS && t !== WATER && t !== LAVA && !isPlant(t) && (shutDoor(t) || !BOXES[t]);
+
+// İki nokta arasında görüşü kesen blok var mı. 0.12 blokluk adımlarla tarar, ince kapı levhası atlanmaz.
+export function sightClear(ax, ay, az, bx, by, bz) {
+  const dx = bx - ax, dy = by - ay, dz = bz - az;
+  const n = Math.ceil(Math.hypot(dx, dy, dz) / 0.12);
+  for (let i = 1; i < n; i++) {
+    const s = i / n;
+    if (blocksSight(get(Math.floor(ax + dx * s), Math.floor(ay + dy * s), Math.floor(az + dz * s)))) return false;
+  }
+  return true;
+}
+
 export const wh = { fn: null };
 export const variantHook = { fn: null };   // ray şekli gibi çizim varyantları (dünyada saklanmaz)
 export const wlHook = { fn: null };
