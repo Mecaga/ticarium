@@ -39,6 +39,7 @@ import { shoot } from './bow.js';
 import { placeRail, useCart } from './rails.js';
 import { placeLever, isLever, toggleLever } from './redstone.js';
 import { placeStair, isSlab, LADDER } from './stairs.js';
+import { placeBoat, rideBoat, isBoat } from './boat.js';
 import * as content from './content.js';
 import { isFlat } from '../world/textures.js'; // ✨ Paket 22: Düz eşya kontrolü eklendi
 
@@ -93,6 +94,7 @@ function afterWear(t, amt) {
 
 // Blok kırılınca düşen eşyalar [[eşya, adet], ...]
 function dropsOf(t) {
+  if (t === N.KAYIK_BLOK) return [[N.KAYIK, 1]];
   if (t === 78) return [[N.SALTER, 1]]; // Açık şalter kırıldığında normal şalter eşyası düşer
   if (t === N.KIL_BLOK) return [[N.KIL, 4]]; // Kil blok kırılınca 4 adet kil eşyası düşer
   if (t >= N.KAR_1 && t <= N.KAR_3) {
@@ -423,6 +425,7 @@ export function placeBlock() {
     if (tb === JUKE) return useJuke(target, eco.sel);
     if (tb === BPRINT) return useBlueprint(target);
     if (isLever(tb)) return toggleLever(target);
+    if (isBoat(tb)) return rideBoat(target);
   }
 
   const t = eco.sel;
@@ -442,6 +445,7 @@ export function placeBlock() {
 
   if (isSlab(t) || t === LADDER) return placeStair(t);
   if (t === N.KEMIK_TOZU) return useBoneMeal();
+  if (t === N.KAYIK) return placeBoat();
 
   const tl = TOOLS[t];
   if (tl && tl[0] === 'hoe') return useHoe();
