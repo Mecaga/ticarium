@@ -16,6 +16,7 @@ import * as ext2 from './textures/extra_items2.js';
 import * as spr from './textures/spruce_blocks.js';
 import * as snw from './textures/snow_items.js';
 import * as rl from './textures/rail_tiles.js';
+import * as boat from './textures/boat_items.js';
 import { TOOL_MAP, toolImage } from './textures/map.js';
 import { iconTexture, PNG_NAME, ICON_ITEM } from './textures/blockmap.js';
 
@@ -30,7 +31,8 @@ const MODS = [
   ['extra_items2', 'Ek eşyalar 2', ext2],
   ['spruce_blocks', 'Çam ve kömür blokları', spr],
   ['snow_items', 'Kar eşyaları', snw],
-  ['rail_tiles', 'Raylar ve vagon', rl]
+  ['rail_tiles', 'Raylar ve vagon', rl],
+  ['boat_items', 'Kayık', boat]
 ];
 
 const TILE_NAMES = [], DEF = {}, CAT = {}, TI = {};
