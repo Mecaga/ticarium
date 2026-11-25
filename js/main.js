@@ -44,6 +44,7 @@ import './game/spider.js';
 import './game/arms.js'; // Kol/ekipman modülü
 import './game/bow.js';  // Yay ve ok modülü
 import { isCartBlock, rideCart } from './game/rails.js'; // Ray ve vagon modülü
+import './game/boat.js';
 import './game/doors.js'; // 🚪 Kapı ve Yatak Modülü
 import './game/redstone.js'; // 🔌 Şalter ve Redstone Bloğu Modülü
 import './game/hopper.js'; // 🔄 Huni Modülü
