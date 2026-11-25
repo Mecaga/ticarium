@@ -9,9 +9,10 @@ import { hurt } from '../entities/health.js';
 import { dropItems } from '../entities/items.js';
 import { clock, gamePhase } from '../world/sky.js';
 import { toast } from '../ui/ui.js';
-import { db, ref, update, onValue } from '../core/firebase.js';
+import { db, ref, set as fbSet, update, onValue } from '../core/firebase.js';
 import { uid } from '../core/auth.js';
-import { isCreative } from './creative.js';
+import { isCreative as isCreativeS } from './creative.js';
+let spSeq = 0;
 
 // ---- Yeni eşyalar ----
 function reg(id, name, color, base, tile, flat) {
@@ -45,7 +46,7 @@ function mk(x, y, z) {
   }
   g.position.set(x, y, z);
   ob.add(g);
-  return { g, x, y, z, hp: 5, cd: 0, climb: 0 };
+  return { id: ++spSeq, g, x, y, z, hp: 5, cd: 0, climb: 0 };
 }
 function spawnOne() {
   const a = Math.random() * 6.28, d = 14 + Math.random() * 10;
@@ -72,7 +73,7 @@ function tick(now) {
   import('../world/world.js').then(w => {
     for (const s of spiders) {
       const dx = P.x - s.x, dz = P.z - s.z, d = Math.hypot(dx, dz);
-      if (nt && d < 20 && d > 0.9 && !P.ghost && !isCreative()) {   // gece ve yaratıcı/hayalet değilse: saldırır ve tırmanır
+      if (nt && d < 20 && d > 0.9 && !P.ghost && !isCreativeS()) {   // gece ve yaratıcı/hayalet değilse: saldırır ve tırmanır
         const ux = dx / (d || 1), uz = dz / (d || 1);
         const fx = Math.floor(s.x + ux * 0.7), fz = Math.floor(s.z + uz * 0.7), fy = Math.floor(s.y);
         const wall = solid(fx, fy, fz);
@@ -96,9 +97,9 @@ function tick(now) {
       }
       s.g.position.set(s.x, s.y, s.z);
       s.cd -= dt;
-      if (nt && d < 1.4 && s.cd <= 0 && Math.abs(P.y - s.y) < 2 && !P.ghost && !isCreative()) { 
-        s.cd = 1; 
-        hurt(2, { name: 'Örümcek' }); 
+      if (nt && d < 1.4 && s.cd <= 0 && Math.abs(P.y - s.y) < 2 && !P.ghost && !isCreativeS()) {
+        s.cd = 1;
+        hurt(2, { name: 'Örümcek' });
       }
     }
     spiders = spiders.filter(s => Math.hypot(P.x - s.x, P.z - s.z) < 60 || (ob.remove(s.g), false));
@@ -126,107 +127,117 @@ export function hitSpider(dx, dy, dz, dmg) {
 }
 
 // ---- Ortak zaman ve uyku ----
-let roomUnsub = null, roomKey = '', myOff = 0;
+let timeSubs = [], timeKey = '', myOff = 0, lastWake = 0;
 export function sleepSync(sleeping) {
   const r = G.room;
   if (!r || r.solo || !r.code) return;
   update(ref(db, 'rooms/' + r.code + '/players/' + uid), { sleep: sleeping ? Date.now() : null }).catch(() => {});
 }
 setInterval(() => {
-  const r = G.room;
-  if (!r || r.solo || !r.code) {
-    if (roomUnsub) { roomUnsub.forEach(u => u()); roomUnsub = null; roomKey = ''; }
-    return;
-  }
-  if (roomKey === r.code) return;
-  roomKey = r.code;
-  const offs = onValue(ref(db, 'rooms/' + r.code + '/time/off'), s => {
+  const r = G.room, k = (r && !r.solo && r.code) ? r.code : '';
+  if (timeKey === k) return;
+  timeSubs.forEach(u => u()); timeSubs = []; timeKey = k;
+  if (!k) return;
+  timeSubs.push(onValue(ref(db, 'rooms/' + k + '/time/off'), s => {
     if (typeof s.val() === 'number') { myOff = s.val(); clock.off = myOff; }
-  });
-  const pl = onValue(ref(db, 'rooms/' + r.code + '/players'), s => {
+  }));
+  timeSubs.push(onValue(ref(db, 'rooms/' + k + '/players'), s => {
+    if (timeKey !== k || !G.room || !G.room.sim) return;
     let n = 0, z = 0;
     s.forEach(c => { const v = c.val() || {}; n++; if (v.sleep && Date.now() - v.sleep < 20000) z++; });
-    if (n > 0 && z === n && r.sim) {   // sadece oda yönetimi olan cihaz yazar
+    if (n > 0 && z === n && Date.now() - lastWake > 30000) {
+      lastWake = Date.now();
       const cur = Date.now() / 1000 + myOff;
-      update(ref(db, 'rooms/' + r.code + '/time'), { off: myOff + 480 - (cur % 480) }).catch(() => {});
+      update(ref(db, 'rooms/' + k + '/time'), { off: myOff + 480 - (cur % 480) }).catch(() => {});
       toast('☀️ Herkes uyudu, sabah oldu');
     }
-  });
-  roomUnsub = [offs, pl];
+  }));
 }, 2000);
 
-// ---- Örümcek senkronu ----
-const remote = new Map();   // başkasının cihazında yönetilen örümcekler (sadece çizim)
-const mine = () => G.room && (G.room.solo || G.room.sim);
-const rkey = () => G.room && !G.room.solo && G.room.code;
+// ---- Örümcek senkronu (sürüm 2) ----
+const remoteS = new Map(), seenS = new Map();
+let spSubs = [], spKey = '', hitSub = null, hitKey = '', pubKey = '', pubEmpty = true, lastRH = 0, lastSm = performance.now();
+const roomOf = () => (G.room && !G.room.solo && G.room.code) ? G.room.code : '';
+const isOwner = () => !!(G.room && (G.room.solo || G.room.sim));
 
-setInterval(() => {   // yönetici: konumları yaz
-  const k = rkey();
-  if (!k || !mine()) return;
+setInterval(() => {   // yönetici: konumları yazar, oda değişince eskisini temizler
+  const k = isOwner() ? roomOf() : '';
+  if (pubKey && pubKey !== k) { fbSet(ref(db, 'rooms/' + pubKey + '/spiders'), null).catch(() => {}); pubEmpty = true; }
+  pubKey = k;
+  if (!k) return;
+  if (!spiders.length) {
+    if (!pubEmpty) { pubEmpty = true; fbSet(ref(db, 'rooms/' + k + '/spiders'), null).catch(() => {}); }
+    return;
+  }
+  pubEmpty = false;
   const o = {};
-  spiders.forEach((s, i) => { o['s' + i] = { x: +s.x.toFixed(2), y: +s.y.toFixed(2), z: +s.z.toFixed(2), r: +s.g.rotation.y.toFixed(2) }; });
-  import('../core/firebase.js').then(f => f.set(f.ref(f.db, 'rooms/' + k + '/spiders'), spiders.length ? o : null).catch(() => {}));
+  for (const s of spiders) o['s' + s.id] = { x: +s.x.toFixed(2), y: +s.y.toFixed(2), z: +s.z.toFixed(2), r: +s.g.rotation.y.toFixed(2) };
+  fbSet(ref(db, 'rooms/' + k + '/spiders'), o).catch(() => {});
 }, 500);
 
-let subKey = '';
-setInterval(() => {   // diğerleri: oku ve çiz
-  const k = rkey();
-  if (!k || mine()) { remote.forEach(g => ob.remove(g)); remote.clear(); subKey = ''; return; }
-  if (subKey === k) return;
-  subKey = k;
-  onValue(ref(db, 'rooms/' + k + '/spiders'), s => {
+setInterval(() => {   // diğer cihazlar: okur, çizer, oda değişince eski aboneliği kapatır
+  const k = isOwner() ? '' : roomOf();
+  if (spKey === k) return;
+  spSubs.forEach(u => u()); spSubs = [];
+  remoteS.forEach(g => ob.remove(g)); remoteS.clear();
+  spKey = k;
+  if (!k) return;
+  spSubs.push(onValue(ref(db, 'rooms/' + k + '/spiders'), s => {
+    if (spKey !== k) return;
     const v = s.val() || {};
     for (const id in v) {
-      let g = remote.get(id);
-      if (!g) { g = mk(v[id].x, v[id].y, v[id].z).g; remote.set(id, g); }
-      g.userData.tx = v[id].x; g.userData.ty = v[id].y; g.userData.tz = v[id].z; g.userData.tr = v[id].r;
-      if (!g.userData.init) { g.position.set(v[id].x, v[id].y, v[id].z); g.userData.init = 1; }
+      let g = remoteS.get(id);
+      if (!g) { g = mk(v[id].x, v[id].y, v[id].z).g; g.rotation.y = v[id].r; remoteS.set(id, g); }
+      Object.assign(g.userData, { tx: v[id].x, ty: v[id].y, tz: v[id].z, tr: v[id].r });
     }
-    for (const [id, g] of remote) if (!(id in v)) { ob.remove(g); remote.delete(id); }
-  });
-}, 1500);
+    for (const [id, g] of remoteS) if (!(id in v)) { ob.remove(g); remoteS.delete(id); }
+  }));
+}, 1000);
 
-export function sendSpiderHit(dx, dy, dz, d) {
-  const k = rkey();
-  if (!k) return;
+(function smoothS(now) {   // uzak örümcekler hedefe doğru kayar
+  requestAnimationFrame(smoothS);
+  const dt = Math.min(0.1, (now - lastSm) / 1000); lastSm = now;
+  const a = 1 - Math.pow(0.0005, dt);
+  for (const g of remoteS.values()) {
+    const u = g.userData;
+    if (u.tx === undefined) continue;
+    g.position.x += (u.tx - g.position.x) * a;
+    g.position.y += (u.ty - g.position.y) * a;
+    g.position.z += (u.tz - g.position.z) * a;
+    g.rotation.y += Math.atan2(Math.sin(u.tr - g.rotation.y), Math.cos(u.tr - g.rotation.y)) * a;
+  }
+})(lastSm);
+
+export function sendSpiderHit(dx, dy, dz, d) {   // yönetici değilsen vuruşu yöneticiye yollar
+  const k = roomOf();
+  if (!k || isOwner()) return;
   update(ref(db, 'rooms/' + k + '/spiderhits/' + uid), { dx, dy, dz, d, px: P.x, py: P.y, pz: P.z, n: Date.now() }).catch(() => {});
 }
-
-let hitKey = '';
-setInterval(() => {   // yönetici: gelen vuruşları uygula
-  const k = rkey();
-  if (!k || !mine() || hitKey === k) return;
-  hitKey = k;
-  onValue(ref(db, 'rooms/' + k + '/spiderhits'), s => {
+setInterval(() => {   // yönetici: her vuruş isteğini yalnızca bir kez uygular
+  const k = isOwner() ? roomOf() : '';
+  if (hitKey === k) return;
+  if (hitSub) { hitSub(); hitSub = null; }
+  seenS.clear(); hitKey = k;
+  if (!k) return;
+  hitSub = onValue(ref(db, 'rooms/' + k + '/spiderhits'), s => {
     s.forEach(c => {
       const v = c.val();
-      if (!v || Date.now() - v.n > 1500 || c.key === uid) return;
+      if (!v || c.key === uid || v.n <= (seenS.get(c.key) || 0)) return;
+      seenS.set(c.key, v.n);
+      if (Date.now() - v.n > 1500) return;
       const ox = P.x, oy = P.y, oz = P.z;
-      P.x = v.px; P.y = v.py; P.z = v.pz;   // vuranın konumundan hesapla
+      P.x = v.px; P.y = v.py; P.z = v.pz;
       hitSpider(v.dx, v.dy, v.dz, v.d);
       P.x = ox; P.y = oy; P.z = oz;
     });
   });
-}, 1500);
-
-// --- Paket 19: Uzak cihazda gece yakındaki örümceğin oyuncuya hasar vermesi ---
-setInterval(() => {
-  if (!G.room || G.room.solo || mine() || P.ghost || !night() || isCreative()) return;
-  remote.forEach(g => {
-    const d = Math.hypot(P.x - g.position.x, P.z - g.position.z);
-    if (d < 1.4 && Math.abs(P.y - g.position.y) < 2) hurt(2, { name: 'Örümcek' });
-  });
 }, 1000);
 
-// --- Uzak cihaz için yumuşak hareket (smooth) döngüsü ---
-(function smooth(t) {
-  requestAnimationFrame(smooth);
-  remote.forEach(g => {
-    const u = g.userData;
-    if (u.tx === undefined) return;
-    g.position.x += (u.tx - g.position.x) * 0.2;
-    g.position.y += (u.ty - g.position.y) * 0.2;
-    g.position.z += (u.tz - g.position.z) * 0.2;
-    g.rotation.y += (u.tr - g.rotation.y) * 0.2;
-  });
-})();
+setInterval(() => {   // uzak cihazda: gece yakındaki örümcek bana vurur
+  if (!G.room || G.room.solo || isOwner() || P.ghost || isCreativeS() || !night() || Date.now() - lastRH < 1000) return;
+  for (const g of remoteS.values()) {
+    if (Math.hypot(P.x - g.position.x, P.z - g.position.z) < 1.4 && Math.abs(P.y - g.position.y) < 2) {
+      lastRH = Date.now(); hurt(2, { name: 'Örümcek' }); return;
+    }
+  }
+}, 500);
