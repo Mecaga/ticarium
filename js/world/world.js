@@ -64,6 +64,7 @@ export function pointHit(px, py, pz) {
 const opaque = t => t !== 0 && !BOXES[t] && !isPlant(t) && t !== WATER && t !== LAVA && t !== GLASS;
 
 export const wh = { fn: null };
+export const variantHook = { fn: null };   // ray şekli gibi çizim varyantları (dünyada saklanmaz)
 export const wlHook = { fn: null };
 export const ph = { fn: null };
 
@@ -314,6 +315,7 @@ export function updateChunks(px, pz, budgetMs = 6) {
       c = newChunk(cx, cz);
       const flows = genChunk(c);
       chunks.set(k, c); lcK = -1;
+      for (const [ax, az] of D4) { const n = chunks.get(ck(cx + ax, cz + az)); if (n) touch(n); }
       if (wh.fn) for (const i of flows) wh.fn(cx * CW + (i % CW), Math.floor(i / (CW * CW)), cz * CW + (Math.floor(i / CW) % CW));
       did++;
     } else if (c.dirty === 1) { buildChunk(c); did++; }
@@ -522,9 +524,10 @@ function buildChunk(c) {
   };
   const x0 = c.cx * CW, z0 = c.cz * CW;
   for (let y = 0; y < H; y++) for (let lz = 0; lz < CW; lz++) for (let lx = 0; lx < CW; lx++) {
-    const t = c.b[(y * CW + lz) * CW + lx];
-    if (!t) continue;
+    const raw = c.b[(y * CW + lz) * CW + lx];
+    if (!raw) continue;
     const x = x0 + lx, z = z0 + lz;
+    const t = variantHook.fn ? variantHook.fn(raw, x, y, z) : raw;
 
     if (t === WATER || t === LAVA) {
       const S = t === WATER ? wS : lS, tile = t === WATER ? WT : LT;
