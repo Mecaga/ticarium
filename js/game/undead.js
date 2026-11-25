@@ -1,5 +1,5 @@
 import { N } from '../world/idtable.js';
-import { TYPES, CATS, get, set, rebuild, surfaceY, isLoaded, target, stgt } from '../world/world.js';
+import { TYPES, CATS, get, set, rebuild, surfaceY, isLoaded, target, stgt, sightClear } from '../world/world.js';
 import { FACE_TILES, tileOf, addFlat } from '../world/textures.js';
 import { eco } from './economy.js';
 import { RECIPES } from './recipes.js';
@@ -15,6 +15,7 @@ import { recordChange } from './progress.js';
 import { sfx } from '../core/sound.js';
 import { db, ref, set as fbSet, update, onValue } from '../core/firebase.js';
 import { uid } from '../core/auth.js';
+import { seesPlayer, seesFrom, aimClear } from './sight.js';
 let uSeq = 0;
 
 function reg(id, name, color, base, tile, cat) {
@@ -101,22 +102,22 @@ let last = performance.now();
     if (!nt) { m.hp -= dt * 3; if (m.hp <= 0) { grp.remove(m.g); mobs = mobs.filter(k => k !== m); continue; } }
     const dx = P.x - m.x, dz = P.z - m.z, d = Math.hypot(dx, dz);
     m.cd -= dt;
-    if (!calm && d < 24) {
+    if (!calm && d < 24 && seesPlayer(m, 1.5)) {
       const keep = m.kind === 'iskelet' ? 7 : 0.9;
       if (d > keep) { m.x += dx / d * 2.2 * dt; m.z += dz / d * 2.2 * dt; }
       m.g.rotation.y = Math.atan2(-dx, -dz);
       if (m.kind === 'zombi' && d < 1.3 && m.cd <= 0 && Math.abs(P.y - m.y) < 2) { m.cd = 1; hurt(2, { name: 'Zombi' }); }
-      if (m.kind === 'iskelet' && d < 16 && m.cd <= 0) { m.cd = 2; shootAt(m); }
+      if (m.kind === 'iskelet' && d < 16 && m.cd <= 0 && aimClear(m.x, m.y, m.z, 1.4)) { m.cd = 2; shootAt(m); }
     }
     if (isLoaded(Math.floor(m.x), Math.floor(m.z))) { const gy = surfaceY(Math.floor(m.x), Math.floor(m.z)); if (gy >= 0) m.y = gy + 1; }
     m.g.position.set(m.x, m.y, m.z);
     if (d > 70) { grp.remove(m.g); mobs = mobs.filter(k => k !== m); }
   }
   for (let i = arrows.length - 1; i >= 0; i--) {
-    const a = arrows[i];
-    a.a.position.addScaledVector(a.v, dt); a.life -= dt;
-    const d = Math.hypot(P.x - a.a.position.x, P.y + 1 - a.a.position.y, P.z - a.a.position.z);
-    if (d < 0.8 && !calm) { hurt(3, { name: 'İskelet' }); a.life = 0; }
+    const a = arrows[i], p = a.a.position, ox = p.x, oy = p.y, oz = p.z;
+    p.addScaledVector(a.v, dt); a.life -= dt;
+    if (!sightClear(ox, oy, oz, p.x, p.y, p.z)) a.life = 0;                       // duvara ya da kapalı kapıya çarptı
+    else if (!calm && Math.hypot(P.x - p.x, P.y + 1 - p.y, P.z - p.z) < 0.8) { hurt(3, { name: 'İskelet' }); a.life = 0; }
     if (a.life <= 0) { grp.remove(a.a); arrows.splice(i, 1); }
   }
 })(last);
@@ -222,7 +223,7 @@ setInterval(() => {   // yönetici: her vuruş isteğini yalnızca bir kez uygul
 setInterval(() => {   // uzak cihazda: yakın canavar bana vurur
   if (!G.room || G.room.solo || ownerU() || P.ghost || isCreative() || Date.now() - lastRU < 1000) return;
   for (const g of remoteU.values()) {
-    if (Math.hypot(P.x - g.position.x, P.z - g.position.z) < 1.3 && Math.abs(P.y - g.position.y) < 2) {
+    if (Math.hypot(P.x - g.position.x, P.z - g.position.z) < 1.3 && Math.abs(P.y - g.position.y) < 2 && seesFrom(g.position.x, g.position.y, g.position.z, 1.5)) {
       lastRU = Date.now(); hurt(2, { name: 'Zombi' }); return;
     }
   }
