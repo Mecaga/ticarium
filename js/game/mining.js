@@ -40,6 +40,7 @@ const HARD = {
   [157]: [0.4, 'pick', 0],
   [158]: [0.4, 'pick', 0]
 };
+HARD[N.KAYIK_BLOK] = [0.6, 'axe', 0];
 HARD[N.KOMUR_BLOK] = [4, 'pick', 0]; HARD[N.SPRUCE_ODUN] = [3, 'axe', 0]; HARD[N.SPRUCE_TAHTA] = [2, 'axe', 0];
 HARD[N.SPRUCE_YAPRAK] = [0.3, null, 0]; HARD[N.SPRUCE_BASAMAK] = [1.5, 'axe', 0];
 for (let i = N.LAVANTA; i <= N.AMBER; i++) HARD[i] = [0.05, null, 0];
