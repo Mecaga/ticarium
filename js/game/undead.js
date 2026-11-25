@@ -15,6 +15,7 @@ import { recordChange } from './progress.js';
 import { sfx } from '../core/sound.js';
 import { db, ref, set as fbSet, update, onValue } from '../core/firebase.js';
 import { uid } from '../core/auth.js';
+let uSeq = 0;
 
 function reg(id, name, color, base, tile, cat) {
   TYPES[id] = { name, color, base };
@@ -53,7 +54,7 @@ function spawn() {
   const kind = Math.random() < 0.55 ? 'zombi' : 'iskelet', g = build(kind);
   g.position.set(x + 0.5, y + 1, z + 0.5);
   grp.add(g);
-  mobs.push({ g, kind, x: x + 0.5, y: y + 1, z: z + 0.5, hp: kind === 'zombi' ? 10 : 8, cd: 0 });
+  mobs.push({ id: ++uSeq, g, kind, x: x + 0.5, y: y + 1, z: z + 0.5, hp: kind === 'zombi' ? 10 : 8, cd: 0 });
 }
 
 const arrows = [];
@@ -139,78 +140,90 @@ export function useBoneMeal() {
   sfx.place(); drawHud();
 }
 
-// --- Paket 18: Çok oyunculu zombi ve iskelet senkronizasyonu ---
-const rkey = () => G.room && !G.room.solo && G.room.code;
-const mineU = () => G.room && (G.room.solo || G.room.sim);
-const remoteU = new Map();
+// ---- Canavar ağı (sürüm 2) ----
+const remoteU = new Map(), seenU = new Map();
+let unSubs = [], unKey = '', hitUSub = null, hitUKey = '', pubUKey = '', pubUEmpty = true, lastRU = 0, lastUm = performance.now();
+const roomU = () => (G.room && !G.room.solo && G.room.code) ? G.room.code : '';
+const ownerU = () => !!(G.room && (G.room.solo || G.room.sim));
 
-setInterval(() => {   // yönetici: konumları yaz
-  const k = rkey();
-  if (!k || !mineU()) return;
+setInterval(() => {   // yönetici: canavar konumlarını yazar
+  const k = ownerU() ? roomU() : '';
+  if (pubUKey && pubUKey !== k) { fbSet(ref(db, 'rooms/' + pubUKey + '/undead'), null).catch(() => {}); pubUEmpty = true; }
+  pubUKey = k;
+  if (!k) return;
+  if (!mobs.length) {
+    if (!pubUEmpty) { pubUEmpty = true; fbSet(ref(db, 'rooms/' + k + '/undead'), null).catch(() => {}); }
+    return;
+  }
+  pubUEmpty = false;
   const o = {};
-  mobs.forEach((m, i) => { o['u' + i] = { x: +m.x.toFixed(2), y: +m.y.toFixed(2), z: +m.z.toFixed(2), r: +m.g.rotation.y.toFixed(2), k: m.kind === 'zombi' ? 0 : 1 }; });
-  fbSet(ref(db, 'rooms/' + k + '/undead'), mobs.length ? o : null).catch(() => {});
+  for (const m of mobs) o['u' + m.id] = { x: +m.x.toFixed(2), y: +m.y.toFixed(2), z: +m.z.toFixed(2), r: +m.g.rotation.y.toFixed(2), k: m.kind === 'zombi' ? 0 : 1 };
+  fbSet(ref(db, 'rooms/' + k + '/undead'), o).catch(() => {});
 }, 500);
 
-let subU = '';
-setInterval(() => {   // diğerleri: oku ve çiz
-  const k = rkey();
-  if (!k || mineU()) { remoteU.forEach(g => grp.remove(g)); remoteU.clear(); subU = ''; return; }
-  if (subU === k) return;
-  subU = k;
-  onValue(ref(db, 'rooms/' + k + '/undead'), s => {
+setInterval(() => {   // diğer cihazlar: okur, çizer, oda değişince eski aboneliği kapatır
+  const k = ownerU() ? '' : roomU();
+  if (unKey === k) return;
+  unSubs.forEach(u => u()); unSubs = [];
+  remoteU.forEach(g => grp.remove(g)); remoteU.clear();
+  unKey = k;
+  if (!k) return;
+  unSubs.push(onValue(ref(db, 'rooms/' + k + '/undead'), s => {
+    if (unKey !== k) return;
     const v = s.val() || {};
     for (const id in v) {
       let g = remoteU.get(id);
-      if (!g) { g = build(v[id].k === 0 ? 'zombi' : 'iskelet'); grp.add(g); remoteU.set(id, g); }
-      g.userData.tx = v[id].x; g.userData.ty = v[id].y; g.userData.tz = v[id].z; g.userData.tr = v[id].r;
-      if (!g.userData.init) { g.position.set(v[id].x, v[id].y, v[id].z); g.userData.init = 1; }
+      if (!g) { g = build(v[id].k === 0 ? 'zombi' : 'iskelet'); g.position.set(v[id].x, v[id].y, v[id].z); g.rotation.y = v[id].r; grp.add(g); remoteU.set(id, g); }
+      Object.assign(g.userData, { tx: v[id].x, ty: v[id].y, tz: v[id].z, tr: v[id].r });
     }
     for (const [id, g] of remoteU) if (!(id in v)) { grp.remove(g); remoteU.delete(id); }
-  });
-}, 1500);
+  }));
+}, 1000);
 
-export function sendUndeadHit(dx, dy, dz, d) {
-  const k = rkey();
-  if (!k) return;
+(function smoothU(now) {   // uzak canavarlar hedefe doğru kayar
+  requestAnimationFrame(smoothU);
+  const dt = Math.min(0.1, (now - lastUm) / 1000); lastUm = now;
+  const a = 1 - Math.pow(0.0005, dt);
+  for (const g of remoteU.values()) {
+    const u = g.userData;
+    if (u.tx === undefined) continue;
+    g.position.x += (u.tx - g.position.x) * a;
+    g.position.y += (u.ty - g.position.y) * a;
+    g.position.z += (u.tz - g.position.z) * a;
+    g.rotation.y += Math.atan2(Math.sin(u.tr - g.rotation.y), Math.cos(u.tr - g.rotation.y)) * a;
+  }
+})(lastUm);
+
+export function sendUndeadHit(dx, dy, dz, d) {   // yönetici değilsen vuruşu yöneticiye yollar
+  const k = roomU();
+  if (!k || ownerU()) return;
   update(ref(db, 'rooms/' + k + '/undeadhits/' + uid), { dx, dy, dz, d, px: P.x, py: P.y, pz: P.z, n: Date.now() }).catch(() => {});
 }
-
-let hitU = '';
-setInterval(() => {   // yönetici: gelen vuruşları uygula
-  const k = rkey();
-  if (!k || !mineU() || hitU === k) return;
-  hitU = k;
-  onValue(ref(db, 'rooms/' + k + '/undeadhits'), s => {
+setInterval(() => {   // yönetici: her vuruş isteğini yalnızca bir kez uygular
+  const k = ownerU() ? roomU() : '';
+  if (hitUKey === k) return;
+  if (hitUSub) { hitUSub(); hitUSub = null; }
+  seenU.clear(); hitUKey = k;
+  if (!k) return;
+  hitUSub = onValue(ref(db, 'rooms/' + k + '/undeadhits'), s => {
     s.forEach(c => {
       const v = c.val();
-      if (!v || Date.now() - v.n > 1500 || c.key === uid) return;
+      if (!v || c.key === uid || v.n <= (seenU.get(c.key) || 0)) return;
+      seenU.set(c.key, v.n);
+      if (Date.now() - v.n > 1500) return;
       const ox = P.x, oy = P.y, oz = P.z;
       P.x = v.px; P.y = v.py; P.z = v.pz;
       hitUndead(v.dx, v.dy, v.dz, v.d);
       P.x = ox; P.y = oy; P.z = oz;
     });
   });
-}, 1500);
-
-// --- Paket 19: Uzak cihazda yakındaki canavarın oyuncuya hasar vermesi ---
-setInterval(() => {
-  if (!G.room || G.room.solo || mineU() || P.ghost || isCreative()) return;
-  remoteU.forEach(g => {
-    const d = Math.hypot(P.x - g.position.x, P.z - g.position.z);
-    if (d < 1.3 && Math.abs(P.y - g.position.y) < 2) hurt(2, { name: 'Zombi' });
-  });
 }, 1000);
 
-// --- Uzak cihaz için yumuşak hareket (smooth) döngüsü ---
-(function smooth(t) {
-  requestAnimationFrame(smooth);
-  remoteU.forEach(g => {
-    const u = g.userData;
-    if (u.tx === undefined) return;
-    g.position.x += (u.tx - g.position.x) * 0.2;
-    g.position.y += (u.ty - g.position.y) * 0.2;
-    g.position.z += (u.tz - g.position.z) * 0.2;
-    g.rotation.y += (u.tr - g.rotation.y) * 0.2;
-  });
-})();
+setInterval(() => {   // uzak cihazda: yakın canavar bana vurur
+  if (!G.room || G.room.solo || ownerU() || P.ghost || isCreative() || Date.now() - lastRU < 1000) return;
+  for (const g of remoteU.values()) {
+    if (Math.hypot(P.x - g.position.x, P.z - g.position.z) < 1.3 && Math.abs(P.y - g.position.y) < 2) {
+      lastRU = Date.now(); hurt(2, { name: 'Zombi' }); return;
+    }
+  }
+}, 500);
