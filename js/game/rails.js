@@ -1,5 +1,5 @@
 import { N } from '../world/idtable.js';
-import { TYPES, CATS, BOXES, get, set, rebuild, prev, target, solid, isLoaded, TALL } from '../world/world.js';
+import { TYPES, CATS, BOXES, get, set, rebuild, prev, target, solid, isLoaded, TALL, variantHook } from '../world/world.js';
 import { FACE_TILES, tileOf, addFlat } from '../world/textures.js';
 import { eco } from './economy.js';
 import { RECIPES } from './recipes.js';
@@ -13,149 +13,179 @@ import { input } from '../ui/input.js';
 import { isDead } from '../entities/health.js';
 import { setSneak } from './modes.js';
 
-// Blok numaraları: ray (eksen belirsiz, komşuya bakılır), vagonlu ray (x ya da z ekseni)
+// Dünyada saklanan numaralar. Eksen numaranın kendisinde:
+// 151 ray (kuzey-güney), 156 ray (doğu-batı), 157 vagon (kuzey-güney), 158 vagon (doğu-batı).
+// Ray şekli (düz / köşe) dünyada saklanmaz, komşulara bakılarak çizilir.
 export const RAY_X = 156, CART_Z = 157, CART_X = 158;
-const RAY_Z = N.RAY;
+const RAY = N.RAY;
+
+const DX = [0, 1, 0, -1], DZ = [-1, 0, 1, 0];                          // 0 kuzey(-z) 1 doğu(+x) 2 güney(+z) 3 batı(-x)
+const SHAPE_OPEN = [[0, 2], [1, 3], [0, 1], [0, 3], [2, 1], [2, 3]];   // 0 KG, 1 DB, 2 KD, 3 KB, 4 GD, 5 GB
+const SHAPE_VAR = [159, 162, 163, 167, 168, 169];                       // görünüm numaraları (dünyada saklanmaz)
+const SHAPE_TEX = ['railNS', 'railEW', 'railNE', 'railNW', 'railSE', 'railSW'];
+const RAIL_BOX = [0, 0, 0, 1, 0.1, 1];
+const CART_BOX = [0.06, 0.1, 0.06, 0.94, 0.4, 0.94];
+const SPEED = 3.5;   // hücre / saniye
+
+const tex = n => { const t = tileOf(n); return t === undefined ? tileOf('stone') : t; };
+
+// Görünüm kayıtları
+SHAPE_VAR.forEach((id, i) => { const t = tex(SHAPE_TEX[i]); FACE_TILES[id] = [t, t, t]; BOXES[id] = RAIL_BOX; });
+const cT = tex('railCartTop'), cS = tex('railCartSide');
+for (const id of [CART_Z, CART_X]) { FACE_TILES[id] = [cT, cS, cS]; BOXES[id] = CART_BOX; }
+BOXES[RAY] = BOXES[RAY_X] = RAIL_BOX;
 
 function reg(id, name, color, base, tile, flat, cat) {
   TYPES[id] = { name, color, base };
-  FACE_TILES[id] = [tileOf(tile), tileOf(tile), tileOf(tile)];
+  FACE_TILES[id] = [tex(tile), tex(tile), tex(tile)];
   eco.inv[id] = 0; eco.raw[id] = base; eco.trend[id] = 0;
   if (flat) addFlat(id);
   if (cat != null && !CATS[cat][1].includes(id)) CATS[cat][1].push(id);
 }
-reg(N.RAY, 'Ray', 0x9a9aa0, 20, 'ingotI', false, 0);
-reg(N.VAGON, 'Vagon', 0xb0b0b8, 80, 'ironB', true, 3);
-BOXES[RAY_Z] = BOXES[RAY_X] = [0, 0, 0, 1, 0.1, 1];
-BOXES[CART_Z] = BOXES[CART_X] = [0.06, 0.1, 0.06, 0.94, 0.4, 0.94];
+reg(RAY, 'Ray', 0x9a9aa0, 20, 'railNS', false, 0);
+reg(N.VAGON, 'Vagon', 0xb0b0b8, 80, 'railCartSide', true, 3);
+FACE_TILES[RAY_X] = FACE_TILES[RAY];
 
 const I = N.DEMIR_KULCE, S = N.CUBUK;
-RECIPES.push({ out: [N.RAY, 16], pat: [[I, 0, I], [I, S, I], [I, 0, I]] });
+RECIPES.push({ out: [RAY, 16], pat: [[I, 0, I], [I, S, I], [I, 0, I]] });
 RECIPES.push({ out: [N.VAGON, 1], pat: [[I, 0, I], [I, I, I]] });
 
-const commit = (x, y, z, t) => { recordChange(x, y, z, t); if (G.online) G.online.sendBlock(x, y, z, t); };
-const isRail = t => t === RAY_Z || t === RAY_X;
 const isCart = t => t === CART_Z || t === CART_X;
-const isAnyRail = t => isRail(t) || isCart(t);
-const axisOf = t => (t === RAY_X || t === CART_X ? 'x' : 'z');
-const railOf = a => (a === 'x' ? RAY_X : RAY_Z);
-const cartOf = a => (a === 'x' ? CART_X : CART_Z);
+const isRail = t => t === RAY || t === RAY_X || isCart(t);
+const axisOf = t => (t === RAY_X || t === CART_X ? 1 : 0);   // 1 = doğu-batı
 export const isCartBlock = isCart;
 
-// Bir hücrenin hangi yönlere ray bağladığı (komşu ray/vagon varlığına göre)
-// dirs: [dx, dz] listesi. Ekseni olmayan ray için komşulara bakar.
-const DIRS = { '+x': [1, 0], '-x': [-1, 0], '+z': [0, 1], '-z': [0, -1] };
-function links(x, y, z) {
-  const out = [];
-  for (const k in DIRS) {
-    const [dx, dz] = DIRS[k];
-    if (isAnyRail(get(x + dx, y, z + dz))) out.push(k);
-  }
-  return out;
+const commit = (x, y, z, t) => { recordChange(x, y, z, t); if (G.online) G.online.sendBlock(x, y, z, t); };
+const put = (x, y, z, t) => { set(x, y, z, t); commit(x, y, z, t); };
+
+// Komşu bitmaskesi: bit 0 kuzey, 1 doğu, 2 güney, 3 batı (ray ya da vagon varsa)
+function mask(x, y, z) {
+  let m = 0;
+  for (let d = 0; d < 4; d++) if (isRail(get(x + DX[d], y, z + DZ[d]))) m |= 1 << d;
+  return m;
 }
 
-// Ray: baktığın yöne göre konur. Komşu raylar hesaba katılmaz, eksen bakış yönüdür.
+// Şekil komşulardan hesaplanır. Hiç komşu yoksa koyulduğu eksen kullanılır.
+function shapeOf(x, y, z, raw) {
+  const m = mask(x, y, z), n = m & 1, e = m & 2, s = m & 4, w = m & 8;
+  if (n && s) return 0;                                              // düz (kavşakta da düz)
+  if (e && w) return 1;
+  if ((n || s) && (e || w)) return n ? (e ? 2 : 3) : (e ? 4 : 5);   // köşe
+  if (n || s) return 0;
+  if (e || w) return 1;
+  return axisOf(raw);
+}
+
+// Çizim: ray şekline göre görünüm, vagon için sabit kutu
+variantHook.fn = (raw, x, y, z) => {
+  if (raw === RAY || raw === RAY_X) return SHAPE_VAR[shapeOf(x, y, z, raw)];
+  if (raw === CART_X) return CART_Z;
+  return raw;
+};
+
+// Ray: baktığın yöne göre konur (komşu yoksa eksen bakış yönüdür)
 export function placeRail() {
   if (!prev) return;
   const [x, y, z] = prev, o = get(x, y, z);
   if ((o !== 0 && o !== TALL) || !solid(x, y - 1, z)) return toast('Ray sağlam zemine konur');
-  if (!isCreative() && (eco.inv[N.RAY] || 0) < 1) return toast('Ray yok');
-  const ax = Math.abs(Math.sin(P.yaw)) > Math.abs(Math.cos(P.yaw)) ? 'x' : 'z';
-  set(x, y, z, railOf(ax)); commit(x, y, z, railOf(ax));
-  if (!isCreative()) eco.inv[N.RAY]--;
+  if (!isCreative() && (eco.inv[RAY] || 0) < 1) return toast('Ray yok');
+  const ax = Math.abs(Math.sin(P.yaw)) > Math.abs(Math.cos(P.yaw)) ? 1 : 0;
+  put(x, y, z, ax ? RAY_X : RAY);
+  if (!isCreative()) eco.inv[RAY]--;
   sfx.place(); rebuild(); drawHud();
 }
 
-// Vagon: rayın üstündeki hücreye, rayın eksenine göre konur
+// Vagon: rayın üstüne konur (rayın ekseniyle aynı)
 export function placeCart() {
   if (!target) return toast('Vagonu rayın üstüne bakarak koy');
   const [x, y, z] = target, t = get(x, y, z);
-  if (!isRail(t)) return toast('Vagonu raya bakarak koy');
+  if (isCart(t)) return toast('Burada zaten vagon var');
+  if (t !== RAY && t !== RAY_X) return toast('Vagonu raya bakarak koy');
   if (!isCreative() && (eco.inv[N.VAGON] || 0) < 1) return toast('Vagon yok');
-  set(x, y, z, cartOf(axisOf(t))); commit(x, y, z, cartOf(axisOf(t)));
+  put(x, y, z, axisOf(t) ? CART_X : CART_Z);
   if (!isCreative()) eco.inv[N.VAGON]--;
   sfx.place(); rebuild(); drawHud();
 }
 export const useCart = placeCart;
 
-// Sürüş durumu
-let ride = null; // { x, y, z, px, pz, dir: [dx,dz] }
+// Sürüş durumu. u: 0 (ea kenarı) ile 1 (eb kenarı) arası konum. base: ileri tuşuna basınca gidilen yön (+1 eb'ye, -1 ea'ya).
+let ride = null;
+
 export function rideCart(p) {
-  if (ride || !isCart(get(p[0], p[1], p[2]))) return;
-  const ax = axisOf(get(p[0], p[1], p[2]));
-  ride = { x: p[0], y: p[1], z: p[2], px: p[0] + 0.5, pz: p[2] + 0.5, dir: ax === 'x' ? [1, 0] : [0, 1] };
+  if (ride) return;
+  const [x, y, z] = p, t = get(x, y, z);
+  if (!isCart(t)) return;
+  const o = SHAPE_OPEN[shapeOf(x, y, z, t)];
+  ride = { x, y, z, ea: o[0], eb: o[1], u: 0.5, base: 1, moving: false };
   P.riding = true; P.kx = P.kz = 0;
+  seat();
   toast('🚃 İleri tuşuyla ilerle, 🧎 ile in');
 }
-function dismount() {
-  if (!ride) return;
-  P.riding = false;
-  P.x = ride.px; P.z = ride.pz; P.y = ride.y + 0.45; P.vy = 0; P.fallY = P.y; P.ground = false;
-  ride = null;
-  setSneak(false);
+
+// Oyuncuyu vagonun yol üzerindeki konumuna koyar
+function seat() {
+  const cx = ride.x + 0.5, cz = ride.z + 0.5, u = ride.u, a = ride.ea, b = ride.eb;
+  let px, pz;
+  if (b === ((a + 2) & 3)) {                       // düz yol
+    px = cx + DX[a] * (0.5 - u); pz = cz + DZ[a] * (0.5 - u);
+  } else if (u <= 0.5) {                           // köşe: giriş kenarından merkeze
+    const k = 0.5 * (1 - u * 2); px = cx + DX[a] * k; pz = cz + DZ[a] * k;
+  } else {                                         // köşe: merkezden çıkış kenarına
+    const k = 0.5 * (u - 0.5) * 2; px = cx + DX[b] * k; pz = cz + DZ[b] * k;
+  }
+  P.x = px; P.z = pz; P.y = ride.y + 0.4; P.vy = 0; P.fallY = P.y; P.ground = true;
 }
 
-// Vagon hücreye varınca bağlı yönlerden birini seçer (bakış yönüne en yakın, geri dönüş dahil)
-function pickDir(cx, cy, cz, came) {
-  const opts = links(cx, cy, cz).map(k => DIRS[k]).filter(([dx, dz]) => !(dx === -came[0] && dz === -came[1]));
-  if (!opts.length) {
-    // Tek yön: geldiği yönün tersi (geri dönüş) tek seçenek olabilir
-    const back = links(cx, cy, cz).map(k => DIRS[k]);
-    return back.length ? back.find(([dx, dz]) => dx === -came[0] && dz === -came[1]) || null : null;
-  }
-  const fwd = [-Math.sin(P.yaw), -Math.cos(P.yaw)];
-  opts.sort((a, b) => (b[0] * fwd[0] + b[1] * fwd[1]) - (a[0] * fwd[0] + a[1] * fwd[1]));
-  return opts[0];
+// Hareket başlarken bakış yönüne en yakın çıkışı seç
+function chooseBase() {
+  const fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw);
+  const cx = DX[ride.eb] - DX[ride.ea], cz = DZ[ride.eb] - DZ[ride.ea];
+  return fx * cx + fz * cz >= 0 ? 1 : -1;
+}
+
+// Vagonu komşu hücreye geçirir. Geçemezse false (duvar, boşluk, başka vagon, yüklü değil).
+function step(side, over, forward) {
+  const nx = ride.x + DX[side], nz = ride.z + DZ[side], y = ride.y;
+  const nt = get(nx, y, nz);
+  if (!isRail(nt) || isCart(nt) || !isLoaded(nx, nz)) return false;
+  const entry = (side + 2) & 3;
+  const o = SHAPE_OPEN[shapeOf(nx, y, nz, nt)];
+  if (o[0] !== entry && o[1] !== entry) return false;
+  const other = o[0] === entry ? o[1] : o[0];
+  put(ride.x, y, ride.z, axisOf(get(ride.x, y, ride.z)) ? RAY_X : RAY);   // eski hücre ray olur
+  put(nx, y, nz, axisOf(nt) ? CART_X : CART_Z);                          // yeni hücre vagon olur
+  ride.x = nx; ride.z = nz;
+  if (forward) { ride.ea = entry; ride.eb = other; ride.u = over; }
+  else { ride.eb = entry; ride.ea = other; ride.u = 1 - over; }
+  return true;
+}
+
+function advance(d) {
+  ride.u += d;
+  if (ride.u > 1) { if (!step(ride.eb, ride.u - 1, true)) ride.u = 1; }
+  else if (ride.u < 0) { if (!step(ride.ea, -ride.u, false)) ride.u = 0; }
+}
+
+function dismount() {
+  if (!ride) return;
+  seat();
+  P.riding = false;
+  P.y = ride.y + 0.45;
+  ride = null;
+  setSneak(false);
 }
 
 let last = performance.now();
 (function loop(now) {
   requestAnimationFrame(loop);
-  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
   if (!ride) return;
-  if (!G.room || isDead() || P.sneak) return dismount();
-  if (!isCart(get(ride.x, ride.y, ride.z))) return dismount();
-
-  // Bakış yönü ileri/geri yönünü belirler
+  if (!G.room || isDead() || P.sneak || !isCart(get(ride.x, ride.y, ride.z))) return dismount();
   const f = -input.jy + (input.keys.KeyW ? 1 : 0) - (input.keys.KeyS ? 1 : 0);
-  if (Math.abs(f) < 0.2) {
-    ride.px = ride.x + 0.5; ride.pz = ride.z + 0.5;
-  } else {
-    const sgn = f > 0 ? 1 : -1;
-    const step = 4 * dt * sgn;
-    const [dx, dz] = ride.dir;
-    let nx = ride.px + dx * step, nz = ride.pz + dz * step;
-    const ox = ride.px, oz = ride.pz;
-    const cx = Math.floor(nx), cz = Math.floor(nz);
-    if (cx !== ride.x || cz !== ride.z) {
-      // Yeni hücre: ray mi, boş mu? (vagonlu hücreye girilmez)
-      const nt = get(cx, ride.y, cz);
-      if (!isRail(nt) || !isLoaded(cx, cz)) {
-        nx = ride.x + 0.5 + (cx === ride.x ? (dx * 0.45) : 0);
-        nz = ride.z + 0.5 + (cz === ride.z ? (dz * 0.45) : 0);
-        if (cx !== ride.x) nz = ride.z + 0.5; else nx = ride.x + 0.5;
-        ride.px = nx; ride.pz = nz;
-        // duvara çarptı: dur
-      } else {
-        // Geçiş yapılacak: hücre sınırında bağlantıya bak
-        const from = [ride.x, ride.z];
-        const came = [Math.sign(cx - ride.x), Math.sign(cz - ride.z)];
-        const nd = pickDir(cx, ride.y, cz, came);
-        if (!nd) { nx = ox; nz = oz; }
-        else {
-          const a2 = axisOf(nt);
-          set(ride.x, ride.y, ride.z, railOf(axisOf(get(ride.x, ride.y, ride.z)))); commit(ride.x, ride.y, ride.z, railOf(axisOf(get(ride.x, ride.y, ride.z))));
-          set(cx, ride.y, cz, cartOf(a2)); commit(cx, ride.y, cz, cartOf(a2));
-          ride.x = cx; ride.z = cz; ride.dir = nd;
-          void from;
-          nx = cx + 0.5; nz = cz + 0.5;
-        }
-        ride.px = nx; ride.pz = nz;
-      }
-    } else {
-      // Aynı hücrede: sadece eksende ilerle
-      ride.px = nx; ride.pz = nz;
-    }
-  }
-  P.x = ride.px; P.z = ride.pz; P.y = ride.y + 0.4; P.vy = 0; P.fallY = P.y; P.ground = true;
+  const mv = Math.abs(f) > 0.2;
+  if (mv && !ride.moving) ride.base = chooseBase();
+  ride.moving = mv;
+  if (mv) advance((f > 0 ? ride.base : -ride.base) * SPEED * dt);
+  seat();
 })(last);
