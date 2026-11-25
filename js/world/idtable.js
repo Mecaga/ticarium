@@ -79,4 +79,9 @@ Object.assign(N, { KOMUR_BLOK: 56, SPRUCE_ODUN: 57, SPRUCE_TAHTA: 58, SPRUCE_YAP
 Object.assign(N, { KAR_TOPU: 313 });
 Object.assign(N, { KAYIK: 314, KAYIK_BLOK: 173 });
 
+Object.assign(N, {
+  KALE_BLOK: 174, KOYLU_TARLA_BLOK: 175, VILLA_BLOK: 176,   // yapı blokları (dünyada)
+  KALE_EYA: 315, KOYLU_TARLA_EYA: 316, VILLA_EYA: 317       // yapı eşyaları (envanter)
+});
+
 export const ESKI = {};
