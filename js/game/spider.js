@@ -12,6 +12,7 @@ import { toast } from '../ui/ui.js';
 import { db, ref, set as fbSet, update, onValue } from '../core/firebase.js';
 import { uid } from '../core/auth.js';
 import { isCreative as isCreativeS } from './creative.js';
+import { seesPlayer, seesFrom } from './sight.js';
 let spSeq = 0;
 
 // ---- Yeni eşyalar ----
@@ -73,7 +74,7 @@ function tick(now) {
   import('../world/world.js').then(w => {
     for (const s of spiders) {
       const dx = P.x - s.x, dz = P.z - s.z, d = Math.hypot(dx, dz);
-      if (nt && d < 20 && d > 0.9 && !P.ghost && !isCreativeS()) {   // gece ve yaratıcı/hayalet değilse: saldırır ve tırmanır
+      if (nt && d < 20 && d > 0.9 && !P.ghost && !isCreativeS() && seesPlayer(s, 0.5)) {   // gece ve yaratıcı/hayalet değilse: saldırır ve tırmanır
         const ux = dx / (d || 1), uz = dz / (d || 1);
         const fx = Math.floor(s.x + ux * 0.7), fz = Math.floor(s.z + uz * 0.7), fy = Math.floor(s.y);
         const wall = solid(fx, fy, fz);
@@ -97,7 +98,7 @@ function tick(now) {
       }
       s.g.position.set(s.x, s.y, s.z);
       s.cd -= dt;
-      if (nt && d < 1.4 && s.cd <= 0 && Math.abs(P.y - s.y) < 2 && !P.ghost && !isCreativeS()) {
+      if (nt && d < 1.4 && s.cd <= 0 && Math.abs(P.y - s.y) < 2 && !P.ghost && !isCreativeS() && seesPlayer(s, 0.5)) {
         s.cd = 1;
         hurt(2, { name: 'Örümcek' });
       }
@@ -236,7 +237,7 @@ setInterval(() => {   // yönetici: her vuruş isteğini yalnızca bir kez uygul
 setInterval(() => {   // uzak cihazda: gece yakındaki örümcek bana vurur
   if (!G.room || G.room.solo || isOwner() || P.ghost || isCreativeS() || !night() || Date.now() - lastRH < 1000) return;
   for (const g of remoteS.values()) {
-    if (Math.hypot(P.x - g.position.x, P.z - g.position.z) < 1.4 && Math.abs(P.y - g.position.y) < 2) {
+    if (Math.hypot(P.x - g.position.x, P.z - g.position.z) < 1.4 && Math.abs(P.y - g.position.y) < 2 && seesFrom(g.position.x, g.position.y, g.position.z, 0.5)) {
       lastRH = Date.now(); hurt(2, { name: 'Örümcek' }); return;
     }
   }
