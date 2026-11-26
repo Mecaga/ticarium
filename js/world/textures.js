@@ -18,6 +18,7 @@ import * as snw from './textures/snow_items.js';
 import * as rl from './textures/rail_tiles.js';
 import * as boat from './textures/boat_items.js';
 import * as sb from './textures/structure_blocks.js';
+import * as dev from './textures/devev_tiles.js';
 import { TOOL_MAP, toolImage } from './textures/map.js';
 import { iconTexture, PNG_NAME, ICON_ITEM } from './textures/blockmap.js';
 
@@ -34,7 +35,8 @@ const MODS = [
   ['snow_items', 'Kar eşyaları', snw],
   ['rail_tiles', 'Raylar ve vagon', rl],
   ['boat_items', 'Kayık', boat],
-  ['structure_blocks', 'Yapı şemaları', sb]
+  ['structure_blocks', 'Yapı şemaları', sb],
+  ['devev_tiles', 'Dev ev', dev]
 ];
 
 const TILE_NAMES = [], DEF = {}, CAT = {}, TI = {};
