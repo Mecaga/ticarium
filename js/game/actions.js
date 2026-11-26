@@ -53,7 +53,7 @@ if (content.FOODX) Object.assign(FOOD, content.FOODX);
 
 const NOPLACE = new Set([STICK, WHEAT, COAL, INGOT_I, INGOT_G, GEM, N.OLTA, N.CAKMAK_TASI, N.YAY, N.OK, N.VAGON, N.KEMIK, N.KEMIK_TOZU]);
 [N.IP, N.DERI, N.KIL, N.PISMIS_TUGLA, N.KEMIK, N.KEMIK_TOZU, N.CAKMAK_TASI, N.OLTA, N.YAY, N.OK, N.MAKAS, N.VAGON].forEach(i => NOPLACE.add(i)); // ✨ Paket 22: Yasaklı eşyalar listesi genişletildi
-[N.KALE_EYA, N.KOYLU_TARLA_EYA, N.VILLA_EYA].forEach(i => NOPLACE.add(i));
+[N.KALE_EYA, N.KOYLU_TARLA_EYA, N.VILLA_EYA, N.DEV_EV_EYA].forEach(i => NOPLACE.add(i));
 if (content.NOPX) content.NOPX.forEach(i => NOPLACE.add(i));
 
 const MOB_DMG = 3, PVP_DMG = 4;
