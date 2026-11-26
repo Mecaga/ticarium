@@ -27,6 +27,7 @@ import { isDrawOpen } from './ui/draw.js';
 import { isCraftOpen } from './ui/craft.js';
 import { updateFurnace, isFurnaceOpen } from './ui/furnace.js';
 import { isChestOpen } from './game/chests.js';
+import { isStructOpen } from './game/structures.js';
 import { tickVitals } from './entities/vitals.js';
 import { initPack } from './world/texturepack.js';
 import { preloadBlocks, onBlockLoad } from './world/textures/blockmap.js';
@@ -125,7 +126,7 @@ function bindBtn(id, fn) {
   el.addEventListener('mousedown', e => { e.stopPropagation(); fn(); });
 }
 
-const panelsOpen = () => isDrawOpen() || isCraftOpen() || isFurnaceOpen() || isChestOpen();
+const panelsOpen = () => isDrawOpen() || isCraftOpen() || isFurnaceOpen() || isChestOpen() || isStructOpen();
 
 hooks.bag = toggleBag;
 phooks.leave = leave;
