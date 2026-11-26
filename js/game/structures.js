@@ -1,5 +1,5 @@
 import { N } from '../world/idtable.js';
-import { TYPES, CATS, get, set, rebuild, isLoaded, isPlant, solid, pointHit, prev, FARM, H as WORLD_H } from '../world/world.js';
+import { TYPES, CATS, get, set, rebuild, isLoaded, isPlant, solid, pointHit, prev, FARM, H as WORLD_H, faceAt } from '../world/world.js';
 import { eco } from './economy.js';
 import { RECIPES } from './recipes.js';
 import { toast, drawHud, iconHTML } from '../ui/ui.js';
@@ -11,6 +11,7 @@ import { recordChange } from './progress.js';
 import { addItem } from './inventory.js';
 import { sfx } from '../core/sound.js';
 import { setPanelWire, clearWireAt, initWires } from './structwire.js';
+import { footprint, relOf, rotVal, DIR_NAME } from './structgeo.js';
 
 // Yapı şemaları: Kocaman kale (10×10×10), Köylü tarlası (9×1×9), Büyük villa (11×8×11), Dev ev (24×11×24).
 // Yapı eşyası yere konunca blok olur. Bloğa bakıp Koy ile panel açılır.
@@ -220,10 +221,10 @@ function layoutOf(sp) {
   return LAYOUT.get(sp);
 }
 
-// ---- Oyuncuyu kurulum alanının dışına taşıma ----
-const SUB = 3;   // kurulum en fazla 3 blok aşağı destek koyar, alan bu kadar aşağıyı da kapsar
+// ---- Oyuncuyu kurulum bölgesinin dışına taşıma ----
+const SUB = 3;   // kurulum en fazla 3 blok aşağı destek koyar, bölge bu kadar aşağıyı da kapsar
 
-// Oyuncu gövdesi (0,6 × 1,7) bu noktada bir engele değiyor mu (gm2 ve vagon durumundan bağımsız)
+// Oyuncu gövdesi (0,6 × 1,7) bu noktada bir engele değiyor mu
 function bodyHit(x, y, z) {
   for (const dx of [-0.3, 0.3]) for (const dz of [-0.3, 0.3]) for (const dy of [0.05, 0.9, 1.65]) {
     const bx = x + dx, by = y + dy, bz = z + dz;
@@ -232,16 +233,16 @@ function bodyHit(x, y, z) {
   return false;
 }
 
-// Oyuncunun gövdesi kurulum hacmiyle (alttaki destekler dahil) kesişiyor mu
-function inZone(sp, ox, by, oz) {
-  return P.x + 0.3 > ox && P.x - 0.3 < ox + sp.W && P.z + 0.3 > oz && P.z - 0.3 < oz + sp.D &&
-    P.y + 1.7 > by - SUB && P.y < by + sp.H;
+// Oyuncu gövdesi bölgeyle (Z) kesişiyor mu. Z.yb: alt sınır (Y0 dahil), Z.yt: üst sınır (dışarıda kalır)
+function inZone(Z) {
+  return P.x + 0.3 > Z.ox && P.x - 0.3 < Z.ox + Z.W && P.z + 0.3 > Z.oz && P.z - 0.3 < Z.oz + Z.D &&
+    P.y + 1.7 > Z.yb - SUB && P.y < Z.yt;
 }
 
-// Alanın dışında, oyuncuya en yakın boş konum. needGround: ayağının altı katı olmalı.
-function safeSpot(sp, ox, oz, needGround) {
+// Bölgenin dışında oyuncuya en yakın boş konum. needGround: ayağının altı katı olmalı.
+function safeSpot(Z, needGround) {
   const px = Math.floor(P.x), pz = Math.floor(P.z), fy0 = Math.floor(P.y);
-  const outside = (x, z) => x < ox || x >= ox + sp.W || z < oz || z >= oz + sp.D;
+  const outside = (x, z) => x < Z.ox || x >= Z.ox + Z.W || z < Z.oz || z >= Z.oz + Z.D;
   let best = null, bestD = Infinity;
   for (let r = 1; r <= 30; r++) {
     for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) {
@@ -255,7 +256,7 @@ function safeSpot(sp, ox, oz, needGround) {
         if (bodyHit(x + 0.5, fy, z + 0.5)) continue;
         const d = Math.hypot(x + 0.5 - P.x, z + 0.5 - P.z) + Math.abs(fy - P.y) * 0.25;
         if (d < bestD) { bestD = d; best = { x: x + 0.5, y: fy, z: z + 0.5 }; }
-        break;   // bu sütunda en yakın uygun yükseklik bulundu
+        break;
       }
     }
     if (best && bestD <= r) break;
@@ -263,29 +264,47 @@ function safeSpot(sp, ox, oz, needGround) {
   return best;
 }
 
-// Oyuncu kurulum hacmindeyse en yakın güvenli konuma taşır. Yer yoksa false döner.
-function keepOut(sp, ox, by, oz) {
-  if (P.riding || !inZone(sp, ox, by, oz)) return true;
-  const s = safeSpot(sp, ox, oz, true) || safeSpot(sp, ox, oz, false);
+// Son çare: bölgenin üstü (oyuncu bölgenin dışında kalır)
+function topSpot(Z) {
+  const x = Z.ox + Z.W / 2, z = Z.oz + Z.D / 2, y = Z.yt + 0.05;
+  return bodyHit(x, y, z) ? null : { x, y, z };
+}
+
+// Oyuncu bölgedeyse en yakın güvenli konuma taşır. Hiç yer yoksa false döner.
+function keepOut(Z) {
+  if (P.riding || !inZone(Z)) return true;
+  const s = safeSpot(Z, true) || safeSpot(Z, false) || topSpot(Z);
   if (!s) return false;
   P.x = s.x; P.y = s.y; P.z = s.z;
   P.vy = 0; P.fallY = P.y; P.ground = false; P.kx = P.kz = 0;
   return true;
 }
 
-// Kurulum uygun mu? Alan yüklü ve bloklarla dolu değilse olur. Oyuncunun yeri burada sorulmaz.
-// Bitkiler (çimen, çiçek, uzun ot, ekin) engel sayılmaz, kurulum onların üstüne yazar.
-function check(sp, bx, by, bz) {
-  const L = layoutOf(sp), fail = msg => ({ ok: false, msg });
-  const ox = bx - Math.floor(sp.W / 2), oz = bz - Math.floor(sp.D / 2);
-  for (let x = ox; x < ox + sp.W; x++) for (let z = oz; z < oz + sp.D; z++)
+// Bloğun ön yüzü: koyan oyuncunun olduğu tarafa (0 kuzey, 1 doğu, 2 güney, 3 batı)
+function facingOf(x, z) {
+  const vx = P.x - (x + 0.5), vz = P.z - (z + 0.5);
+  if (Math.abs(vz) >= Math.abs(vx)) return vz < 0 ? 0 : 2;
+  return vx > 0 ? 1 : 3;
+}
+
+// Kurulum uygun mu? Alan yüklü, boş ve zemini düzgünse olur. Oyuncunun yeri burada sorulmaz (keepOut taşır).
+// Köşe yapılarda hücreler r kez döner. "tool" varsa alet çantada olmalı (harcanmaz).
+function check(sp, bx, by, bz, r) {
+  const L = layoutOf(sp), fail = msg => ({ ok: false, msg }), rr = r || 0;
+  if (!isCreative() && sp.tool && (eco.inv[sp.tool] || 0) < 1) return fail('Çantanda ' + nameOf(sp.tool) + ' olmalı (harcanmaz)');
+  const fp = footprint(sp, rr);
+  const Z = { ox: bx + fp.x0, oz: bz + fp.z0, W: fp.x1 - fp.x0 + 1, D: fp.z1 - fp.z0 + 1, yb: by + (sp.Y0 || 0), yt: by + sp.H };
+  for (let x = Z.ox; x < Z.ox + Z.W; x++) for (let z = Z.oz; z < Z.oz + Z.D; z++)
     if (!isLoaded(x, z)) return fail('Alan henüz yüklenmedi');
-  for (let x = ox; x < ox + sp.W; x++) for (let z = oz; z < oz + sp.D; z++) for (let dy = 0; dy < sp.H; dy++) {
-    const own = x === bx && z === bz && dy === 0, v = get(x, by + dy, z);
-    if (!own && v !== 0 && !isPlant(v)) return fail('Alan dolu, önce boşalt');
-  }
+  // Dolu alan. Kazılan yapılarda (dig) yer altı serbesttir, yerleşim onu oyar. Bitkiler engel değil.
+  for (let x = Z.ox; x < Z.ox + Z.W; x++) for (let z = Z.oz; z < Z.oz + Z.D; z++)
+    for (let y = sp.dig ? by : Z.yb; y < Z.yt; y++) {
+      const own = x === bx && z === bz && y === by, v = get(x, y, z);
+      if (!own && v !== 0 && !isPlant(v)) return fail('Alan dolu, önce boşalt');
+    }
+  // Zemin: bloğun altındaki boşluklar destekle doldurulur (en fazla SUB kat)
   const supports = [];
-  for (let x = ox; x < ox + sp.W; x++) for (let z = oz; z < oz + sp.D; z++) {
+  for (let x = Z.ox; x < Z.ox + Z.W; x++) for (let z = Z.oz; z < Z.oz + Z.D; z++) {
     for (let k = 1; ; k++) {
       const y = by - k;
       if (solid(x, y, z)) break;
@@ -293,7 +312,12 @@ function check(sp, bx, by, bz) {
       supports.push([x, y, z, sp.sup]);
     }
   }
-  return { ok: true, ox, oz, supports, jobs: L.cells.map(c => [ox + c[0], by + c[1], oz + c[2], c[3]]), need: L.need };
+  // Yerleşim: hücreler r kez döner, blok değerleri (kapı, sandık yönü) da döner
+  const jobs = L.cells.map(c => {
+    const [rx, rz] = relOf(sp, c[0], c[2], rr);
+    return [bx + rx, by + c[1], bz + rz, rotVal(c[3], rr)];
+  });
+  return { ok: true, zone: Z, supports, jobs, need: L.need };
 }
 
 // ---- Stok: yerel cihazda, yapının konumuna göre (şema bloğu ile aynı biçim) ----
@@ -335,6 +359,7 @@ function ui() {
     if (b.dataset.v) verItem(+b.dataset.v);
     else if (b.dataset.a) alItem(+b.dataset.a);
     else if (b.dataset.all) { for (const k in layoutOf(cur.sp).need) verItem(+k); }
+    else if (b.dataset.rot) return rotateStruct();
     else if (b.dataset.k) return kur();
     else if (b.dataset.x) return closeStruct();
     draw();
@@ -343,7 +368,7 @@ function ui() {
 
 function draw() {
   if (!cur) return;
-  const sp = cur.sp, c = check(sp, cur.x, cur.y, cur.z), need = layoutOf(sp).need, cre = isCreative();
+  const sp = cur.sp, c = check(sp, cur.x, cur.y, cur.z, cur.r), need = layoutOf(sp).need, cre = isCreative();
   let done = true, rows = '';
   for (const k in need) {
     const item = +k, n = need[k], have = stock[k] || 0, bag = eco.inv[item] || 0;
@@ -354,12 +379,18 @@ function draw() {
         '<button data-v="' + item + '"' + (bag < 1 || have >= n ? ' disabled' : '') + '>Ver</button>' +
         '<button data-a="' + item + '"' + (have < 1 ? ' disabled' : '') + '>Al</button>') + '</div>';
   }
+  if (sp.tool) {
+    const ok = cre || (eco.inv[sp.tool] || 0) >= 1;
+    rows += '<div class="stR">' + iconHTML(sp.tool) + '<span>' + nameOf(sp.tool) + ' <small>(alet, harcanmaz)</small></span><b>' + (ok ? '✔' : '✖') + '</b></div>';
+  }
   const canKur = c.ok && (cre || done);
+  const info = sp.ax === 'corner' ? '<small>Ön yüz: ' + DIR_NAME[cur.r] + ' · sarı ok bu yönü gösterir</small><br>' : '';
   el.innerHTML = '<div id="stB"><h3 style="margin:0 0 2px">🏗️ ' + sp.name + '</h3>' +
-    '<small>' + sp.W + '×' + sp.H + '×' + sp.D + ' · Kurulunca 3 sn içinde dikilir</small>' +
+    '<small>' + sp.W + '×' + (sp.H - (sp.Y0 || 0)) + '×' + sp.D + ' · Kurulunca 3 sn içinde dikilir</small><br>' + info +
     (c.ok ? '' : '<div class="stW">⚠ ' + c.msg + '</div>') + rows +
     '<div style="display:flex;gap:6px;margin-top:8px">' +
     (cre ? '' : '<button data-all="1" style="flex:1">Hepsini ver</button>') +
+    (sp.ax === 'corner' ? '<button data-rot="1" style="flex:1">↻ Döndür</button>' : '') +
     '<button data-k="1" style="flex:1;background:#2e7d32"' + (canKur ? '' : ' disabled') + '>🔨 Kur</button>' +
     '<button data-x="1" style="flex:1;background:#b3261e">Kapat</button></div></div>';
 }
@@ -389,12 +420,12 @@ function giveBack(t) {
   drawHud();
 }
 
-// Hücreleri alttan üste, BATCH'lik parçalar halinde yazar. Her parçadan önce oyuncu alandaysa dışarı taşınır.
-function runBuild(c, sp, by) {
+// Hücreleri alttan üste, BATCH'lik parçalar halinde yazar. Her parçadan önce oyuncu bölgedeyse dışarı taşınır.
+function runBuild(c, sp) {
   const jobs = c.supports.concat(c.jobs).sort((a, b) => a[1] - b[1]);
   let i = 0, warned = false;
   const step = () => {
-    if (!keepOut(sp, c.ox, by, c.oz) && !warned) { warned = true; toast('⚠ Oyuncu için boş yer yok, kurulum sürüyor'); }
+    if (!keepOut(c.zone) && !warned) { warned = true; toast('⚠ Oyuncu için boş yer yok, kurulum sürüyor'); }
     const end = Math.min(jobs.length, i + BATCH);
     for (; i < end; i++) { const [x, y, z, t] = jobs[i]; set(x, y, z, t); commit(x, y, z, t); }
     if (i < jobs.length) return setTimeout(step, 30);
@@ -404,51 +435,64 @@ function runBuild(c, sp, by) {
   step();
 }
 
+// Kur: malzemeler ve oyuncunun durumu kontrol edilir. Sonra yapı bloğu kalkar, 3 sn sonra kurulur.
 function kur() {
   if (!cur) return;
-  const { x, y, z, sp } = cur, c = check(sp, x, y, z);
+  const { x, y, z, sp, r } = cur, c = check(sp, x, y, z, r);
   if (!c.ok) return toast(c.msg);
   if (!isCreative()) {
-    for (const k in c.need) if ((stock[k] || 0) < c.need[k]) return toast('Malzeme eksik');
+    for (const k in c.need) if ((stock[k] || 0) < c.need[k]) return toast('Malzeme eksik: ' + nameOf(+k));
   }
-  if (!keepOut(sp, c.ox, y, c.oz)) return toast('Oyuncu için güvenli boş yer yok');
+  if (!keepOut(c.zone)) return toast('Oyuncu için güvenli boş yer yok');
   if (!isCreative()) {
     for (const k in c.need) stock[k] -= c.need[k];
     saveStock();
   }
-  set(x, y, z, 0); commit(x, y, z, 0);   // yapı bloğu kalkar, çizgi de hemen kalkar
+  set(x, y, z, 0); commit(x, y, z, 0);
   clearWireAt(x, y, z);
   closeStruct();
   toast('🔨 ' + sp.name + ' 3 sn sonra kurulacak');
-  setTimeout(() => runBuild(c, sp, y), BUILD_DELAY);
+  setTimeout(() => runBuild(c, sp), BUILD_DELAY);
 }
 
 // ---- Dışa açık fonksiyonlar ----
+// Yapı eşyası yere konur ve blok olur. Köşe yapılarda ön yüz, koyan oyuncuya bakar.
 export function placeStructure(t) {
   const sp = byItem[t];
   if (!sp || !prev) return;
   const [x, y, z] = prev, here = get(x, y, z);
   if (here !== 0 && !isPlant(here)) return toast('Buraya konmaz');
   if (!isCreative() && (eco.inv[t] || 0) < 1) return toast(sp.name + ' yok');
-  set(x, y, z, sp.blk); commit(x, y, z, sp.blk);
+  const v = sp.blk | ((sp.ax === 'corner' ? facingOf(x, z) : 0) << 8);
+  set(x, y, z, v); commit(x, y, z, v);
   if (!isCreative()) eco.inv[t]--;
   sfx.place(); rebuild(); drawHud();
   toast('Bloğa bakıp Koy ile malzemeleri ver');
 }
 
-// Yapı bloğuna bakıp Koy: paneli açar, bu yapının çizgisi parlaklaşır
+// Yapı bloğuna bakıp Koy: paneli açar. Köşe yapılarda yönü bloktan okur.
 export function openStruct(x, y, z, t) {
   const sp = byBlk[t];
   if (!sp) return;
   ui();
-  cur = { x, y, z, sp };
+  const r = sp.ax === 'corner' ? (faceAt(x, y, z) & 3) : 0;
+  cur = { x, y, z, sp, r };
   stock = loadStock(x, y, z);
   setPanelWire(x, y, z);
   draw();
   el.style.display = 'flex';
 }
 
-// Paneli kapatır: parlak vurgu kalkar, blok duruyorsa ince çizgi kalır
+// Köşe yapıyı 90° döndürür: ön yüz sıradaki yöne geçer, kayıt ve ağ güncellenir
+function rotateStruct() {
+  if (!cur || cur.sp.ax !== 'corner') return;
+  const nr = (cur.r + 1) & 3, v = cur.sp.blk | (nr << 8);
+  set(cur.x, cur.y, cur.z, v); commit(cur.x, cur.y, cur.z, v);
+  cur.r = nr;
+  rebuild();
+  draw();
+}
+
 export function closeStruct() {
   cur = null;
   setPanelWire(null);
