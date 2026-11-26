@@ -116,7 +116,9 @@ function makeVilla(g) {
 // Dev ev (24×11×24, iki kat). x 0..23 (batıdan doğuya), z 0..23 (kuzeyden güneye), y 0..10.
 // Zemin kat: ana oda 10×6, mutfak 5×6, WC 2×6, kiler 2×6, 3 normal oda 5×6, geçit ve giriş holü.
 // Üst kat: 2 normal oda 5×6 ve açık hol. Merdiven koridorda (z=10, x 17–21).
-function makeDevEv(g) {
+function makeDevEv(g0) {
+  // Giriş kuzeyde (z=0) olsun diye yerleşim z ekseninde aynalanır
+  const g = { put: (x, y, z, a, b) => g0.put(x, y, 23 - z, a, b), del: (x, y, z) => g0.del(x, y, 23 - z) };
   const TA = N.TAS, TH = N.TAHTA, CM = N.CAM, TG = N.TUGLA;
   let nD = 0;
   const box = (x0, y0, z0, x1, y1, z1, b) => {
@@ -255,10 +257,10 @@ function makeMaden(g) {
 }
 
 const SPECS = [
-  { key: 'kale', item: N.KALE_EYA, blk: N.KALE_BLOK, name: 'Kocaman kale', W: 10, D: 10, H: 10, sup: N.TAS, make: makeKale },
-  { key: 'tarla', item: N.KOYLU_TARLA_EYA, blk: N.KOYLU_TARLA_BLOK, name: 'Köylü tarlası', W: 9, D: 9, H: 1, sup: N.TOPRAK, make: makeTarla },
-  { key: 'villa', item: N.VILLA_EYA, blk: N.VILLA_BLOK, name: 'Büyük villa', W: 11, D: 11, H: 8, sup: N.TAS, make: makeVilla },
-  { key: 'devev', item: N.DEV_EV_EYA, blk: N.DEV_EV_BLOK, name: 'Dev ev', W: 24, D: 24, H: 11, sup: N.TAS, make: makeDevEv },
+  { key: 'kale', item: N.KALE_EYA, blk: N.KALE_BLOK, name: 'Kocaman kale', W: 10, D: 10, H: 10, sup: N.TAS, ax: 'corner', make: makeKale },
+  { key: 'tarla', item: N.KOYLU_TARLA_EYA, blk: N.KOYLU_TARLA_BLOK, name: 'Köylü tarlası', W: 9, D: 9, H: 1, sup: N.TOPRAK, ax: 'corner', make: makeTarla },
+  { key: 'villa', item: N.VILLA_EYA, blk: N.VILLA_BLOK, name: 'Büyük villa', W: 11, D: 11, H: 8, sup: N.TAS, ax: 'corner', make: makeVilla },
+  { key: 'devev', item: N.DEV_EV_EYA, blk: N.DEV_EV_BLOK, name: 'Dev ev', W: 24, D: 24, H: 11, sup: N.TAS, ax: 'corner', make: makeDevEv },
   { key: 'karakol', item: N.DAG_KARAKOL_EYA, blk: N.DAG_KARAKOL_BLOK, name: 'Dağ karakolu', W: 7, D: 7, H: 6, sup: N.TAS, ax: 'corner', make: makeKarakol },
   { key: 'maden', item: N.MADEN_GIRIS_EYA, blk: N.MADEN_GIRIS_BLOK, name: 'Maden girişi', W: 5, D: 5, H: 3, Y0: -5, dig: true, ax: 'corner', tool: N.DEMIR_KAZMA, sup: N.TAS, make: makeMaden }
 ];
