@@ -1,5 +1,5 @@
 import { N } from '../world/idtable.js';
-import { TYPES, CATS, get, set, rebuild, isLoaded, isPlant, solid, pointHit, prev, FARM, H as WORLD_H, faceAt } from '../world/world.js';
+import { TYPES, CATS, get, set, rebuild, isLoaded, isPlant, solid, pointHit, prev, FARM, H as WORLD_H, faceAt, WATER, LAVA } from '../world/world.js';
 import { eco } from './economy.js';
 import { RECIPES } from './recipes.js';
 import { toast, drawHud, iconHTML } from '../ui/ui.js';
@@ -13,7 +13,8 @@ import { sfx } from '../core/sound.js';
 import { setPanelWire, clearWireAt, initWires } from './structwire.js';
 import { footprint, relOf, rotVal, DIR_NAME } from './structgeo.js';
 
-// Yapı şemaları: Kocaman kale (10×10×10), Köylü tarlası (9×1×9), Büyük villa (11×8×11), Dev ev (24×11×24).
+// Yapı şemaları: Kocaman kale (10×10×10), Köylü tarlası (9×1×9), Büyük villa (11×8×11), Dev ev (24×11×24),
+// Dağ karakolu (7×6×7, köşe), Maden girişi (5×8×5, 5 yer altı, köşe, demir kazma ister).
 // Yapı eşyası yere konunca blok olur. Bloğa bakıp Koy ile panel açılır.
 // "Ver" malzemeyi çantadan stoğa koyar, "Kur" stoğu harcar, yapı 3 sn sonra kurulur.
 // Kurulum set + commit ile yazılır: kayıt (recordChange) ve online (sendBlock) bu yoldan gider.
@@ -199,11 +200,67 @@ function makeDevEv(g) {
   return [[N.KAPI_BASI, nD], [N.SANDIK, 2], [N.OCAK, 1]];
 }
 
+// ---- Parça 3: dağ karakolu ve maden girişi ----
+reg(N.DAG_KARAKOL_BLOK, 'Dağ karakolu yapısı', 0x8a8076, 350);
+reg(N.DAG_KARAKOL_EYA, 'Dağ karakolu', 0x8a8076, 350, 4);
+reg(N.MADEN_GIRIS_BLOK, 'Maden girişi yapısı', 0x6b5a48, 400);
+reg(N.MADEN_GIRIS_EYA, 'Maden girişi', 0x6b5a48, 400, 4);
+RECIPES.push({ out: [N.DAG_KARAKOL_EYA, 1], pat: [[N.ODUN, N.TAS, N.ODUN], [N.TAS, N.TAHTA, N.TAS], [N.ODUN, N.TAS, N.ODUN]] });
+RECIPES.push({ out: [N.MADEN_GIRIS_EYA, 1], pat: [[N.TAS, N.TAS, N.TAS], [0, N.TAHTA, 0], [0, N.TAS, 0]] });
+
+// Dağ karakolu (7×6×7): taş temel, alt taş ve üst tahta duvar, kütük köşe direkleri, tahta çatı,
+// ön yüzde (kuzey) kapı, cam pencereler. İçinde masa, ocak ve sandık.
+function makeKarakol(g) {
+  const TA = N.TAS, TH = N.TAHTA, OD = N.ODUN, CM = N.CAM;
+  const put = (x, y, z, b) => g.put(x, y, z, b, b);
+  const edge = (x, z) => x === 0 || x === 6 || z === 0 || z === 6;
+  for (let x = 0; x < 7; x++) for (let z = 0; z < 7; z++) put(x, 0, z, TA);                  // taş temel
+  for (let y = 1; y <= 4; y++) for (let x = 0; x < 7; x++) for (let z = 0; z < 7; z++)
+    if (edge(x, z)) put(x, y, z, y <= 2 ? TA : TH);                                           // alt taş, üst tahta duvar
+  for (let x = 1; x <= 5; x++) for (let z = 1; z <= 5; z++) put(x, 1, z, TH);                 // zemin tahtası
+  for (let x = 0; x < 7; x++) for (let z = 0; z < 7; z++) put(x, 5, z, TH);                   // tahta çatı
+  for (const [x, z] of [[0, 0], [6, 0], [0, 6], [6, 6]])
+    for (let y = 1; y <= 5; y++) put(x, y, z, OD);                                            // kütük köşe direkleri
+  g.put(3, 1, 0, DOOR_LO, 0); g.put(3, 2, 0, DOOR_UP, 0);                                     // kapı (ön yüz kuzey)
+  for (const y of [2, 3]) { put(0, y, 3, CM); put(6, y, 3, CM); put(3, y, 6, CM); }           // pencereler
+  put(1, 2, 0, CM); put(5, 2, 0, CM);
+  put(2, 2, 3, TH);                                                                           // masa
+  g.put(5, 2, 5, N.OCAK, 0); g.put(1, 2, 5, N.SANDIK, 0);                                    // ocak ve sandık
+  return [[N.KAPI_BASI, 1], [N.SANDIK, 1], [N.OCAK, 1]];
+}
+
+// Maden girişi (5×8×5, 5 blok yer altı): yüzeyde kütük ayaklı taş çerçeve, tahta kiriş ve cam fener.
+// Şaftta merdiven ve kütük destekler, altta maden odası ve sandık. Kazma gerekir (sp.tool).
+function makeMaden(g) {
+  const TA = N.TAS, TH = N.TAHTA, OD = N.ODUN, CM = N.CAM, LAD = N.TIRMANMA_MERDIVEN;
+  const put = (x, y, z, b) => g.put(x, y, z, b, b);
+  // Yer altı: maden odası (x 0..4, z 0..4, y -5..-4) ve dar şaft (2, -3..-1, 2) boşaltılır
+  for (let x = 0; x < 5; x++) for (let z = 0; z < 5; z++) for (let y = -5; y <= -4; y++) g.put(x, y, z, 0, 0);
+  for (let y = -3; y <= -1; y++) g.put(2, y, 2, 0, 0);
+  // Şaft merdiveni (2, -5..-1, 2) ve şaft duvarlarında kütük destekler
+  for (let y = -5; y <= -1; y++) put(2, y, 2, LAD);
+  for (const y of [-1, -3]) { put(1, y, 2, OD); put(3, y, 2, OD); }
+  // Maden odası: iki cam fener ve bir sandık
+  put(0, -4, 2, CM); put(4, -4, 2, CM);
+  g.put(4, -5, 4, N.SANDIK, 0);
+  // Yüzey platformu (y 0): taş. Giriş (2,0,0) ve şaft ağzı (2,0,1), (2,0,2) açık kalır
+  for (let x = 0; x < 5; x++) for (let z = 0; z < 5; z++) if (!(x === 2 && z <= 2)) put(x, 0, z, TA);
+  // Dış çerçeve: ön yüzde kütük ayaklar, tahta kiriş, ortada cam fener; yanlarda alçak taş duvar
+  put(1, 0, 0, OD); put(3, 0, 0, OD); put(1, 1, 0, OD); put(3, 1, 0, OD);
+  put(1, 2, 0, TH); put(3, 2, 0, TH); put(2, 2, 0, CM);
+  put(0, 1, 0, TA); put(4, 1, 0, TA); put(0, 2, 0, TA); put(4, 2, 0, TA);
+  for (let z = 1; z <= 4; z++) { put(0, 1, z, TA); put(4, 1, z, TA); }
+  for (let x = 1; x <= 3; x++) put(x, 1, 4, TA);
+  return [[N.SANDIK, 1]];
+}
+
 const SPECS = [
   { key: 'kale', item: N.KALE_EYA, blk: N.KALE_BLOK, name: 'Kocaman kale', W: 10, D: 10, H: 10, sup: N.TAS, make: makeKale },
   { key: 'tarla', item: N.KOYLU_TARLA_EYA, blk: N.KOYLU_TARLA_BLOK, name: 'Köylü tarlası', W: 9, D: 9, H: 1, sup: N.TOPRAK, make: makeTarla },
   { key: 'villa', item: N.VILLA_EYA, blk: N.VILLA_BLOK, name: 'Büyük villa', W: 11, D: 11, H: 8, sup: N.TAS, make: makeVilla },
-  { key: 'devev', item: N.DEV_EV_EYA, blk: N.DEV_EV_BLOK, name: 'Dev ev', W: 24, D: 24, H: 11, sup: N.TAS, make: makeDevEv }
+  { key: 'devev', item: N.DEV_EV_EYA, blk: N.DEV_EV_BLOK, name: 'Dev ev', W: 24, D: 24, H: 11, sup: N.TAS, make: makeDevEv },
+  { key: 'karakol', item: N.DAG_KARAKOL_EYA, blk: N.DAG_KARAKOL_BLOK, name: 'Dağ karakolu', W: 7, D: 7, H: 6, sup: N.TAS, ax: 'corner', make: makeKarakol },
+  { key: 'maden', item: N.MADEN_GIRIS_EYA, blk: N.MADEN_GIRIS_BLOK, name: 'Maden girişi', W: 5, D: 5, H: 3, Y0: -5, dig: true, ax: 'corner', tool: N.DEMIR_KAZMA, sup: N.TAS, make: makeMaden }
 ];
 const byItem = {}, byBlk = {};
 for (const s of SPECS) { byItem[s.item] = s; byBlk[s.blk] = s; }
@@ -301,6 +358,12 @@ function check(sp, bx, by, bz, r) {
     for (let y = sp.dig ? by : Z.yb; y < Z.yt; y++) {
       const own = x === bx && z === bz && y === by, v = get(x, y, z);
       if (!own && v !== 0 && !isPlant(v)) return fail('Alan dolu, önce boşalt');
+    }
+  // Kazılacak yer altında (dig) su ya da lav varsa kurulmaz: akıp tüneli doldururlar
+  if (sp.dig) for (let x = Z.ox; x < Z.ox + Z.W; x++) for (let z = Z.oz; z < Z.oz + Z.D; z++)
+    for (let y = Z.yb; y < by; y++) {
+      const v = get(x, y, z);
+      if (v === WATER || v === LAVA) return fail('Yer altında su ya da lav var');
     }
   // Zemin: bloğun altındaki boşluklar destekle doldurulur (en fazla SUB kat)
   const supports = [];
