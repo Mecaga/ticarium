@@ -41,6 +41,7 @@ const HARD = {
   [158]: [0.4, 'pick', 0]
 };
 HARD[N.KALE_BLOK] = [2, 'pick', 0]; HARD[N.KOYLU_TARLA_BLOK] = [1, 'shovel', 0]; HARD[N.VILLA_BLOK] = [2, 'axe', 0];
+HARD[N.DEV_EV_BLOK] = [2, 'axe', 0];
 HARD[N.KAYIK_BLOK] = [0.6, 'axe', 0];
 HARD[N.KOMUR_BLOK] = [4, 'pick', 0]; HARD[N.SPRUCE_ODUN] = [3, 'axe', 0]; HARD[N.SPRUCE_TAHTA] = [2, 'axe', 0];
 HARD[N.SPRUCE_YAPRAK] = [0.3, null, 0]; HARD[N.SPRUCE_BASAMAK] = [1.5, 'axe', 0];
