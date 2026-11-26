@@ -58,60 +58,62 @@ function grid() {
 function makeKale(g) {
   const TA = N.TAS, TH = N.TAHTA, CM = N.CAM;
   for (let y = 0; y <= 4; y++) for (let x = 0; x < 10; x++) for (let z = 0; z < 10; z++)
-    if (x <= 1 || x >= 8 || z <= 1 || z >= 8) g.put(x, y, z, TA, TA);
-  for (let y = 0; y <= 3; y++) for (const x of [4, 5]) for (const z of [0, 1]) g.del(x, y, z);
-  for (const x of [4, 5]) for (const z of [0, 1]) g.put(x, 4, z, TH, TH);
-  for (let y = 2; y <= 3; y++) {
+    if (x <= 1 || x >= 8 || z <= 1 || z >= 8) g.put(x, y, z, TA, TA);                       // 2 kalınlıkta duvar
+  for (let y = 0; y <= 3; y++) for (const x of [4, 5]) for (const z of [0, 1]) g.del(x, y, z); // geçit: zemin dahil açık
+  for (const x of [4, 5]) for (const z of [0, 1]) g.put(x, 4, z, TH, TH);                       // geçit lentosu
+  for (let y = 2; y <= 3; y++) {                                                                // pencereler
     for (const x of [4, 5]) for (const z of [8, 9]) g.put(x, y, z, CM, CM);
     for (const z of [4, 5]) for (const x of [0, 1, 8, 9]) g.put(x, y, z, CM, CM);
   }
-  for (let x = 0; x < 10; x++) for (let z = 0; z < 10; z++)
+  for (let x = 0; x < 10; x++) for (let z = 0; z < 10; z++)                                     // siper dişleri
     if ((x === 0 || x === 9 || z === 0 || z === 9) && (x + z) % 2 === 0) g.put(x, 5, z, TA, TA);
-  for (const [cx, cz] of [[0, 0], [7, 0], [0, 7], [7, 7]])
+  for (const [cx, cz] of [[0, 0], [7, 0], [0, 7], [7, 7]])                                      // 4 gözetleme kulesi
     for (let dx = 0; dx < 3; dx++) for (let dz = 0; dz < 3; dz++) {
       const x = cx + dx, z = cz + dz;
-      if (!(dx === 1 && dz === 1)) for (let y = 0; y <= 8; y++) g.put(x, y, z, TA, TA);
-      g.put(x, 9, z, TH, TH);
+      if (!(dx === 1 && dz === 1)) for (let y = 0; y <= 8; y++) g.put(x, y, z, TA, TA);     // gövde (ortası boş)
+      g.put(x, 9, z, TH, TH);                                                               // ahşap platform
     }
   return [];
 }
 
-// Köylü tarlası: toprak kenar, ortada su kanalı, içi işlenmiş toprak
+// Köylü tarlası: toprak kenar, ortada su kanalı, içi işlenmiş toprak (ekim oyuncuya bırakılır)
 function makeTarla(g) {
   for (let x = 0; x < 9; x++) for (let z = 0; z < 9; z++) {
-    if (x === 0 || x === 8 || z === 0 || z === 8) g.put(x, 0, z, N.TOPRAK, N.TOPRAK);
-    else if (z === 4) g.put(x, 0, z, N.SU, 0);
-    else g.put(x, 0, z, FARM, N.TOPRAK);
+    if (x === 0 || x === 8 || z === 0 || z === 8) g.put(x, 0, z, N.TOPRAK, N.TOPRAK);   // toprak kenar
+    else if (z === 4) g.put(x, 0, z, N.SU, 0);                                           // su kanalı
+    else g.put(x, 0, z, FARM, N.TOPRAK);                                                 // işlenmiş toprak
   }
   return [[N.SU_KOVASI, 1]];
 }
 
-// Büyük villa: 2 katlı
+// Büyük villa: 2 katlı, tahta ön/arka, taş yanlar, cam pencereler, kapı, oda bölmesi, taş basamak merdiven, tuğla çatı
 function makeVilla(g) {
   const TA = N.TAS, TH = N.TAHTA, CM = N.CAM, TG = N.TUGLA;
-  for (let x = 0; x < 11; x++) for (let z = 0; z < 11; z++) g.put(x, 0, z, TA, TA);
+  for (let x = 0; x < 11; x++) for (let z = 0; z < 11; z++) g.put(x, 0, z, TA, TA);            // zemin katı
   for (const y of [1, 2, 3, 4, 5, 6]) for (let x = 0; x < 11; x++) for (let z = 0; z < 11; z++) {
     const ez = z === 0 || z === 10, ex = x === 0 || x === 10;
     if (!ez && !ex) continue;
-    const m = ez && !ex ? TH : TA;
+    const m = ez && !ex ? TH : TA;                                                             // ön/arka tahta, yanlar taş
     g.put(x, y, z, m, m);
   }
-  for (const y of [2, 3, 5, 6]) {
+  for (const y of [2, 3, 5, 6]) {                                                              // pencereler
     for (const x of [3, 7]) { g.put(x, y, 0, CM, CM); g.put(x, y, 10, CM, CM); }
     for (const z of [3, 7]) { g.put(0, y, z, CM, CM); g.put(10, y, z, CM, CM); }
   }
-  g.put(5, 1, 0, DOOR_LO, 0); g.put(5, 2, 0, DOOR_UP, 0);
-  for (let x = 1; x <= 9; x++) for (let z = 1; z <= 9; z++) g.put(x, 4, z, TH, TH);
+  g.put(5, 1, 0, DOOR_LO, 0); g.put(5, 2, 0, DOOR_UP, 0);                                     // giriş kapısı
+  for (let x = 1; x <= 9; x++) for (let z = 1; z <= 9; z++) g.put(x, 4, z, TH, TH);           // 2. kat zemini
   g.put(9, 1, 8, TA, TA); g.put(9, 2, 7, TA, TA); g.put(9, 3, 6, TA, TA); g.put(9, 4, 5, TA, TA);
-  g.del(9, 4, 6); g.del(9, 4, 7);
-  for (let y = 1; y <= 3; y++) for (let z = 6; z <= 9; z++) g.put(5, y, z, TH, TH);
-  g.put(2, 1, 2, TH, TH); g.put(1, 1, 2, TH, TH); g.put(3, 1, 2, TH, TH);
-  g.put(7, 3, 8, CM, CM);
-  for (let x = 0; x < 11; x++) for (let z = 0; z < 11; z++) g.put(x, 7, z, TG, TG);
+  g.del(9, 4, 6); g.del(9, 4, 7);                                                             // üst kata açıklık
+  for (let y = 1; y <= 3; y++) for (let z = 6; z <= 9; z++) g.put(5, y, z, TH, TH);            // oda bölmesi
+  g.put(2, 1, 2, TH, TH); g.put(1, 1, 2, TH, TH); g.put(3, 1, 2, TH, TH);                     // masa ve sandalyeler
+  g.put(7, 3, 8, CM, CM);                                                                     // cam aydınlatma
+  for (let x = 0; x < 11; x++) for (let z = 0; z < 11; z++) g.put(x, 7, z, TG, TG);           // tuğla çatı
   return [[N.KAPI_BASI, 1]];
 }
 
-// Dev ev (24×11×24, iki kat)
+// Dev ev (24×11×24, iki kat). x 0..23 (batıdan doğuya), z 0..23 (kuzeyden güneye), y 0..10.
+// Zemin kat: ana oda 10×6, mutfak 5×6, WC 2×6, kiler 2×6, 3 normal oda 5×6, geçit ve giriş holü.
+// Üst kat: 2 normal oda 5×6 ve açık hol. Merdiven koridorda (z=10, x 17–21).
 function makeDevEv(g) {
   const TA = N.TAS, TH = N.TAHTA, CM = N.CAM, TG = N.TUGLA;
   let nD = 0;
@@ -126,10 +128,12 @@ function makeDevEv(g) {
   const win = (x, y, z) => { g.put(x, y, z, CM, CM); g.put(x, y + 1, z, CM, CM); };
   const lamp = (x, y, z) => g.put(x, y, z, CM, CM);
 
+  // Döşemeler ve çatı
   box(0, 0, 0, 23, 0, 23, TH);
   box(0, 5, 0, 23, 5, 23, TH);
   box(0, 10, 0, 23, 10, 23, TG);
 
+  // Dış duvarlar (taş), iki kat
   for (const [a, b] of [[1, 4], [6, 9]]) {
     box(0, a, 0, 23, b, 0, TA);
     box(0, a, 23, 23, b, 23, TA);
@@ -137,6 +141,7 @@ function makeDevEv(g) {
     box(23, a, 0, 23, b, 23, TA);
   }
 
+  // Zemin kat iç duvarları (tahta)
   box(11, 1, 1, 11, 4, 6, TH);
   box(17, 1, 1, 17, 4, 6, TH);
   box(20, 1, 1, 20, 4, 6, TH);
@@ -147,10 +152,12 @@ function makeDevEv(g) {
   box(18, 1, 13, 18, 4, 18, TH);
   box(1, 1, 19, 22, 4, 19, TH);
 
+  // Üst kat iç duvarları (tahta)
   box(6, 6, 1, 6, 9, 6, TH);
   box(12, 6, 1, 12, 9, 6, TH);
   box(1, 6, 7, 12, 9, 7, TH);
 
+  // Kapılar (12 adet)
   door(11, 1, 23, 0);
   door(5, 1, 7, 0);
   door(14, 1, 7, 0);
@@ -164,6 +171,7 @@ function makeDevEv(g) {
   door(3, 6, 7, 0);
   door(9, 6, 7, 0);
 
+  // Pencereler
   for (const x of [3, 7, 14, 18, 21]) win(x, 2, 0);
   for (const x of [4, 8, 15, 18]) win(x, 2, 23);
   for (const z of [3, 10, 15, 21]) { win(0, 2, z); win(23, 2, z); }
@@ -172,9 +180,11 @@ function makeDevEv(g) {
   for (const z of [3, 10, 18]) win(0, 7, z);
   for (const z of [3, 10, 15]) win(23, 7, z);
 
+  // Merdiven ve açıklık
   put(21, 1, 10, TA); put(20, 2, 10, TA); put(19, 3, 10, TA); put(18, 4, 10, TA); put(17, 5, 10, TA);
   cut(18, 5, 10, 19, 5, 10);
 
+  // İç detay
   put(5, 1, 3, TH); lamp(5, 4, 3);
   for (let x = 12; x <= 15; x++) put(x, 1, 1, TA);
   g.put(16, 1, 1, N.OCAK, 0);
@@ -211,8 +221,9 @@ function layoutOf(sp) {
 }
 
 // ---- Oyuncuyu kurulum alanının dışına taşıma ----
-const SUB = 3;
+const SUB = 3;   // kurulum en fazla 3 blok aşağı destek koyar, alan bu kadar aşağıyı da kapsar
 
+// Oyuncu gövdesi (0,6 × 1,7) bu noktada bir engele değiyor mu (gm2 ve vagon durumundan bağımsız)
 function bodyHit(x, y, z) {
   for (const dx of [-0.3, 0.3]) for (const dz of [-0.3, 0.3]) for (const dy of [0.05, 0.9, 1.65]) {
     const bx = x + dx, by = y + dy, bz = z + dz;
@@ -221,11 +232,13 @@ function bodyHit(x, y, z) {
   return false;
 }
 
+// Oyuncunun gövdesi kurulum hacmiyle (alttaki destekler dahil) kesişiyor mu
 function inZone(sp, ox, by, oz) {
   return P.x + 0.3 > ox && P.x - 0.3 < ox + sp.W && P.z + 0.3 > oz && P.z - 0.3 < oz + sp.D &&
     P.y + 1.7 > by - SUB && P.y < by + sp.H;
 }
 
+// Alanın dışında, oyuncuya en yakın boş konum. needGround: ayağının altı katı olmalı.
 function safeSpot(sp, ox, oz, needGround) {
   const px = Math.floor(P.x), pz = Math.floor(P.z), fy0 = Math.floor(P.y);
   const outside = (x, z) => x < ox || x >= ox + sp.W || z < oz || z >= oz + sp.D;
@@ -242,7 +255,7 @@ function safeSpot(sp, ox, oz, needGround) {
         if (bodyHit(x + 0.5, fy, z + 0.5)) continue;
         const d = Math.hypot(x + 0.5 - P.x, z + 0.5 - P.z) + Math.abs(fy - P.y) * 0.25;
         if (d < bestD) { bestD = d; best = { x: x + 0.5, y: fy, z: z + 0.5 }; }
-        break;
+        break;   // bu sütunda en yakın uygun yükseklik bulundu
       }
     }
     if (best && bestD <= r) break;
@@ -250,6 +263,7 @@ function safeSpot(sp, ox, oz, needGround) {
   return best;
 }
 
+// Oyuncu kurulum hacmindeyse en yakın güvenli konuma taşır. Yer yoksa false döner.
 function keepOut(sp, ox, by, oz) {
   if (P.riding || !inZone(sp, ox, by, oz)) return true;
   const s = safeSpot(sp, ox, oz, true) || safeSpot(sp, ox, oz, false);
@@ -259,6 +273,8 @@ function keepOut(sp, ox, by, oz) {
   return true;
 }
 
+// Kurulum uygun mu? Alan yüklü ve bloklarla dolu değilse olur. Oyuncunun yeri burada sorulmaz.
+// Bitkiler (çimen, çiçek, uzun ot, ekin) engel sayılmaz, kurulum onların üstüne yazar.
 function check(sp, bx, by, bz) {
   const L = layoutOf(sp), fail = msg => ({ ok: false, msg });
   const ox = bx - Math.floor(sp.W / 2), oz = bz - Math.floor(sp.D / 2);
@@ -280,7 +296,7 @@ function check(sp, bx, by, bz) {
   return { ok: true, ox, oz, supports, jobs: L.cells.map(c => [ox + c[0], by + c[1], oz + c[2], c[3]]), need: L.need };
 }
 
-// ---- Stok ----
+// ---- Stok: yerel cihazda, yapının konumuna göre (şema bloğu ile aynı biçim) ----
 let el = null, cur = null, stock = {};
 const keyOf = (x, y, z) => 'bd_st_' + ((G.room && G.room.code) || 'solo') + '_' + x + '_' + y + '_' + z;
 function loadStock(x, y, z) {
@@ -373,6 +389,7 @@ function giveBack(t) {
   drawHud();
 }
 
+// Hücreleri alttan üste, BATCH'lik parçalar halinde yazar. Her parçadan önce oyuncu alandaysa dışarı taşınır.
 function runBuild(c, sp, by) {
   const jobs = c.supports.concat(c.jobs).sort((a, b) => a[1] - b[1]);
   let i = 0, warned = false;
@@ -399,7 +416,7 @@ function kur() {
     for (const k in c.need) stock[k] -= c.need[k];
     saveStock();
   }
-  set(x, y, z, 0); commit(x, y, z, 0);
+  set(x, y, z, 0); commit(x, y, z, 0);   // yapı bloğu kalkar, çizgi de hemen kalkar
   clearWireAt(x, y, z);
   closeStruct();
   toast('🔨 ' + sp.name + ' 3 sn sonra kurulacak');
@@ -419,6 +436,7 @@ export function placeStructure(t) {
   toast('Bloğa bakıp Koy ile malzemeleri ver');
 }
 
+// Yapı bloğuna bakıp Koy: paneli açar, bu yapının çizgisi parlaklaşır
 export function openStruct(x, y, z, t) {
   const sp = byBlk[t];
   if (!sp) return;
@@ -430,6 +448,7 @@ export function openStruct(x, y, z, t) {
   el.style.display = 'flex';
 }
 
+// Paneli kapatır: parlak vurgu kalkar, blok duruyorsa ince çizgi kalır
 export function closeStruct() {
   cur = null;
   setPanelWire(null);
@@ -438,6 +457,7 @@ export function closeStruct() {
 
 export const isStructOpen = () => !!cur;
 
+// Yapı bloğu kırılınca: yapı eşyası ve stokta kalan malzemeler döner, çizgi hemen kalkar
 export function structDrops(t, x, y, z) {
   const sp = byBlk[t];
   if (!sp) return null;
