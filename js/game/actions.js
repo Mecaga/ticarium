@@ -40,6 +40,7 @@ import { placeRail, useCart } from './rails.js';
 import { placeLever, isLever, toggleLever } from './redstone.js';
 import { placeStair, isSlab, LADDER } from './stairs.js';
 import { placeBoat, rideBoat, isBoat } from './boat.js';
+import { placeStructure, openStruct, isStructBlock, isStructItem, structDrops } from './structures.js';
 import * as content from './content.js';
 import { isFlat } from '../world/textures.js'; // ✨ Paket 22: Düz eşya kontrolü eklendi
 
@@ -52,6 +53,7 @@ if (content.FOODX) Object.assign(FOOD, content.FOODX);
 
 const NOPLACE = new Set([STICK, WHEAT, COAL, INGOT_I, INGOT_G, GEM, N.OLTA, N.CAKMAK_TASI, N.YAY, N.OK, N.VAGON, N.KEMIK, N.KEMIK_TOZU]);
 [N.IP, N.DERI, N.KIL, N.PISMIS_TUGLA, N.KEMIK, N.KEMIK_TOZU, N.CAKMAK_TASI, N.OLTA, N.YAY, N.OK, N.MAKAS, N.VAGON].forEach(i => NOPLACE.add(i)); // ✨ Paket 22: Yasaklı eşyalar listesi genişletildi
+[N.KALE_EYA, N.KOYLU_TARLA_EYA, N.VILLA_EYA].forEach(i => NOPLACE.add(i));
 if (content.NOPX) content.NOPX.forEach(i => NOPLACE.add(i));
 
 const MOB_DMG = 3, PVP_DMG = 4;
@@ -232,6 +234,15 @@ export function breakBlock(canDrop = true) {
   if (isDead() || uiOpen() || !target) return;
   const [x, y, z] = target;
   const t = get(x, y, z);
+  if (isStructBlock(t)) {
+    const d = structDrops(t, x, y, z) || [];
+    set(x, y, z, 0);
+    commit(x, y, z, 0);
+    if (!isCreative()) for (const [it, n] of d) dropAt([[it, n]], x, y, z);
+    sfx.breakB();
+    rebuild(); drawHud();
+    return;
+  }
   if (t === BEDROCK && !isCreative()) return toast('Katman kayası kırılamaz');
   if (t === CANVAS) {
     const d = getPaint(x, y, z);
@@ -426,11 +437,13 @@ export function placeBlock() {
     if (tb === BPRINT) return useBlueprint(target);
     if (isLever(tb)) return toggleLever(target);
     if (isBoat(tb)) return rideBoat(target);
+    if (isStructBlock(tb)) return openStruct(target[0], target[1], target[2], tb);
   }
 
   const t = eco.sel;
   if (!isCreative() && (eco.inv[t] || 0) < 1 && t !== N.KOVA) return;
 
+  if (isStructItem(t)) return placeStructure(t);
   if (t === N.OLTA) return useRod();
   if (t === N.YAY) return shoot();
   if (t === N.RAY) return placeRail();
