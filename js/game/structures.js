@@ -50,12 +50,12 @@ function grid() {
   };
 }
 
-// Kocaman kale: kalın duvar halkası, kuzeyde geçit, 4 köşede gözetleme kulesi, siper dişleri
+// Kocaman kale: kalın duvar halkası, kuzeyde geçit (zemin dahil açık), 4 köşede gözetleme kulesi
 function makeKale(g) {
   const TA = N.TAS, TH = N.TAHTA, CM = N.CAM;
   for (let y = 0; y <= 4; y++) for (let x = 0; x < 10; x++) for (let z = 0; z < 10; z++)
-    if (x <= 1 || x >= 8 || z <= 1 || z >= 8) g.put(x, y, z, TA, TA);                  // 2 kalınlıkta duvar
-  for (let y = 1; y <= 3; y++) for (const x of [4, 5]) for (const z of [0, 1]) g.del(x, y, z); // giriş geçidi
+    if (x <= 1 || x >= 8 || z <= 1 || z >= 8) g.put(x, y, z, TA, TA);                       // 2 kalınlıkta duvar
+  for (let y = 0; y <= 3; y++) for (const x of [4, 5]) for (const z of [0, 1]) g.del(x, y, z); // geçit: zemin dahil açık
   for (const x of [4, 5]) for (const z of [0, 1]) g.put(x, 4, z, TH, TH);                       // geçit lentosu
   for (let y = 2; y <= 3; y++) {                                                                // pencereler
     for (const x of [4, 5]) for (const z of [8, 9]) g.put(x, y, z, CM, CM);
@@ -82,27 +82,29 @@ function makeTarla(g) {
   return [[N.SU_KOVASI, 1]];
 }
 
-// Büyük villa: 2 katlı, tahta-taş duvarlar, cam pencereler, kapı, oda bölmesi, merdiven, tuğla çatı
+// Büyük villa: 2 katlı, tahta ön/arka, taş yanlar, cam pencereler, kapı, oda bölmesi, taş basamak merdiven, tuğla çatı
 function makeVilla(g) {
-  const TA = N.TAS, TH = N.TAHTA, CM = N.CAM, TG = N.TUGLA, MER = N.TIRMANMA_MERDIVEN;
-  for (let x = 0; x < 11; x++) for (let z = 0; z < 11; z++) g.put(x, 0, z, TA, TA);      // zemin katı
-  for (const y of [1, 2, 3, 5, 6]) for (let x = 0; x < 11; x++) for (let z = 0; z < 11; z++) {
+  const TA = N.TAS, TH = N.TAHTA, CM = N.CAM, TG = N.TUGLA;
+  for (let x = 0; x < 11; x++) for (let z = 0; z < 11; z++) g.put(x, 0, z, TA, TA);            // zemin katı
+  for (const y of [1, 2, 3, 4, 5, 6]) for (let x = 0; x < 11; x++) for (let z = 0; z < 11; z++) {
     const ez = z === 0 || z === 10, ex = x === 0 || x === 10;
     if (!ez && !ex) continue;
-    const m = ez && !ex ? TH : TA;                                                         // ön/arka tahta, yanlar taş
+    const m = ez && !ex ? TH : TA;                                                             // ön/arka tahta, yanlar taş
     g.put(x, y, z, m, m);
   }
-  for (const y of [2, 3, 5, 6]) {                                                           // pencereler
+  for (const y of [2, 3, 5, 6]) {                                                              // pencereler
     for (const x of [3, 7]) { g.put(x, y, 0, CM, CM); g.put(x, y, 10, CM, CM); }
     for (const z of [3, 7]) { g.put(0, y, z, CM, CM); g.put(10, y, z, CM, CM); }
   }
-  g.put(5, 1, 0, DOOR_LO, 0); g.put(5, 2, 0, DOOR_UP, 0);                                   // giriş kapısı
-  for (let x = 1; x <= 9; x++) for (let z = 1; z <= 9; z++) g.put(x, 4, z, TH, TH);         // 2. kat zemini
-  for (let y = 1; y <= 3; y++) for (let z = 6; z <= 9; z++) g.put(5, y, z, TH, TH);         // oda bölmesi
-  for (let y = 1; y <= 4; y++) g.put(9, y, 1, MER, N.CUBUK);                                // merdiven (2. kata)
-  g.put(2, 1, 2, TH, TH); g.put(1, 1, 2, TH, TH); g.put(3, 1, 2, TH, TH);                   // masa ve sandalyeler
-  g.put(7, 3, 8, CM, CM);                                                                   // cam aydınlatma
-  for (let x = 0; x < 11; x++) for (let z = 0; z < 11; z++) g.put(x, 7, z, TG, TG);         // tuğla çatı
+  g.put(5, 1, 0, DOOR_LO, 0); g.put(5, 2, 0, DOOR_UP, 0);                                     // giriş kapısı
+  for (let x = 1; x <= 9; x++) for (let z = 1; z <= 9; z++) g.put(x, 4, z, TH, TH);           // 2. kat zemini
+  // Merdiven: x=9 hattında z 8'den 5'e taş basamaklar, her birine zıplayarak çıkılır
+  g.put(9, 1, 8, TA, TA); g.put(9, 2, 7, TA, TA); g.put(9, 3, 6, TA, TA); g.put(9, 4, 5, TA, TA);
+  g.del(9, 4, 6); g.del(9, 4, 7);                                                             // üst kata açıklık
+  for (let y = 1; y <= 3; y++) for (let z = 6; z <= 9; z++) g.put(5, y, z, TH, TH);            // oda bölmesi
+  g.put(2, 1, 2, TH, TH); g.put(1, 1, 2, TH, TH); g.put(3, 1, 2, TH, TH);                     // masa ve sandalyeler
+  g.put(7, 3, 8, CM, CM);                                                                     // cam aydınlatma
+  for (let x = 0; x < 11; x++) for (let z = 0; z < 11; z++) g.put(x, 7, z, TG, TG);           // tuğla çatı
   return [[N.KAPI_BASI, 1]];
 }
 
@@ -316,4 +318,4 @@ export function structDrops(t, x, y, z) {
   for (const k in s) if (s[k] > 0) out.push([+k, s[k]]);
   try { localStorage.removeItem(keyOf(x, y, z)); } catch (e) {}
   return out;
-                                                       }
+}
