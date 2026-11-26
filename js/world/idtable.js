@@ -86,4 +86,9 @@ Object.assign(N, {
 
 Object.assign(N, { DEV_EV_BLOK: 177, DEV_EV_EYA: 318 });
 
+Object.assign(N, {
+  DAG_KARAKOL_BLOK: 178, MADEN_GIRIS_BLOK: 179,   // yapı blokları (dünyada, 1-255)
+  DAG_KARAKOL_EYA: 319, MADEN_GIRIS_EYA: 320      // yapı eşyaları (envanter)
+});
+
 export const ESKI = {};
