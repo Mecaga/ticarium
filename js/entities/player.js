@@ -1,10 +1,15 @@
 import { get, solid, WATER, spawnPos, isLoaded, pointHit } from '../world/world.js';
 import { input } from '../ui/input.js';
+import { N } from '../world/idtable.js';
 
 const R = 0.3, PH = 1.7;
 const sp0 = spawnPos();
 
 export const pHooks = { onFall: null };
+// Merdiven tırmanma kancası (stairs.js doldurur): (dt, ileri, tuşlar) -> dikey hız, ya da null (yerçekimi)
+export const climbHook = { fn: null };
+// İçinden geçilen ama çarpmayan bloklar (merdiven). Hedeflenebilir kalır.
+const NOCOLL = new Set([N.TIRMANMA_MERDIVEN]);
 
 export const P = {
   x: sp0.x, y: sp0.y, z: sp0.z,
@@ -14,13 +19,16 @@ export const P = {
   fallY: sp0.y,
   inWater: false, underWater: false,
   sneak: false, fly: false, ghost: false, up: false, down: false, fast: false,
-  riding: false // ✨ Paket 22: Vagon sürüş durumu eklendi
+  riding: false
 };
 
 export function collides(x, y, z) {
-  if (P.ghost || P.riding) return false; // ✨ Paket 22: Vagondayken çarpışma kapatıldı
-  for (const dx of [-R, R]) for (const dz of [-R, R]) for (const dy of [0.05, 0.9, PH - 0.05])
-    if (solid(Math.floor(x + dx), Math.floor(y + dy), Math.floor(z + dz)) || pointHit(x + dx, y + dy, z + dz)) return true;
+  if (P.ghost || P.riding) return false;
+  for (const dx of [-R, R]) for (const dz of [-R, R]) for (const dy of [0.05, 0.9, PH - 0.05]) {
+    const bx = Math.floor(x + dx), by = Math.floor(y + dy), bz = Math.floor(z + dz);
+    if (solid(bx, by, bz)) return true;
+    if (pointHit(x + dx, y + dy, z + dz) && !NOCOLL.has(get(bx, by, bz))) return true;
+  }
   return false;
 }
 
@@ -52,7 +60,7 @@ function mv(nx, nz) {
 
 export function updatePlayer(dt, frozen) {
   if (frozen) return;
-  if (P.riding) return; // ✨ Paket 22: Vagondayken normal oyuncu hareketi dondurulur
+  if (P.riding) return;
   if (!isLoaded(Math.floor(P.x), Math.floor(P.z))) return;
   if (collides(P.x, P.y, P.z)) {   // üstümüze blok konduysa dışarı çık
     let ok = false;
@@ -84,12 +92,21 @@ export function updatePlayer(dt, frozen) {
   mv(P.x + vx * dt, P.z);
   mv(P.x, P.z + vz * dt);
 
-  if (P.fly) {   // uçuş: yerçekimi yok, ⬆ ⬇ ile yükselir
+  if (P.fly) {   // uçuş: yerçekimi yok
     const up = P.up || k.Space, dn = P.down || k.ShiftLeft || P.sneak;
     P.vy = (up ? 8 : 0) - (dn ? 8 : 0);
     P.fallY = P.y; P.ground = false;
     const ny = P.y + P.vy * dt;
     if (P.ghost || !collides(P.x, ny, P.z)) P.y = ny; else P.vy = 0;
+    return;
+  }
+
+  // Merdiven: yerçekimi yerine tırmanma hızı (null dönerse normal fizik çalışır)
+  const cv = climbHook.fn ? climbHook.fn(dt, f, k) : null;
+  if (cv !== null) {
+    P.vy = cv; P.ground = false; P.fallY = P.y;
+    const cy = P.y + P.vy * dt;
+    if (!collides(P.x, cy, P.z)) P.y = cy; else P.vy = 0;
     return;
   }
 
