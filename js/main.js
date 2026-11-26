@@ -220,7 +220,7 @@ function loop(now) {
   if (G.online) G.online.updateOthers(dt);
   updateItems(dt, !frozen);
   rebuild();
-  camera.position.set(P.x, P.y + (P.sneak ? 1.3 : 1.6), P.z);
+  camera.position.set(P.x, P.y + (P.riding && P.seatH ? P.seatH : (P.sneak ? 1.3 : 1.6)), P.z);
   camera.rotation.set(P.pitch, P.yaw, 0);
   const uw = isWater(Math.floor(camera.position.x), Math.floor(camera.position.y), Math.floor(camera.position.z));
   updateSky(dt, camera, uw);
