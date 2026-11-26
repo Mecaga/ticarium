@@ -1,10 +1,10 @@
 import { N } from '../world/idtable.js';
-import { TYPES, CATS, BOXES, get, set, rebuild, prev, target, solid, isLoaded, TALL, variantHook } from '../world/world.js';
+import { TYPES, CATS, BOXES, MBOX, get, set, rebuild, prev, target, solid, isLoaded, TALL, variantHook } from '../world/world.js';
 import { FACE_TILES, tileOf, addFlat } from '../world/textures.js';
 import { eco } from './economy.js';
 import { RECIPES } from './recipes.js';
 import { toast, drawHud } from '../ui/ui.js';
-import { P } from '../entities/player.js';
+import { P, freeSpotNear } from '../entities/player.js';
 import { G } from '../core/state.js';
 import { isCreative } from './creative.js';
 import { recordChange } from './progress.js';
@@ -13,27 +13,42 @@ import { input } from '../ui/input.js';
 import { isDead } from '../entities/health.js';
 import { setSneak } from './modes.js';
 
-// Dünyada saklanan numaralar. Eksen numaranın kendisinde:
-// 151 ray (kuzey-güney), 156 ray (doğu-batı), 157 vagon (kuzey-güney), 158 vagon (doğu-batı).
-// Ray şekli (düz / köşe) dünyada saklanmaz, komşulara bakılarak çizilir.
+// Dünyada saklanan numaralar: ray 151 (kuzey-güney), 156 (doğu-batı); vagon 157 ve 158.
+// Ray şekli (düz, köşe) dünyada saklanmaz, komşulara bakılarak çizilir.
 export const RAY_X = 156, CART_Z = 157, CART_X = 158;
 const RAY = N.RAY;
 
-const DX = [0, 1, 0, -1], DZ = [-1, 0, 1, 0];                          // 0 kuzey(-z) 1 doğu(+x) 2 güney(+z) 3 batı(-x)
-const SHAPE_OPEN = [[0, 2], [1, 3], [0, 1], [0, 3], [2, 1], [2, 3]];   // 0 KG, 1 DB, 2 KD, 3 KB, 4 GD, 5 GB
-const SHAPE_VAR = [159, 162, 163, 167, 168, 169];                       // görünüm numaraları (dünyada saklanmaz)
+const DX = [0, 1, 0, -1], DZ = [-1, 0, 1, 0];                          // 0 kuzey 1 doğu 2 güney 3 batı
+const SHAPE_OPEN = [[0, 2], [1, 3], [0, 1], [0, 3], [2, 1], [2, 3]];   // 0 düz KG, 1 düz DB, 2 KD, 3 KB, 4 GD, 5 GB
+const SHAPE_VAR = [159, 162, 163, 167, 168, 169];                      // görünüm numaraları
 const SHAPE_TEX = ['railNS', 'railEW', 'railNE', 'railNW', 'railSE', 'railSW'];
 const RAIL_BOX = [0, 0, 0, 1, 0.1, 1];
-const CART_BOX = [0.06, 0.1, 0.06, 0.94, 0.4, 0.94];
-const SPEED = 3.5;   // hücre / saniye
+const CART_BOX = [0.1, 0, 0.1, 0.9, 0.5, 0.9];   // seçim ve çarpışma kutusu (kasa, ray altı dahil)
+const CART_FLOOR = 0.22;                          // binenin ayağı: kasa tabanının üstü
+const CART_SEAT = 0.8;                            // binince kamera yüksekliği
+const SPEED = 3.5;                                // hücre / saniye
 
 const tex = n => { const t = tileOf(n); return t === undefined ? tileOf('stone') : t; };
 
-// Görünüm kayıtları
+// Ray görünümleri ve kutuları
 SHAPE_VAR.forEach((id, i) => { const t = tex(SHAPE_TEX[i]); FACE_TILES[id] = [t, t, t]; BOXES[id] = RAIL_BOX; });
-const cT = tex('railCartTop'), cS = tex('railCartSide');
-for (const id of [CART_Z, CART_X]) { FACE_TILES[id] = [cT, cS, cS]; BOXES[id] = CART_BOX; }
 BOXES[RAY] = BOXES[RAY_X] = RAIL_BOX;
+
+// Vagon: açık kasa. Taban rayın 0.04 üstünde yüzer, ray altta görünür kalır.
+const CF = [tex('railCartTop'), tex('railCartSide'), tex('railCartSide')];
+const CART_PARTS = [
+  [[0.1, 0.14, 0.1, 0.9, 0.22, 0.9], CF],   // taban
+  [[0.1, 0.14, 0.1, 0.9, 0.5, 0.2], CF],    // kuzey duvar
+  [[0.1, 0.14, 0.8, 0.9, 0.5, 0.9], CF],    // güney duvar
+  [[0.1, 0.14, 0.2, 0.2, 0.5, 0.8], CF],    // batı duvar
+  [[0.8, 0.14, 0.2, 0.9, 0.5, 0.8], CF]     // doğu duvar
+];
+BOXES[CART_Z] = BOXES[CART_X] = CART_BOX;
+FACE_TILES[CART_Z] = FACE_TILES[CART_X] = CF;
+MBOX[CART_Z] = MBOX[CART_X] = (x, y, z) => {
+  const rail = FACE_TILES[SHAPE_VAR[shapeOf(x, y, z, get(x, y, z) === CART_X ? RAY_X : RAY)]];
+  return [[RAIL_BOX, rail], ...CART_PARTS];
+};
 
 function reg(id, name, color, base, tile, flat, cat) {
   TYPES[id] = { name, color, base };
@@ -58,32 +73,25 @@ export const isCartBlock = isCart;
 const commit = (x, y, z, t) => { recordChange(x, y, z, t); if (G.online) G.online.sendBlock(x, y, z, t); };
 const put = (x, y, z, t) => { set(x, y, z, t); commit(x, y, z, t); };
 
-// Komşu bitmaskesi: bit 0 kuzey, 1 doğu, 2 güney, 3 batı (ray ya da vagon varsa)
+// Komşu bitmaskesi: bit 0 kuzey, 1 doğu, 2 güney, 3 batı
 function mask(x, y, z) {
   let m = 0;
   for (let d = 0; d < 4; d++) if (isRail(get(x + DX[d], y, z + DZ[d]))) m |= 1 << d;
   return m;
 }
-
-// Şekil komşulardan hesaplanır. Hiç komşu yoksa koyulduğu eksen kullanılır.
+// Şekil komşulardan hesaplanır; komşu yoksa koyulduğu eksen kullanılır
 function shapeOf(x, y, z, raw) {
   const m = mask(x, y, z), n = m & 1, e = m & 2, s = m & 4, w = m & 8;
-  if (n && s) return 0;                                              // düz (kavşakta da düz)
+  if (n && s) return 0;
   if (e && w) return 1;
-  if ((n || s) && (e || w)) return n ? (e ? 2 : 3) : (e ? 4 : 5);   // köşe
+  if ((n || s) && (e || w)) return n ? (e ? 2 : 3) : (e ? 4 : 5);
   if (n || s) return 0;
   if (e || w) return 1;
   return axisOf(raw);
 }
+variantHook.fn = (raw, x, y, z) => ((raw === RAY || raw === RAY_X) ? SHAPE_VAR[shapeOf(x, y, z, raw)] : raw);
 
-// Çizim: ray şekline göre görünüm, vagon için sabit kutu
-variantHook.fn = (raw, x, y, z) => {
-  if (raw === RAY || raw === RAY_X) return SHAPE_VAR[shapeOf(x, y, z, raw)];
-  if (raw === CART_X) return CART_Z;
-  return raw;
-};
-
-// Ray: baktığın yöne göre konur (komşu yoksa eksen bakış yönüdür)
+// Ray: baktığın yöne göre konur
 export function placeRail() {
   if (!prev) return;
   const [x, y, z] = prev, o = get(x, y, z);
@@ -95,7 +103,7 @@ export function placeRail() {
   sfx.place(); rebuild(); drawHud();
 }
 
-// Vagon: rayın üstüne konur (rayın ekseniyle aynı)
+// Vagon: rayın üstüne konur. Ray, vagonun altında görünmeye devam eder.
 export function placeCart() {
   if (!target) return toast('Vagonu rayın üstüne bakarak koy');
   const [x, y, z] = target, t = get(x, y, z);
@@ -108,35 +116,36 @@ export function placeCart() {
 }
 export const useCart = placeCart;
 
-// Sürüş durumu. u: 0 (ea kenarı) ile 1 (eb kenarı) arası konum. base: ileri tuşuna basınca gidilen yön (+1 eb'ye, -1 ea'ya).
-let ride = null;
+// ---- Sürüş ----
+// ea, eb: vagonun girdiği ve çıktığı açık kenarlar. u: 0..1 konum (0 ea kenarı, 1 eb kenarı).
+let ride = null;   // { x, y, z: vagon hücresi, ea, eb, u, base, moving }
 
 export function rideCart(p) {
-  if (ride) return;
+  if (ride || P.riding) return;
   const [x, y, z] = p, t = get(x, y, z);
   if (!isCart(t)) return;
-  const o = SHAPE_OPEN[shapeOf(x, y, z, t)];
+  const o = SHAPE_OPEN[shapeOf(x, y, z, t === CART_X ? RAY_X : RAY)];
   ride = { x, y, z, ea: o[0], eb: o[1], u: 0.5, base: 1, moving: false };
-  P.riding = true; P.kx = P.kz = 0;
+  P.riding = true; P.seatH = CART_SEAT; P.kx = P.kz = 0;
   seat();
   toast('🚃 İleri tuşuyla ilerle, 🧎 ile in');
 }
 
-// Oyuncuyu vagonun yol üzerindeki konumuna koyar
+// Oyuncuyu kasanın tabanına oturtur ve yol üzerindeki konumunu ayarlar
 function seat() {
   const cx = ride.x + 0.5, cz = ride.z + 0.5, u = ride.u, a = ride.ea, b = ride.eb;
   let px, pz;
-  if (b === ((a + 2) & 3)) {                       // düz yol
+  if (b === ((a + 2) & 3)) {                     // düz yol
     px = cx + DX[a] * (0.5 - u); pz = cz + DZ[a] * (0.5 - u);
-  } else if (u <= 0.5) {                           // köşe: giriş kenarından merkeze
+  } else if (u <= 0.5) {                         // köşe: giriş kenarından merkeze
     const k = 0.5 * (1 - u * 2); px = cx + DX[a] * k; pz = cz + DZ[a] * k;
-  } else {                                         // köşe: merkezden çıkış kenarına
+  } else {                                       // köşe: merkezden çıkış kenarına
     const k = 0.5 * (u - 0.5) * 2; px = cx + DX[b] * k; pz = cz + DZ[b] * k;
   }
-  P.x = px; P.z = pz; P.y = ride.y + 0.4; P.vy = 0; P.fallY = P.y; P.ground = true;
+  P.x = px; P.z = pz; P.y = ride.y + CART_FLOOR; P.vy = 0; P.fallY = P.y; P.ground = true;
 }
 
-// Hareket başlarken bakış yönüne en yakın çıkışı seç
+// Hareket başlarken bakış yönüne en yakın çıkış (ileri +1, geri -1)
 function chooseBase() {
   const fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw);
   const cx = DX[ride.eb] - DX[ride.ea], cz = DZ[ride.eb] - DZ[ride.ea];
@@ -152,8 +161,8 @@ function step(side, over, forward) {
   const o = SHAPE_OPEN[shapeOf(nx, y, nz, nt)];
   if (o[0] !== entry && o[1] !== entry) return false;
   const other = o[0] === entry ? o[1] : o[0];
-  put(ride.x, y, ride.z, axisOf(get(ride.x, y, ride.z)) ? RAY_X : RAY);   // eski hücre ray olur
-  put(nx, y, nz, axisOf(nt) ? CART_X : CART_Z);                          // yeni hücre vagon olur
+  put(ride.x, y, ride.z, axisOf(get(ride.x, y, ride.z)) ? RAY_X : RAY);
+  put(nx, y, nz, axisOf(nt) ? CART_X : CART_Z);
   ride.x = nx; ride.z = nz;
   if (forward) { ride.ea = entry; ride.eb = other; ride.u = over; }
   else { ride.eb = entry; ride.ea = other; ride.u = 1 - over; }
@@ -166,13 +175,15 @@ function advance(d) {
   else if (ride.u < 0) { if (!step(ride.ea, -ride.u, false)) ride.u = 0; }
 }
 
+// Vagondan in: yanındaki destekli boş yere. Yer yoksa kasanın üstüne.
 function dismount() {
   if (!ride) return;
-  seat();
-  P.riding = false;
-  P.y = ride.y + 0.45;
+  const s = freeSpotNear(ride.x, ride.y, ride.z);
+  P.seatH = 0; setSneak(false);
+  if (s) { P.x = s.x; P.y = s.y; P.z = s.z; }
+  else P.y = ride.y + 0.5;
+  P.vy = 0; P.fallY = P.y; P.ground = false;
   ride = null;
-  setSneak(false);
 }
 
 let last = performance.now();
