@@ -48,6 +48,7 @@ export const getRaw = (x, y, z) => {
 export const isWater = (x, y, z) => get(x, y, z) === WATER;
 export const isLava = (x, y, z) => get(x, y, z) === LAVA;
 export const BOXES = {};   // ince bloklar: id -> [x0,y0,z0,x1,y1,z1] (yatak, kapı)
+export const MBOX = {};   // çok kutulu çizim: (x,y,z,yön) => [[kutu, yüzler], ...] (sadece görünüm)
 for (let i = 0; i < 3; i++) {
   BOXES[N.KAR_1 + i] = [0, 0, 0, 1, 0.25 * (i + 1), 1];
   FACE_TILES[N.KAR_1 + i] = FACE_TILES[N.KAR];   // atlas yedeği: kar dokusu
@@ -567,6 +568,9 @@ function buildChunk(c) {
     }
 
     if (t === GLASS) { glass(x, y, z); continue; }
+
+    const mbx = MBOX[t];
+    if (mbx) { const fy = c.f[(y * CW + lz) * CW + lx] & 3; for (const [bb, ftm] of mbx(x, y, z, fy)) boxMesh(mq, ftm, bb, x, y, z); continue; }
 
     if (BOXES[t] && FACE_TILES[t]) {
       const bn = PNG_NAME[t];
