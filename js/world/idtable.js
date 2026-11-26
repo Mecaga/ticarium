@@ -84,4 +84,6 @@ Object.assign(N, {
   KALE_EYA: 315, KOYLU_TARLA_EYA: 316, VILLA_EYA: 317       // yapı eşyaları (envanter)
 });
 
+Object.assign(N, { DEV_EV_BLOK: 177, DEV_EV_EYA: 318 });
+
 export const ESKI = {};
