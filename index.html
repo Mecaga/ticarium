@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>BlokDiyar</title>
-<link rel="stylesheet" href="css/style.css?v=92">
+<link rel="stylesheet" href="css/style.css?v=93">
 <style>
 /* Dokunma düğmeleri: ekran görüntüsündeki düzen (sağ ve alt kenardan, CSS px) */
 #bJump, #bAttack, #bPlace, #bBreak { position: fixed; z-index: 25; }
@@ -21,7 +21,7 @@
 #bBreak { right: 92px; bottom: 72px;  background: rgba(160, 82, 45, .88); }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
-<script src="js/dbg.js?v=92"></script>
+<script src="js/dbg.js?v=93"></script>
 </head>
 <body>
 <div id="flash"></div>
@@ -114,7 +114,7 @@
     </div>
     <div id="mErr"></div>
     <div id="mAuth"></div>
-    <div id="mVer" style="font-size:11px;opacity:.55;text-align:center;margin-top:4px">Sürüm 92</div>
+    <div id="mVer" style="font-size:11px;opacity:.55;text-align:center;margin-top:4px">Sürüm 93</div>
   </div>
 </div>
 
@@ -144,7 +144,7 @@ var missing = ids.filter(function (i) { return !document.getElementById(i); });
 if (missing.length) {
   showErr('Eksik elemanlar: ' + missing.join(', '));
 } else {
-  import('./js/main.js?v=92').catch(function (e) {
+  import('./js/main.js?v=93').catch(function (e) {
     showErr('Yükleme hatası: ' + (e.message || e));
   });
 }
