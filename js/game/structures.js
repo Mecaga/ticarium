@@ -1,80 +1,452 @@
+import { N } from '../world/idtable.js';
+import { TYPES, CATS, get, set, rebuild, isLoaded, isPlant, solid, pointHit, prev, FARM, H as WORLD_H } from '../world/world.js';
+import { eco } from './economy.js';
+import { RECIPES } from './recipes.js';
+import { toast, drawHud, iconHTML } from '../ui/ui.js';
+import { P } from '../entities/player.js';
+import { dropItems } from '../entities/items.js';
 import { G } from '../core/state.js';
-import { eachBlock, get, target } from '../world/world.js';
+import { isCreative } from './creative.js';
+import { recordChange } from './progress.js';
+import { addItem } from './inventory.js';
+import { sfx } from '../core/sound.js';
+import { setPanelWire, clearWireAt, initWires } from './structwire.js';
 
-// Yapı alanı çizgileri: her yapı bloğunun W×H×D kutusu mavi çizilir.
-// Kaynak yüklü chunk'lardaki bloklar; başka oyuncunun koyduğu yapılar da böylece uzaktan görünür.
-// Baktığın ya da panelde açık olan yapı parlak mavi olur. Blok kırılınca ya da kurulum başlayınca çizgi kalkar.
+// Yapı şemaları: Kocaman kale (10×10×10), Köylü tarlası (9×1×9), Büyük villa (11×8×11), Dev ev (24×11×24).
+// Yapı eşyası yere konunca blok olur. Bloğa bakıp Koy ile panel açılır.
+// "Ver" malzemeyi çantadan stoğa koyar, "Kur" stoğu harcar, yapı 3 sn sonra kurulur.
+// Kurulum set + commit ile yazılır: kayıt (recordChange) ve online (sendBlock) bu yoldan gider.
 
-const IDLE = 0x2f7dd1, ACTIVE = 0x9be4ff;
-const DIM = {};            // blok numarası -> { W, H, D }
-const wires = new Map();   // "x,y,z" -> { line, t }
-const geos = new Map();    // "WxHxD" -> kenar geometrisi (aynı boyutlar paylaşılır)
-let mIdle = null, mActive = null, panelKey = '', activeKey = '';
+const DOOR_LO = 240, DOOR_UP = 248;   // doors.js: kapı alt ve üst parçası, yön 0 = kuzey
+const BUILD_DELAY = 3000, BATCH = 60;
 
-// structures.js bir kez çağırır: yapı tanımlarını alır, taramayı ve vurgu döngüsünü başlatır
-export function initWires(specs) {
-  for (const s of specs) DIM[s.blk] = { W: s.W, H: s.H, D: s.D };
-  setInterval(scan, 1000);
-  setInterval(tick, 150);
+const commit = (x, y, z, t) => { recordChange(x, y, z, t); if (G.online) G.online.sendBlock(x, y, z, t); };
+const nameOf = t => (TYPES[t] ? TYPES[t].name : 'Eşya ' + t);
+
+// ---- Kayıtlar ----
+function reg(id, name, color, base, cat) {
+  TYPES[id] = { name, color, base };
+  eco.inv[id] = 0; eco.raw[id] = base; eco.trend[id] = 0;
+  if (cat != null && !CATS[cat][1].includes(id)) CATS[cat][1].push(id);
+}
+reg(N.KALE_BLOK, 'Kale yapısı', 0x807e7c, 200);
+reg(N.KOYLU_TARLA_BLOK, 'Tarla yapısı', 0x6e4e28, 120);
+reg(N.VILLA_BLOK, 'Villa yapısı', 0xbc9862, 300);
+reg(N.DEV_EV_BLOK, 'Dev ev yapısı', 0xe2d8c4, 500);
+reg(N.KALE_EYA, 'Kocaman kale', 0x8c8884, 200, 4);
+reg(N.KOYLU_TARLA_EYA, 'Köylü tarlası', 0x6e4e28, 120, 4);
+reg(N.VILLA_EYA, 'Büyük villa', 0xbc9862, 300, 4);
+reg(N.DEV_EV_EYA, 'Dev ev', 0xe2d8c4, 500, 4);
+
+// Tarifler (çalışma masası, 3×3)
+RECIPES.push({ out: [N.KALE_EYA, 1], pat: [[N.TAS, N.TAS, N.TAS], [N.TAS, N.TAHTA, N.TAS], [N.TAS, N.TAS, N.TAS]] });
+RECIPES.push({ out: [N.KOYLU_TARLA_EYA, 1], pat: [[N.TOPRAK, N.TOPRAK, N.TOPRAK], [N.TOPRAK, N.KOVA, N.TOPRAK], [N.TOPRAK, N.TOPRAK, N.TOPRAK]] });
+RECIPES.push({ out: [N.VILLA_EYA, 1], pat: [[N.TAHTA, N.TAHTA, N.TAHTA], [N.TAHTA, N.CAM, N.TAHTA], [N.TAHTA, N.TAHTA, N.TAHTA]] });
+RECIPES.push({ out: [N.DEV_EV_EYA, 1], pat: [[N.TUGLA, N.TUGLA, N.TUGLA], [N.TAHTA, N.ELMAS, N.TAHTA], [N.TAS, N.TAS, N.TAS]] });
+
+// ---- Yerleşimler: hücre = [x, y, z, blok, malzeme] (malzeme 0 = bedava). Koordinat yapının köşesinden. ----
+function grid() {
+  const m = new Map();
+  return {
+    put(x, y, z, b, c) { m.set(x + ',' + y + ',' + z, [x, y, z, b, c]); },
+    del(x, y, z) { m.delete(x + ',' + y + ',' + z); },
+    list() { return [...m.values()]; }
+  };
 }
 
-// Panelde açık yapının konumu. Paneli kapatırken null ver.
-export function setPanelWire(x, y, z) {
-  panelKey = x == null ? '' : x + ',' + y + ',' + z;
+// Kocaman kale: kalın duvar halkası, kuzeyde geçit (zemin dahil açık), 4 köşede gözetleme kulesi
+function makeKale(g) {
+  const TA = N.TAS, TH = N.TAHTA, CM = N.CAM;
+  for (let y = 0; y <= 4; y++) for (let x = 0; x < 10; x++) for (let z = 0; z < 10; z++)
+    if (x <= 1 || x >= 8 || z <= 1 || z >= 8) g.put(x, y, z, TA, TA);
+  for (let y = 0; y <= 3; y++) for (const x of [4, 5]) for (const z of [0, 1]) g.del(x, y, z);
+  for (const x of [4, 5]) for (const z of [0, 1]) g.put(x, 4, z, TH, TH);
+  for (let y = 2; y <= 3; y++) {
+    for (const x of [4, 5]) for (const z of [8, 9]) g.put(x, y, z, CM, CM);
+    for (const z of [4, 5]) for (const x of [0, 1, 8, 9]) g.put(x, y, z, CM, CM);
+  }
+  for (let x = 0; x < 10; x++) for (let z = 0; z < 10; z++)
+    if ((x === 0 || x === 9 || z === 0 || z === 9) && (x + z) % 2 === 0) g.put(x, 5, z, TA, TA);
+  for (const [cx, cz] of [[0, 0], [7, 0], [0, 7], [7, 7]])
+    for (let dx = 0; dx < 3; dx++) for (let dz = 0; dz < 3; dz++) {
+      const x = cx + dx, z = cz + dz;
+      if (!(dx === 1 && dz === 1)) for (let y = 0; y <= 8; y++) g.put(x, y, z, TA, TA);
+      g.put(x, 9, z, TH, TH);
+    }
+  return [];
 }
 
-// Blok kırıldığında ya da kurulum başladığında çizgiyi hemen kaldırır
-export function clearWireAt(x, y, z) {
-  const k = x + ',' + y + ',' + z, w = wires.get(k);
-  if (w && G.scene) G.scene.remove(w.line);
-  wires.delete(k);
-  if (activeKey === k) activeKey = '';
+// Köylü tarlası: toprak kenar, ortada su kanalı, içi işlenmiş toprak
+function makeTarla(g) {
+  for (let x = 0; x < 9; x++) for (let z = 0; z < 9; z++) {
+    if (x === 0 || x === 8 || z === 0 || z === 8) g.put(x, 0, z, N.TOPRAK, N.TOPRAK);
+    else if (z === 4) g.put(x, 0, z, N.SU, 0);
+    else g.put(x, 0, z, FARM, N.TOPRAK);
+  }
+  return [[N.SU_KOVASI, 1]];
 }
 
-function mats() {
-  if (mIdle) return;
-  mIdle = new THREE.LineBasicMaterial({ color: IDLE, transparent: true, opacity: 0.75, fog: false });
-  mActive = new THREE.LineBasicMaterial({ color: ACTIVE, fog: false });
+// Büyük villa: 2 katlı
+function makeVilla(g) {
+  const TA = N.TAS, TH = N.TAHTA, CM = N.CAM, TG = N.TUGLA;
+  for (let x = 0; x < 11; x++) for (let z = 0; z < 11; z++) g.put(x, 0, z, TA, TA);
+  for (const y of [1, 2, 3, 4, 5, 6]) for (let x = 0; x < 11; x++) for (let z = 0; z < 11; z++) {
+    const ez = z === 0 || z === 10, ex = x === 0 || x === 10;
+    if (!ez && !ex) continue;
+    const m = ez && !ex ? TH : TA;
+    g.put(x, y, z, m, m);
+  }
+  for (const y of [2, 3, 5, 6]) {
+    for (const x of [3, 7]) { g.put(x, y, 0, CM, CM); g.put(x, y, 10, CM, CM); }
+    for (const z of [3, 7]) { g.put(0, y, z, CM, CM); g.put(10, y, z, CM, CM); }
+  }
+  g.put(5, 1, 0, DOOR_LO, 0); g.put(5, 2, 0, DOOR_UP, 0);
+  for (let x = 1; x <= 9; x++) for (let z = 1; z <= 9; z++) g.put(x, 4, z, TH, TH);
+  g.put(9, 1, 8, TA, TA); g.put(9, 2, 7, TA, TA); g.put(9, 3, 6, TA, TA); g.put(9, 4, 5, TA, TA);
+  g.del(9, 4, 6); g.del(9, 4, 7);
+  for (let y = 1; y <= 3; y++) for (let z = 6; z <= 9; z++) g.put(5, y, z, TH, TH);
+  g.put(2, 1, 2, TH, TH); g.put(1, 1, 2, TH, TH); g.put(3, 1, 2, TH, TH);
+  g.put(7, 3, 8, CM, CM);
+  for (let x = 0; x < 11; x++) for (let z = 0; z < 11; z++) g.put(x, 7, z, TG, TG);
+  return [[N.KAPI_BASI, 1]];
 }
 
-function geoOf(W, H, D) {
-  const k = W + 'x' + H + 'x' + D;
-  if (!geos.has(k)) geos.set(k, new THREE.EdgesGeometry(new THREE.BoxGeometry(W, H, D)));
-  return geos.get(k);
+// Dev ev (24×11×24, iki kat)
+function makeDevEv(g) {
+  const TA = N.TAS, TH = N.TAHTA, CM = N.CAM, TG = N.TUGLA;
+  let nD = 0;
+  const box = (x0, y0, z0, x1, y1, z1, b) => {
+    for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) for (let z = z0; z <= z1; z++) g.put(x, y, z, b, b);
+  };
+  const put = (x, y, z, b) => g.put(x, y, z, b, b);
+  const cut = (x0, y0, z0, x1, y1, z1) => {
+    for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) for (let z = z0; z <= z1; z++) g.del(x, y, z);
+  };
+  const door = (x, y, z, f) => { g.put(x, y, z, DOOR_LO + f, 0); g.put(x, y + 1, z, DOOR_UP + f, 0); nD++; };
+  const win = (x, y, z) => { g.put(x, y, z, CM, CM); g.put(x, y + 1, z, CM, CM); };
+  const lamp = (x, y, z) => g.put(x, y, z, CM, CM);
+
+  box(0, 0, 0, 23, 0, 23, TH);
+  box(0, 5, 0, 23, 5, 23, TH);
+  box(0, 10, 0, 23, 10, 23, TG);
+
+  for (const [a, b] of [[1, 4], [6, 9]]) {
+    box(0, a, 0, 23, b, 0, TA);
+    box(0, a, 23, 23, b, 23, TA);
+    box(0, a, 0, 0, b, 23, TA);
+    box(23, a, 0, 23, b, 23, TA);
+  }
+
+  box(11, 1, 1, 11, 4, 6, TH);
+  box(17, 1, 1, 17, 4, 6, TH);
+  box(20, 1, 1, 20, 4, 6, TH);
+  box(1, 1, 7, 22, 4, 7, TH);
+  box(1, 1, 12, 22, 4, 12, TH);
+  box(6, 1, 13, 6, 4, 18, TH);
+  box(12, 1, 13, 12, 4, 18, TH);
+  box(18, 1, 13, 18, 4, 18, TH);
+  box(1, 1, 19, 22, 4, 19, TH);
+
+  box(6, 6, 1, 6, 9, 6, TH);
+  box(12, 6, 1, 12, 9, 6, TH);
+  box(1, 6, 7, 12, 9, 7, TH);
+
+  door(11, 1, 23, 0);
+  door(5, 1, 7, 0);
+  door(14, 1, 7, 0);
+  door(18, 1, 7, 0);
+  door(21, 1, 7, 0);
+  door(3, 1, 12, 0);
+  door(9, 1, 12, 0);
+  door(15, 1, 12, 0);
+  door(20, 1, 12, 0);
+  door(20, 1, 19, 0);
+  door(3, 6, 7, 0);
+  door(9, 6, 7, 0);
+
+  for (const x of [3, 7, 14, 18, 21]) win(x, 2, 0);
+  for (const x of [4, 8, 15, 18]) win(x, 2, 23);
+  for (const z of [3, 10, 15, 21]) { win(0, 2, z); win(23, 2, z); }
+  for (const x of [3, 9]) win(x, 7, 0);
+  for (const x of [4, 8, 15, 18]) win(x, 7, 23);
+  for (const z of [3, 10, 18]) win(0, 7, z);
+  for (const z of [3, 10, 15]) win(23, 7, z);
+
+  put(21, 1, 10, TA); put(20, 2, 10, TA); put(19, 3, 10, TA); put(18, 4, 10, TA); put(17, 5, 10, TA);
+  cut(18, 5, 10, 19, 5, 10);
+
+  put(5, 1, 3, TH); lamp(5, 4, 3);
+  for (let x = 12; x <= 15; x++) put(x, 1, 1, TA);
+  g.put(16, 1, 1, N.OCAK, 0);
+  put(14, 1, 4, TH); lamp(14, 4, 3);
+  put(19, 1, 1, TG);
+  g.put(21, 1, 2, N.SANDIK, 0); g.put(21, 1, 5, N.SANDIK, 0);
+  for (const x of [3, 9, 15]) { put(x, 1, 16, TH); lamp(x, 4, 16); }
+  put(3, 6, 4, TH); lamp(3, 9, 4);
+  put(9, 6, 4, TH); lamp(9, 9, 4);
+
+  return [[N.KAPI_BASI, nD], [N.SANDIK, 2], [N.OCAK, 1]];
 }
 
-// Yüklü chunk'lardaki yapı bloklarını bulur: yenisine çizgi ekler, kalkanın çizgisini siler
-function scan() {
-  if (!G.scene) return;
-  mats();
-  const ids = Object.keys(DIM).map(Number);
-  if (!ids.length) return;
-  const seen = new Set();
-  eachBlock(ids, (x, y, z, t) => {
-    const d = DIM[t];
-    if (!d) return;
-    const k = x + ',' + y + ',' + z;
-    seen.add(k);
-    const w = wires.get(k);
-    if (w && w.t === t) return;
-    if (w) G.scene.remove(w.line);
-    const line = new THREE.LineSegments(geoOf(d.W, d.H, d.D), k === activeKey ? mActive : mIdle);
-    // Kutu yapının alanına göre: yatayda x - floor(W/2) ile başlar, dikeyde y'den H kadar yükselir
-    line.position.set(x - Math.floor(d.W / 2) + d.W / 2, y + d.H / 2, z - Math.floor(d.D / 2) + d.D / 2);
-    G.scene.add(line);
-    wires.set(k, { line, t });
+const SPECS = [
+  { key: 'kale', item: N.KALE_EYA, blk: N.KALE_BLOK, name: 'Kocaman kale', W: 10, D: 10, H: 10, sup: N.TAS, make: makeKale },
+  { key: 'tarla', item: N.KOYLU_TARLA_EYA, blk: N.KOYLU_TARLA_BLOK, name: 'Köylü tarlası', W: 9, D: 9, H: 1, sup: N.TOPRAK, make: makeTarla },
+  { key: 'villa', item: N.VILLA_EYA, blk: N.VILLA_BLOK, name: 'Büyük villa', W: 11, D: 11, H: 8, sup: N.TAS, make: makeVilla },
+  { key: 'devev', item: N.DEV_EV_EYA, blk: N.DEV_EV_BLOK, name: 'Dev ev', W: 24, D: 24, H: 11, sup: N.TAS, make: makeDevEv }
+];
+const byItem = {}, byBlk = {};
+for (const s of SPECS) { byItem[s.item] = s; byBlk[s.blk] = s; }
+export const isStructBlock = t => !!byBlk[t];
+export const isStructItem = t => !!byItem[t];
+
+const LAYOUT = new Map();
+function layoutOf(sp) {
+  if (!LAYOUT.has(sp)) {
+    const g = grid(), extras = sp.make(g) || [], cells = g.list(), need = {};
+    for (const c of cells) if (c[4]) need[c[4]] = (need[c[4]] || 0) + 1;
+    for (const [item, n] of extras) need[item] = (need[item] || 0) + n;
+    LAYOUT.set(sp, { cells, need });
+  }
+  return LAYOUT.get(sp);
+}
+
+// ---- Oyuncuyu kurulum alanının dışına taşıma ----
+const SUB = 3;
+
+function bodyHit(x, y, z) {
+  for (const dx of [-0.3, 0.3]) for (const dz of [-0.3, 0.3]) for (const dy of [0.05, 0.9, 1.65]) {
+    const bx = x + dx, by = y + dy, bz = z + dz;
+    if (solid(Math.floor(bx), Math.floor(by), Math.floor(bz)) || pointHit(bx, by, bz)) return true;
+  }
+  return false;
+}
+
+function inZone(sp, ox, by, oz) {
+  return P.x + 0.3 > ox && P.x - 0.3 < ox + sp.W && P.z + 0.3 > oz && P.z - 0.3 < oz + sp.D &&
+    P.y + 1.7 > by - SUB && P.y < by + sp.H;
+}
+
+function safeSpot(sp, ox, oz, needGround) {
+  const px = Math.floor(P.x), pz = Math.floor(P.z), fy0 = Math.floor(P.y);
+  const outside = (x, z) => x < ox || x >= ox + sp.W || z < oz || z >= oz + sp.D;
+  let best = null, bestD = Infinity;
+  for (let r = 1; r <= 30; r++) {
+    for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) {
+      if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+      const x = px + dx, z = pz + dz;
+      if (!isLoaded(x, z) || !outside(x, z)) continue;
+      for (const off of [0, 1, -1, 2, -2, 3, -3, 4, -4]) {
+        const fy = fy0 + off;
+        if (fy < 1 || fy + 2 >= WORLD_H) continue;
+        if (needGround && !solid(x, fy - 1, z)) continue;
+        if (bodyHit(x + 0.5, fy, z + 0.5)) continue;
+        const d = Math.hypot(x + 0.5 - P.x, z + 0.5 - P.z) + Math.abs(fy - P.y) * 0.25;
+        if (d < bestD) { bestD = d; best = { x: x + 0.5, y: fy, z: z + 0.5 }; }
+        break;
+      }
+    }
+    if (best && bestD <= r) break;
+  }
+  return best;
+}
+
+function keepOut(sp, ox, by, oz) {
+  if (P.riding || !inZone(sp, ox, by, oz)) return true;
+  const s = safeSpot(sp, ox, oz, true) || safeSpot(sp, ox, oz, false);
+  if (!s) return false;
+  P.x = s.x; P.y = s.y; P.z = s.z;
+  P.vy = 0; P.fallY = P.y; P.ground = false; P.kx = P.kz = 0;
+  return true;
+}
+
+function check(sp, bx, by, bz) {
+  const L = layoutOf(sp), fail = msg => ({ ok: false, msg });
+  const ox = bx - Math.floor(sp.W / 2), oz = bz - Math.floor(sp.D / 2);
+  for (let x = ox; x < ox + sp.W; x++) for (let z = oz; z < oz + sp.D; z++)
+    if (!isLoaded(x, z)) return fail('Alan henüz yüklenmedi');
+  for (let x = ox; x < ox + sp.W; x++) for (let z = oz; z < oz + sp.D; z++) for (let dy = 0; dy < sp.H; dy++) {
+    const own = x === bx && z === bz && dy === 0, v = get(x, by + dy, z);
+    if (!own && v !== 0 && !isPlant(v)) return fail('Alan dolu, önce boşalt');
+  }
+  const supports = [];
+  for (let x = ox; x < ox + sp.W; x++) for (let z = oz; z < oz + sp.D; z++) {
+    for (let k = 1; ; k++) {
+      const y = by - k;
+      if (solid(x, y, z)) break;
+      if (k > SUB) return fail('Zemin düz değil, bu alan kurulamaz');
+      supports.push([x, y, z, sp.sup]);
+    }
+  }
+  return { ok: true, ox, oz, supports, jobs: L.cells.map(c => [ox + c[0], by + c[1], oz + c[2], c[3]]), need: L.need };
+}
+
+// ---- Stok ----
+let el = null, cur = null, stock = {};
+const keyOf = (x, y, z) => 'bd_st_' + ((G.room && G.room.code) || 'solo') + '_' + x + '_' + y + '_' + z;
+function loadStock(x, y, z) {
+  try { return JSON.parse(localStorage.getItem(keyOf(x, y, z)) || '{}') || {}; } catch (e) { return {}; }
+}
+function saveStock() {
+  if (!cur) return;
+  const clean = {};
+  for (const i in stock) if (stock[i] > 0) clean[i] = stock[i];
+  stock = clean;
+  const k = keyOf(cur.x, cur.y, cur.z);
+  try {
+    if (Object.keys(clean).length) localStorage.setItem(k, JSON.stringify(clean));
+    else localStorage.removeItem(k);
+  } catch (e) {}
+}
+
+// ---- Panel ----
+function ui() {
+  if (el) return;
+  const st = document.createElement('style');
+  st.textContent = '#stP{position:fixed;inset:0;background:#000b;z-index:27;display:none;align-items:center;justify-content:center}' +
+    '#stB{background:#1d2330;color:#fff;border-radius:14px;padding:14px;width:min(94vw,420px);max-height:90vh;overflow:auto;box-sizing:border-box;font-size:13px}' +
+    '#stB .stR{display:flex;align-items:center;gap:6px;margin:6px 0;padding:6px;background:#0004;border-radius:8px}' +
+    '#stB .stR img{width:26px;height:26px;image-rendering:pixelated}#stB .stR span{flex:1}' +
+    '#stB button{padding:7px 9px;border:0;border-radius:7px;background:#1565c0;color:#fff;font-weight:700;margin-left:3px}' +
+    '#stB button:disabled{background:#455;opacity:.5}' +
+    '#stB .stW{background:#3a1d22;border-left:4px solid #f55;padding:6px;border-radius:6px;margin:6px 0}';
+  document.head.appendChild(st);
+  el = document.createElement('div');
+  el.id = 'stP';
+  document.body.appendChild(el);
+  el.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b || !cur) return;
+    if (b.dataset.v) verItem(+b.dataset.v);
+    else if (b.dataset.a) alItem(+b.dataset.a);
+    else if (b.dataset.all) { for (const k in layoutOf(cur.sp).need) verItem(+k); }
+    else if (b.dataset.k) return kur();
+    else if (b.dataset.x) return closeStruct();
+    draw();
   });
-  for (const [k, w] of wires) if (!seen.has(k)) { G.scene.remove(w.line); wires.delete(k); }
 }
 
-// Parlak vurgu: panel açıksa o yapı, değilse baktığın yapı. 150 ms'de bir kontrol edilir.
-function tick() {
-  if (!G.scene || !mIdle) return;
-  let want = panelKey;
-  if (!want && target && DIM[get(target[0], target[1], target[2])]) want = target[0] + ',' + target[1] + ',' + target[2];
-  if (want === activeKey) return;
-  const old = wires.get(activeKey), nw = wires.get(want);
-  if (old) old.line.material = mIdle;
-  if (nw) nw.line.material = mActive;
-  activeKey = want;
+function draw() {
+  if (!cur) return;
+  const sp = cur.sp, c = check(sp, cur.x, cur.y, cur.z), need = layoutOf(sp).need, cre = isCreative();
+  let done = true, rows = '';
+  for (const k in need) {
+    const item = +k, n = need[k], have = stock[k] || 0, bag = eco.inv[item] || 0;
+    if (have < n) done = false;
+    rows += '<div class="stR">' + iconHTML(item) + '<span>' + nameOf(item) + '</span>' +
+      (cre ? '<b>' + n + '</b>' :
+        '<b>' + have + ' / ' + n + '</b>' +
+        '<button data-v="' + item + '"' + (bag < 1 || have >= n ? ' disabled' : '') + '>Ver</button>' +
+        '<button data-a="' + item + '"' + (have < 1 ? ' disabled' : '') + '>Al</button>') + '</div>';
+  }
+  const canKur = c.ok && (cre || done);
+  el.innerHTML = '<div id="stB"><h3 style="margin:0 0 2px">🏗️ ' + sp.name + '</h3>' +
+    '<small>' + sp.W + '×' + sp.H + '×' + sp.D + ' · Kurulunca 3 sn içinde dikilir</small>' +
+    (c.ok ? '' : '<div class="stW">⚠ ' + c.msg + '</div>') + rows +
+    '<div style="display:flex;gap:6px;margin-top:8px">' +
+    (cre ? '' : '<button data-all="1" style="flex:1">Hepsini ver</button>') +
+    '<button data-k="1" style="flex:1;background:#2e7d32"' + (canKur ? '' : ' disabled') + '>🔨 Kur</button>' +
+    '<button data-x="1" style="flex:1;background:#b3261e">Kapat</button></div></div>';
 }
+
+function verItem(item) {
+  const need = layoutOf(cur.sp).need[item] || 0, have = stock[item] || 0, room = need - have;
+  if (room <= 0) return;
+  const bag = eco.inv[item] || 0, n = Math.min(room, bag);
+  if (n < 1) return toast('Çantada ' + nameOf(item) + ' yok');
+  eco.inv[item] = bag - n;
+  stock[item] = have + n;
+  saveStock(); drawHud();
+}
+
+function alItem(item) {
+  const have = stock[item] || 0;
+  if (have < 1) return;
+  const a = addItem(item, have) || 0;
+  stock[item] = have - a;
+  saveStock(); drawHud();
+  if (a < have) toast('🎒 Çanta dolu');
+}
+
+// ---- Kurulum ----
+function giveBack(t) {
+  if (!addItem(t, 1)) dropItems([{ t, c: 1, x: P.x, y: P.y + 1.3, z: P.z, vx: 0, vy: 2, vz: 0 }]);
+  drawHud();
+}
+
+function runBuild(c, sp, by) {
+  const jobs = c.supports.concat(c.jobs).sort((a, b) => a[1] - b[1]);
+  let i = 0, warned = false;
+  const step = () => {
+    if (!keepOut(sp, c.ox, by, c.oz) && !warned) { warned = true; toast('⚠ Oyuncu için boş yer yok, kurulum sürüyor'); }
+    const end = Math.min(jobs.length, i + BATCH);
+    for (; i < end; i++) { const [x, y, z, t] = jobs[i]; set(x, y, z, t); commit(x, y, z, t); }
+    if (i < jobs.length) return setTimeout(step, 30);
+    if (sp.key === 'tarla' && !isCreative()) giveBack(N.KOVA);
+    toast('✅ ' + sp.name + ' kuruldu');
+  };
+  step();
+}
+
+function kur() {
+  if (!cur) return;
+  const { x, y, z, sp } = cur, c = check(sp, x, y, z);
+  if (!c.ok) return toast(c.msg);
+  if (!isCreative()) {
+    for (const k in c.need) if ((stock[k] || 0) < c.need[k]) return toast('Malzeme eksik');
+  }
+  if (!keepOut(sp, c.ox, y, c.oz)) return toast('Oyuncu için güvenli boş yer yok');
+  if (!isCreative()) {
+    for (const k in c.need) stock[k] -= c.need[k];
+    saveStock();
+  }
+  set(x, y, z, 0); commit(x, y, z, 0);
+  clearWireAt(x, y, z);
+  closeStruct();
+  toast('🔨 ' + sp.name + ' 3 sn sonra kurulacak');
+  setTimeout(() => runBuild(c, sp, y), BUILD_DELAY);
+}
+
+// ---- Dışa açık fonksiyonlar ----
+export function placeStructure(t) {
+  const sp = byItem[t];
+  if (!sp || !prev) return;
+  const [x, y, z] = prev, here = get(x, y, z);
+  if (here !== 0 && !isPlant(here)) return toast('Buraya konmaz');
+  if (!isCreative() && (eco.inv[t] || 0) < 1) return toast(sp.name + ' yok');
+  set(x, y, z, sp.blk); commit(x, y, z, sp.blk);
+  if (!isCreative()) eco.inv[t]--;
+  sfx.place(); rebuild(); drawHud();
+  toast('Bloğa bakıp Koy ile malzemeleri ver');
+}
+
+export function openStruct(x, y, z, t) {
+  const sp = byBlk[t];
+  if (!sp) return;
+  ui();
+  cur = { x, y, z, sp };
+  stock = loadStock(x, y, z);
+  setPanelWire(x, y, z);
+  draw();
+  el.style.display = 'flex';
+}
+
+export function closeStruct() {
+  cur = null;
+  setPanelWire(null);
+  if (el) el.style.display = 'none';
+}
+
+export const isStructOpen = () => !!cur;
+
+export function structDrops(t, x, y, z) {
+  const sp = byBlk[t];
+  if (!sp) return null;
+  clearWireAt(x, y, z);
+  const s = loadStock(x, y, z), out = [[sp.item, 1]];
+  for (const k in s) if (s[k] > 0) out.push([+k, s[k]]);
+  try { localStorage.removeItem(keyOf(x, y, z)); } catch (e) {}
+  return out;
+}
+
+// Yapı alanı çizgileri (mavi kutular) bu dosya yüklenince başlar
+initWires(SPECS);
