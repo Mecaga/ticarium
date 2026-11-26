@@ -10,6 +10,7 @@ export const pHooks = { onFall: null };
 export const climbHook = { fn: null };
 // İçinden geçilen ama çarpmayan bloklar (merdiven). Hedeflenebilir kalır.
 const NOCOLL = new Set([N.TIRMANMA_MERDIVEN]);
+const RAILS = [N.RAY, 156, 157, 158];
 
 export const P = {
   x: sp0.x, y: sp0.y, z: sp0.z,
@@ -50,11 +51,14 @@ export function knock(dx, dz) {
 function edgeOk(nx, nz) {
   return !(P.sneak && P.ground && !P.fly && !collides(nx, P.y - 0.4, nz) && collides(P.x, P.y - 0.4, P.z));
 }
+// Üstünde ray olan blok: yanından ileri gidince tek blok yükseklikteki rayın üstüne çıkılır
+function railAbove(x, z) { return RAILS.includes(get(x, Math.floor(P.y) + 1, z)); }
 function mv(nx, nz) {
   if (!edgeOk(nx, nz)) return;
   if (!collides(nx, P.y, nz)) { P.x = nx; P.z = nz; return; }
-  if (P.ground && !P.fly) {   // alçak basamaklara (kar, yatak) otomatik çık
-    for (const h of [0.3, 0.55, 0.8]) if (!collides(nx, P.y + h, nz)) { P.x = nx; P.z = nz; P.y += h; return; }
+  if (P.ground && !P.fly) {   // alçak basamaklar otomatik çıkılır; raylı blok 1.1 blok
+    const hs = railAbove(Math.floor(nx), Math.floor(nz)) ? [0.3, 0.55, 0.8, 1.1] : [0.3, 0.55, 0.8];
+    for (const h of hs) if (!collides(nx, P.y + h, nz)) { P.x = nx; P.z = nz; P.y += h; return; }
   }
 }
 
@@ -131,4 +135,16 @@ export function updatePlayer(dt, frozen) {
   }
 
   if (P.ground) { P.sx = P.x; P.sy = P.y; P.sz = P.z; }
+}
+
+// Araçtan inince: hücrenin yanında, altı katı ve gövdeye yeri olan ilk nokta. Yoksa null.
+export function freeSpotNear(bx, by, bz) {
+  P.riding = false;
+  for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+    const x = bx + dx, z = bz + dz;
+    if (!solid(x, by - 1, z)) continue;
+    if (collides(x + 0.5, by, z + 0.5)) continue;
+    return { x: x + 0.5, y: by, z: z + 0.5 };
+  }
+  return null;
 }
