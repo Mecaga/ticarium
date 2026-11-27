@@ -34,7 +34,7 @@ import { openBook, isBook } from './library.js';
 import { isEgg, useEgg } from './eggs.js';
 import { hitSpider } from './spider.js';
 import { hitUndead, useBoneMeal, sendUndeadHit } from './undead.js'; // 🧟 Paket 17 & 18: Zombi vuruş senkronizasyonu eklendi
-import { useRod, useFlint } from './fishing.js';
+import { useRod, useFlint, isCasting } from './fishing.js';
 import { shoot } from './bow.js';
 import { placeRail, useCart } from './rails.js';
 import { placeLever, isLever, toggleLever } from './redstone.js';
@@ -423,6 +423,7 @@ function useDye(t) {
 
 export function placeBlock() {
   if (isDead() || uiOpen() || P.ghost) return;
+  if (isCasting() && eco.sel === N.OLTA) return useRod();
 
   // 1. Önce masaya, fırına, sandığa, kapıya, yatağa veya şaltere tıklama kontrolü
   if (isBook(eco.sel)) { if (P.sneak) openBook(eco.sel); return; }
