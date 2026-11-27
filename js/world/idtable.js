@@ -93,4 +93,11 @@ Object.assign(N, {
 
 Object.assign(N, { MALIKANE_BLOK: 188, MALIKANE_EYA: 321 });
 
+Object.assign(N, {
+  CIT_MESE: 117, CIT_HUS: 118, CIT_SPRUCE: 119,                               // çit
+  KAPI_CIT_MESE: 120, KAPI_CIT_HUS: 121, KAPI_CIT_SPRUCE: 122,                // çit kapısı
+  TUZAK_MESE: 133, TUZAK_HUS: 134, TUZAK_SPRUCE: 135,                         // tuzak kapı
+  KOSELI_MESE: 136, KOSELI_HUS: 137, KOSELI_SPRUCE: 138, KOSELI_TAS: 139     // köşeli merdiven
+});
+
 export const ESKI = {};
