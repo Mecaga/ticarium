@@ -581,6 +581,9 @@ function buildChunk(c) {
 
     if (t === GLASS) { glass(x, y, z); continue; }
 
+    const bfn = BOXFN[t];
+    if (bfn) { const fv = c.f[(y * CW + lz) * CW + lx]; for (const bb of bfn(x, y, z, fv)) boxMesh(mq, FACE_TILES[t], bb, x, y, z); continue; }
+
     const mbx = MBOX[t];
     if (mbx) { const fy = c.f[(y * CW + lz) * CW + lx]; for (const [bb, ftm] of mbx(x, y, z, fy)) boxMesh(mq, ftm, bb, x, y, z); continue; }
 
