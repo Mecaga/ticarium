@@ -1,4 +1,4 @@
-import { get, solid, WATER, spawnPos, isLoaded, pointHit } from '../world/world.js';
+import { get, solid, WATER, spawnPos, isLoaded, boxesOf } from '../world/world.js';
 import { input } from '../ui/input.js';
 import { N } from '../world/idtable.js';
 
@@ -23,13 +23,23 @@ export const P = {
   riding: false
 };
 
+// Gövde kutusu (0,6 × 1,7) ile blok kutularının kesişimi. İnce şekiller (çit kolu, tuzak kapı,
+// kapı levhası, ray) doğru çarpar. Tam bloklar solid() ile kontrol edilir.
 export function collides(x, y, z) {
   if (P.ghost || P.riding) return false;
-  for (const dx of [-R, R]) for (const dz of [-R, R]) for (const dy of [0.05, 0.9, PH - 0.05]) {
-    const bx = Math.floor(x + dx), by = Math.floor(y + dy), bz = Math.floor(z + dz);
-    if (solid(bx, by, bz)) return true;
-    if (pointHit(x + dx, y + dy, z + dz) && !NOCOLL.has(get(bx, by, bz))) return true;
-  }
+  const x0 = x - R, x1 = x + R, y0 = y, y1 = y + PH, z0 = z - R, z1 = z + R;
+  for (let i = Math.floor(x0); i < x1; i++)
+    for (let k = Math.floor(z0); k < z1; k++)
+      for (let j = Math.floor(y0); j < y1; j++) {
+        const t = get(i, j, k);
+        if (!t || NOCOLL.has(t)) continue;
+        const bs = boxesOf(t, i, j, k);
+        if (bs) {
+          for (const b of bs) {
+            if (x0 < i + b[3] && x1 > i + b[0] && y0 < j + b[4] && y1 > j + b[1] && z0 < k + b[5] && z1 > k + b[2]) return true;
+          }
+        } else if (solid(i, j, k)) return true;
+      }
   return false;
 }
 
