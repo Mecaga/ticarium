@@ -228,3 +228,13 @@ setInterval(() => {   // uzak cihazda: yakın canavar bana vurur
     }
   }
 }, 500);
+
+// ---- Vuruş köprüsü (combat.js kullanır) ----
+export const undeadList = () => mobs;                       // yönetici: yerel zombi ve iskeletler
+export const remoteUndead = () => [...remoteU.entries()];   // diğer cihazlar: çizilenler [anahtar, grup]
+export function hitUndeadObj(m, dmg) {
+  if (!m || !mobs.includes(m)) return false;
+  m.hp -= dmg;
+  if (m.hp <= 0) die(m);
+  return true;
+}
