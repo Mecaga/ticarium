@@ -242,3 +242,17 @@ setInterval(() => {   // uzak cihazda: gece yakındaki örümcek bana vurur
     }
   }
 }, 500);
+
+// ---- Vuruş köprüsü (combat.js kullanır) ----
+export const spiderList = () => spiders;                    // yönetici: yerel örümcekler
+export const remoteSpiders = () => [...remoteS.entries()];  // diğer cihazlar: çizilen örümcekler [anahtar, grup]
+export function hitSpiderObj(s, dmg) {
+  if (!s || !spiders.includes(s)) return false;
+  s.hp -= dmg;
+  if (s.hp <= 0) {
+    ob.remove(s.g);
+    spiders = spiders.filter(k => k !== s);
+    dropItems([{ t: N.IP, c: 1 + Math.floor(Math.random() * 2), x: s.x, y: s.y + 0.5, z: s.z, vx: 0, vy: 2, vz: 0 }]);
+  }
+  return true;
+}
