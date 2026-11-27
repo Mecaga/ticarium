@@ -14,7 +14,7 @@ import { setPanelWire, clearWireAt, initWires } from './structwire.js';
 import { footprint, relOf, rotVal, DIR_NAME } from './structgeo.js';
 
 // Yapı şemaları: Kocaman kale (10×10×10), Köylü tarlası (9×1×9), Büyük villa (11×8×11), Dev ev (24×11×24),
-// Dağ karakolu (7×6×7, köşe), Maden girişi (5×8×5, 5 yer altı, köşe, demir kazma ister).
+// Dağ karakolu (7×6×7, köşe), Maden girişi (5×8×5, 5 yer altı, köşe, demir kazma ister), Büyük malikâne (15×12×15, köşe).
 // Yapı eşyası yere konunca blok olur. Bloğa bakıp Koy ile panel açılır.
 // "Ver" malzemeyi çantadan stoğa koyar, "Kur" stoğu harcar, yapı 3 sn sonra kurulur.
 // Kurulum set + commit ile yazılır: kayıt (recordChange) ve online (sendBlock) bu yoldan gider.
@@ -256,13 +256,114 @@ function makeMaden(g) {
   return [[N.SANDIK, 1]];
 }
 
+// ---- Büyük malikâne (15×15×12) ----
+reg(N.MALIKANE_BLOK, 'Büyük malikâne yapısı', 0xd0c4a8, 600);
+reg(N.MALIKANE_EYA, 'Büyük malikâne', 0xd0c4a8, 600, 4);
+RECIPES.push({ out: [N.MALIKANE_EYA, 1], pat: [[N.TAS, N.CAM, N.TAS], [N.TAHTA, N.CALISMA_MASASI, N.TAHTA], [N.TAS, N.TAHTA, N.TAS]] });
+
+// Büyük malikâne (15×15×12): iki katlı konak. Ön yüz kuzeyde (z=0): ana kapı.
+// Merkezde taş merdiven (zeminden üst kata, her basamak 1 blok), üstte balkon ve cam ışıklık.
+// Zemin: giriş holü, mutfak, yemek odası, kütüphane, oturma odası (şömine), orta hol, depo, atölye, banyo.
+// Üst: balkon, 2 yatak odası, çalışma odası, müzik odası, teras, hizmetçi odası, banyo.
+function makeMalikane(g) {
+  const TA = N.TAS, TH = N.TAHTA, CM = N.CAM, TG = N.TUGLA;
+  const CT = N.CALISMA_MASASI, OC = N.OCAK, SD = N.SANDIK, MK = N.MUZIK_KUTUSU, BT = N.BASAMAK_TAS;
+  const extra = {};
+  const put = (x, y, z, b) => g.put(x, y, z, b, b);                                        // malzeme: listede sayılır
+  const furn = (x, y, z, b) => { g.put(x, y, z, b, 0); extra[b] = (extra[b] || 0) + 1; }; // eşya: ayrıca sayılır
+  const box = (x0, y0, z0, x1, y1, z1, b) => {
+    for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) for (let z = z0; z <= z1; z++) put(x, y, z, b);
+  };
+  const cut = (x0, y0, z0, x1, y1, z1) => {
+    for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) for (let z = z0; z <= z1; z++) g.del(x, y, z);
+  };
+  const door = (x, y, z, f) => {   // 2 yüksek kapı. f: 0 kuzey/güney kenarında plaka, 1 doğu/batı kenarında plaka
+    g.put(x, y, z, DOOR_LO + f, 0); g.put(x, y + 1, z, DOOR_UP + f, 0);
+    extra[N.KAPI_BASI] = (extra[N.KAPI_BASI] || 0) + 1;
+  };
+  const win = (x, y, z) => { put(x, y, z, CM); put(x, y + 1, z, CM); };   // 2 yüksek cam
+  const lamp = (x, y, z) => put(x, y, z, CM);                             // tavandan sarkan cam lamba
+
+  // 1) Temel, kat döşemeleri, çatı, merdiven boşluğu, cam ışıklık
+  box(0, 0, 0, 14, 0, 14, TA);
+  box(0, 5, 0, 14, 5, 14, TH);
+  cut(6, 5, 2, 8, 5, 5);
+  box(0, 10, 0, 14, 10, 14, TG);
+  box(6, 10, 2, 8, 10, 5, CM);
+
+  // 2) Zemin kat duvarları: dış taş, iç tahta
+  box(0, 1, 0, 14, 4, 0, TA); box(0, 1, 14, 14, 4, 14, TA);
+  box(0, 1, 0, 0, 4, 14, TA); box(14, 1, 0, 14, 4, 14, TA);
+  box(5, 1, 1, 5, 4, 13, TH); box(9, 1, 1, 9, 4, 13, TH);
+  box(1, 1, 5, 13, 4, 5, TH); box(1, 1, 9, 13, 4, 9, TH);
+
+  // 3) Üst kat duvarları: dış ve iç tahta. Merkez geçit (z=5) açık, balkon korkuluğu var.
+  box(0, 6, 0, 14, 9, 0, TH); box(0, 6, 14, 14, 9, 14, TH);
+  box(0, 6, 0, 0, 9, 14, TH); box(14, 6, 0, 14, 9, 14, TH);
+  box(5, 6, 1, 5, 9, 13, TH); box(9, 6, 1, 9, 9, 13, TH);
+  box(1, 6, 5, 13, 9, 5, TH); cut(6, 6, 5, 8, 9, 5);
+  box(1, 6, 9, 13, 9, 9, TH);
+  box(6, 6, 2, 8, 6, 2, TH);                                              // balkon korkuluğu
+
+  // 4) Çatı kenarı: taş dişler
+  for (let x = 0; x <= 14; x += 2) { put(x, 11, 0, TA); put(x, 11, 14, TA); }
+  for (let z = 0; z <= 14; z += 2) { put(0, 11, z, TA); put(14, 11, z, TA); }
+
+  // 5) Merkez merdiven: z=2..6, her basamak 1 blok (zıplayarak çıkılır). Son basamak üst kat döşemesi.
+  for (let k = 2; k <= 6; k++) for (let y = 1; y <= k - 1; y++) for (let x = 6; x <= 8; x++) put(x, y, k, TA);
+
+  // 6) Pencereler (kapı yerleri hariç)
+  for (const x of [2, 3, 6, 8, 11, 12]) { win(x, 2, 0); win(x, 2, 14); }
+  for (const z of [2, 3, 7, 8, 11, 12]) { win(0, 2, z); win(14, 2, z); }
+  for (const x of [2, 3, 6, 7, 8, 11, 12]) { win(x, 7, 0); win(x, 7, 14); }
+  for (const z of [2, 3, 7, 8, 11, 12]) { win(0, 7, z); win(14, 7, z); }
+
+  // 7) Kapılar (24)
+  door(7, 1, 0, 0); door(7, 1, 14, 2);                                    // ön ve arka giriş
+  door(5, 1, 1, 1); door(9, 1, 1, 1);                                     // giriş holünden yan odalara
+  door(5, 1, 7, 1); door(9, 1, 7, 1);                                     // orta hol: kütüphane ve oturma odası
+  door(5, 1, 11, 1); door(9, 1, 11, 1);                                   // depo, atölye, banyo
+  door(2, 1, 5, 0); door(11, 1, 5, 0);                                    // mutfak-kütüphane, yemek-oturma
+  door(7, 1, 9, 0); door(2, 1, 9, 0); door(11, 1, 9, 0);                  // orta hol ve alt odalar
+  door(5, 6, 1, 1); door(9, 6, 1, 1);                                     // balkondan yatak odaları
+  door(5, 6, 7, 1); door(9, 6, 7, 1); door(5, 6, 11, 1); door(9, 6, 11, 1);
+  door(2, 6, 5, 0); door(11, 6, 5, 0);
+  door(7, 6, 9, 0); door(2, 6, 9, 0); door(11, 6, 9, 0);
+
+  // 8) Aydınlatma: zeminde (y=4) ve üst katta (y=9) tavandan sarkan cam lambalar
+  for (const [x, z] of [[6, 1], [8, 1], [2, 2], [12, 2], [2, 7], [12, 7], [7, 7], [2, 11], [7, 11], [11, 12]]) lamp(x, 4, z);
+  for (const [x, z] of [[2, 2], [12, 2], [2, 7], [12, 7], [7, 7], [7, 1], [7, 12], [2, 11], [11, 12]]) lamp(x, 9, z);
+
+  // 9) Zemin kat eşyaları (kapı önleri boş)
+  box(1, 1, 1, 3, 1, 1, TA); furn(1, 1, 2, OC); furn(1, 1, 4, SD); put(3, 1, 3, TH);   // mutfak
+  box(11, 1, 2, 12, 1, 3, TH);                                                         // yemek masası
+  put(10, 1, 2, BT); put(13, 1, 2, BT); put(13, 1, 3, BT); put(12, 1, 1, BT);          // sandalyeler
+  box(1, 1, 6, 1, 2, 8, TH); furn(2, 1, 7, CT); furn(4, 1, 8, SD);                     // kütüphane, çalışma masası
+  furn(13, 1, 6, OC); box(12, 1, 8, 13, 1, 8, TH); put(12, 1, 6, TH);                  // oturma odası, şömine
+  furn(1, 1, 10, SD); furn(1, 1, 11, SD); furn(4, 1, 13, SD);                          // depo
+  put(8, 1, 10, TH); furn(8, 1, 12, CT);                                               // atölye, çalışma masası
+  put(13, 1, 13, TG); put(12, 1, 13, TA);                                              // banyo
+
+  // 10) Üst kat eşyaları
+  box(1, 6, 1, 1, 7, 1, TH); put(3, 6, 2, TH); furn(1, 6, 4, SD);                      // yatak odası 1
+  furn(13, 6, 1, SD); put(12, 6, 3, TH); box(13, 6, 4, 13, 7, 4, TH);                  // yatak odası 2
+  box(1, 6, 6, 1, 7, 6, TH); put(3, 6, 7, TH); furn(1, 6, 8, SD);                      // çalışma odası
+  furn(13, 6, 7, MK); box(12, 6, 8, 13, 6, 8, TH);                                     // müzik odası
+  put(7, 6, 12, TH);                                                                   // teras
+  furn(1, 6, 13, SD); put(3, 6, 12, TH);                                               // hizmetçi odası
+  put(13, 6, 13, TG); put(12, 6, 13, TA);                                              // banyo
+
+  return Object.keys(extra).map(k => [+k, extra[k]]);
+}
+
 const SPECS = [
   { key: 'kale', item: N.KALE_EYA, blk: N.KALE_BLOK, name: 'Kocaman kale', W: 10, D: 10, H: 10, sup: N.TAS, ax: 'corner', make: makeKale },
   { key: 'tarla', item: N.KOYLU_TARLA_EYA, blk: N.KOYLU_TARLA_BLOK, name: 'Köylü tarlası', W: 9, D: 9, H: 1, sup: N.TOPRAK, ax: 'corner', make: makeTarla },
   { key: 'villa', item: N.VILLA_EYA, blk: N.VILLA_BLOK, name: 'Büyük villa', W: 11, D: 11, H: 8, sup: N.TAS, ax: 'corner', make: makeVilla },
   { key: 'devev', item: N.DEV_EV_EYA, blk: N.DEV_EV_BLOK, name: 'Dev ev', W: 24, D: 24, H: 11, sup: N.TAS, ax: 'corner', make: makeDevEv },
   { key: 'karakol', item: N.DAG_KARAKOL_EYA, blk: N.DAG_KARAKOL_BLOK, name: 'Dağ karakolu', W: 7, D: 7, H: 6, sup: N.TAS, ax: 'corner', make: makeKarakol },
-  { key: 'maden', item: N.MADEN_GIRIS_EYA, blk: N.MADEN_GIRIS_BLOK, name: 'Maden girişi', W: 5, D: 5, H: 3, Y0: -5, dig: true, ax: 'corner', tool: N.DEMIR_KAZMA, sup: N.TAS, make: makeMaden }
+  { key: 'maden', item: N.MADEN_GIRIS_EYA, blk: N.MADEN_GIRIS_BLOK, name: 'Maden girişi', W: 5, D: 5, H: 3, Y0: -5, dig: true, ax: 'corner', tool: N.DEMIR_KAZMA, sup: N.TAS, make: makeMaden },
+  { key: 'malikane', item: N.MALIKANE_EYA, blk: N.MALIKANE_BLOK, name: 'Büyük malikâne', W: 15, D: 15, H: 12, sup: N.TAS, ax: 'corner', make: makeMalikane }
 ];
 const byItem = {}, byBlk = {};
 for (const s of SPECS) { byItem[s.item] = s; byBlk[s.blk] = s; }
