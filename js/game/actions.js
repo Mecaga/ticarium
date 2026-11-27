@@ -43,6 +43,7 @@ import { placeBoat, rideBoat, isBoat } from './boat.js';
 import { placeStructure, openStruct, isStructBlock, isStructItem, structDrops } from './structures.js';
 import * as content from './content.js';
 import { isFlat } from '../world/textures.js'; // ✨ Paket 22: Düz eşya kontrolü eklendi
+import { placeWood, toggleWood, isWood, isWoodToggle } from './woodvar.js';
 
 // Açlık puanları: et, elma, ekmek, pişmiş et, patates, havuç, domates, biber, soğan, çiğköfte vb.
 const FOOD = {
@@ -438,6 +439,7 @@ export function placeBlock() {
     if (isLever(tb)) return toggleLever(target);
     if (isBoat(tb)) return rideBoat(target);
     if (isStructBlock(tb)) return openStruct(target[0], target[1], target[2], tb);
+    if (isWoodToggle(tb)) return toggleWood(target);
   }
 
   const t = eco.sel;
@@ -459,6 +461,8 @@ export function placeBlock() {
   if (isSlab(t) || t === LADDER) return placeStair(t);
   if (t === N.KEMIK_TOZU) return useBoneMeal();
   if (t === N.KAYIK) return placeBoat();
+
+  if (isWood(t)) return placeWood(t);
 
   const tl = TOOLS[t];
   if (tl && tl[0] === 'hoe') return useHoe();
