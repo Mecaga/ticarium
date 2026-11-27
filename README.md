@@ -44,16 +44,11 @@
 
 ## 🏰 Yapı Örneği
 
+*Bloklar: `TUGLA` çatı • `TAHTA` üst kat ve bölme • `CAM` pencere • `TAS` alt duvar ve basamak*
+
 ```text
-          ▲
-         ╱ ╲
-        ╱   ╲
-       ╱  ■  ╲
-      ╱_______╲
-     │  ┌───┐  │
-     │  │   │  │
-     │  │   │  │
-    ╱│  └───┘  │╲
-   ╱ └─────────┘ ╲
-  ╱_______________╲
- ╱  █ █ █ █ █ █ █  ╲
+[TUGLA] [TUGLA] [TUGLA] [TUGLA] [TUGLA] [TUGLA] [TUGLA]
+[TAHTA] [CAM]   [TAHTA] [TAHTA] [TAHTA] [CAM]   [TAHTA]
+[TAHTA] [TAHTA] [TAHTA] [TAHTA] [TAHTA] [TAHTA] [TAHTA]
+[TAS]   [CAM]   [TAS]   [KAPI]  [TAS]   [CAM]   [TAS]
+[TAS]   [TAS]   [TAS]   [BASAM] [TAS]   [TAS]   [TAS]
