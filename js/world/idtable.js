@@ -91,4 +91,6 @@ Object.assign(N, {
   DAG_KARAKOL_EYA: 319, MADEN_GIRIS_EYA: 320      // yapı eşyaları (envanter)
 });
 
+Object.assign(N, { MALIKANE_BLOK: 188, MALIKANE_EYA: 321 });
+
 export const ESKI = {};
