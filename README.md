@@ -44,6 +44,12 @@
 
 ## 🏰 Yapı Örneği
 
+<div align="center">
+
+<img src="assets/ornek-yapi.png" alt="Taş zemin, tahta çatı, cam pencere ve yaprak detayları olan blok ev modeli" width="360" />
+
+</div>
+
 *Bloklar: `TUGLA` çatı • `TAHTA` üst kat ve bölme • `CAM` pencere • `TAS` alt duvar ve basamak*
 
 ```text
