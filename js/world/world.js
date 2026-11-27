@@ -48,6 +48,7 @@ export const getRaw = (x, y, z) => {
 export const isWater = (x, y, z) => get(x, y, z) === WATER;
 export const isLava = (x, y, z) => get(x, y, z) === LAVA;
 export const BOXES = {};   // ince bloklar: id -> [x0,y0,z0,x1,y1,z1] (yatak, kapı)
+export const BOXFN = {};   // yöne ya da komşuya bağlı şekiller: id -> (x, y, z, f) => [[x0,y0,z0,x1,y1,z1], ...]
 export const MBOX = {};   // çok kutulu çizim: (x,y,z,yön) => [[kutu, yüzler], ...] (sadece görünüm)
 for (let i = 0; i < 3; i++) {
   BOXES[N.KAR_1 + i] = [0, 0, 0, 1, 0.25 * (i + 1), 1];
@@ -55,12 +56,23 @@ for (let i = 0; i < 3; i++) {
 }
 
 export const solid = (x, y, z) => { const t = get(x, y, z); return t !== 0 && !BOXES[t] && !isPlant(t) && t !== WATER && t !== LAVA; };
-// Kesin nokta çarpışması (ince bloklar için)
+// Bir hücredeki kutular: önce BOXFN (yöne bağlı), yoksa BOXES. Kutu yoksa null.
+export function boxesOf(t, x, y, z) {
+  if (!t) return null;
+  const fn = BOXFN[t];
+  if (fn) return fn(x, y, z, faceAt(x, y, z));
+  const b = BOXES[t];
+  return b ? [b] : null;
+}
+
+// Nokta bir kutunun içinde mi (hedefleme için)
 export function pointHit(px, py, pz) {
-  const x = Math.floor(px), y = Math.floor(py), z = Math.floor(pz), b = BOXES[get(x, y, z)];
-  if (!b) return false;
+  const x = Math.floor(px), y = Math.floor(py), z = Math.floor(pz);
+  const bs = boxesOf(get(x, y, z), x, y, z);
+  if (!bs) return false;
   const fx = px - x, fy = py - y, fz = pz - z;
-  return fx >= b[0] && fx <= b[3] && fy >= b[1] && fy <= b[4] && fz >= b[2] && fz <= b[5];
+  for (const b of bs) if (fx >= b[0] && fx <= b[3] && fy >= b[1] && fy <= b[4] && fz >= b[2] && fz <= b[5]) return true;
+  return false;
 }
 const opaque = t => t !== 0 && !BOXES[t] && !isPlant(t) && t !== WATER && t !== LAVA && t !== GLASS;
 
@@ -570,7 +582,7 @@ function buildChunk(c) {
     if (t === GLASS) { glass(x, y, z); continue; }
 
     const mbx = MBOX[t];
-    if (mbx) { const fy = c.f[(y * CW + lz) * CW + lx] & 3; for (const [bb, ftm] of mbx(x, y, z, fy)) boxMesh(mq, ftm, bb, x, y, z); continue; }
+    if (mbx) { const fy = c.f[(y * CW + lz) * CW + lx]; for (const [bb, ftm] of mbx(x, y, z, fy)) boxMesh(mq, ftm, bb, x, y, z); continue; }
 
     if (BOXES[t] && FACE_TILES[t]) {
       const bn = PNG_NAME[t];
