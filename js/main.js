@@ -14,6 +14,7 @@ import { G } from './core/state.js';
 import { initAutosave } from './game/progress.js';
 import './game/fishing.js'; // Sıralama kuralı: actions.js'ten Önce yüklenmeli
 import { initActions, breakBlock, placeBlock, attack } from './game/actions.js';
+import { swing } from './game/combat.js';
 import { initMining, breakDown, breakUp, updateMining } from './game/mining.js';
 import { initDeath, toSpawn } from './game/death.js';
 import { enterGame, leave, requestLeave } from './game/session.js';
@@ -134,7 +135,7 @@ phooks.leave = leave;
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || isMenuOpen() || panelsOpen()) return;
   if (e.code === 'KeyB') toggleBag();
-  if (e.code === 'KeyF') attack();
+  if (e.code === 'KeyF') swing();
   if (e.code === 'KeyP') togglePlayers();
   if (e.code === 'KeyT' && G.room) { e.preventDefault(); toggleChat(); }
   if (e.code === 'KeyQ' && !isDead()) dropFromInventory(eco.sel, 1);
@@ -174,6 +175,7 @@ bindBtn('bLeave', requestLeave);
 bindBtn('bSettings', toggleSettings);
 bindBtn('bPlayers', togglePlayers);
 bindBtn('bDrop', () => { if (!isDead()) dropFromInventory(eco.sel, 1); });
+bindBtn('bAttack', () => { if (!isMenuOpen() && !panelsOpen() && !isBagOpen() && !isChatOpen() && !panelOpen()) swing(); });
 
 initMenu(enterGame);
 showMenu();
