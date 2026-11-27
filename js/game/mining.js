@@ -47,6 +47,13 @@ HARD[N.MALIKANE_BLOK] = [3, 'axe', 0];
 HARD[N.KAYIK_BLOK] = [0.6, 'axe', 0];
 HARD[N.KOMUR_BLOK] = [4, 'pick', 0]; HARD[N.SPRUCE_ODUN] = [3, 'axe', 0]; HARD[N.SPRUCE_TAHTA] = [2, 'axe', 0];
 HARD[N.SPRUCE_YAPRAK] = [0.3, null, 0]; HARD[N.SPRUCE_BASAMAK] = [1.5, 'axe', 0];
+for (const i of [
+  N.CIT_MESE, N.CIT_HUS, N.CIT_SPRUCE,
+  N.KAPI_CIT_MESE, N.KAPI_CIT_HUS, N.KAPI_CIT_SPRUCE,
+  N.TUZAK_MESE, N.TUZAK_HUS, N.TUZAK_SPRUCE,
+  N.KOSELI_MESE, N.KOSELI_HUS, N.KOSELI_SPRUCE
+]) HARD[i] = [1.5, 'axe', 0];
+HARD[N.KOSELI_TAS] = [2, 'pick', 0];
 for (let i = N.LAVANTA; i <= N.AMBER; i++) HARD[i] = [0.05, null, 0];
 for (let i = N.BUGDAY_0; i <= N.BUGDAY_3; i++) HARD[i] = [0.05, null, 0];
 for (let i = 204; i <= 235; i++) HARD[i] = [0.05, null, 0];
