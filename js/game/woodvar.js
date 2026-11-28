@@ -174,4 +174,4 @@ export function toggleWood(p) {
   if (!was && collides(P.x, P.y, P.z)) { set(x, y, z, t | (f << 8)); return toast('Oyuncu içindeyken kapanmaz'); }
   commit(x, y, z, t | (nf << 8));
   sfx.place(); rebuild();
-        }
+}
