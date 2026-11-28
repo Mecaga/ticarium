@@ -7,6 +7,7 @@ import { toast } from '../ui/ui.js';
 import { tgtOpts } from '../world/world.js';
 import { toSpawn } from './death.js';
 import { db, ref, update } from '../core/firebase.js';
+import { socialCmd } from './social.js';
 
 const $ = id => document.getElementById(id);
 function mk(id, txt, css) {
@@ -82,6 +83,7 @@ const setTime = hr => {
 };
 
 export function extraCmd(cmd) {
+  const sc = socialCmd(cmd); if (sc) return sc;
   if (cmd === '/gm2') {
     if (!isCreative()) setCreative(true);
     setGhost(true);
