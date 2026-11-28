@@ -1,6 +1,6 @@
 import { N } from '../world/idtable.js';
 import { solid, atlas, TYPES, isLoaded } from '../world/world.js';
-import { isFlat, FACE_TILES } from '../world/textures.js';
+import { isFlat, FACE_TILES, iconCanvas, hasIcon } from '../world/textures.js';
 import { TOOL_MAP } from '../world/textures/map.js';
 import { PNG_NAME, BLOCK_FACES, faceTexture, onBlockLoad } from '../world/textures/blockmap.js';
 import { eco } from '../game/economy.js';
@@ -72,8 +72,8 @@ function cubeGeometry(t) {
 
 function spriteGeometry(t) {
   if (sprGeo[t]) return sprGeo[t];
-  const tile = sideTile(t);
-  const px = atlas.cv.getContext('2d').getImageData(tile * 16, 0, 16, 16).data;
+  const ic = iconCanvas(t);
+  const px = ic ? ic.getContext('2d').getImageData(0, 0, 16, 16).data : atlas.cv.getContext('2d').getImageData(sideTile(t) * 16, 0, 16, 16).data;
   const on = (x, y) => x >= 0 && y >= 0 && x < 16 && y < 16 && px[(y * 16 + x) * 4 + 3] > 100;
   const S = 0.5 / 16, D = S * 2, pos = [], col = [], ind = [];
   let n = 0;
@@ -234,7 +234,7 @@ export function spawnItem(id, d) {
   const t = +d.t;
   let c = d.c, dur = null;
   if (c >= 100000) { dur = c - 100000; c = 1; }
-  const flat = isFlat(t);
+  const flat = isFlat(t) || hasIcon(t);
   let mesh;
   if (flat) {
     mesh = new THREE.Mesh(spriteGeometry(t), sprMat);
