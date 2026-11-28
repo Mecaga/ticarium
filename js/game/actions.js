@@ -440,7 +440,7 @@ export function placeBlock() {
     if (isLever(tb)) return toggleLever(target);
     if (isBoat(tb)) return rideBoat(target);
     if (isStructBlock(tb)) return openStruct(target[0], target[1], target[2], tb);
-    if (isWoodToggle(tb)) return toggleWood(target);
+    if (isWoodToggle(tb) && !P.sneak) return toggleWood(target);   // 🧎 ile eğilince üstüne ya da yanına koyulur
   }
 
   const t = eco.sel;
