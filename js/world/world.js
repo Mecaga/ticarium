@@ -716,7 +716,9 @@ export function updateTarget(camera) {
       if (stgt && !prev) prev = null;
       break;
     }
-    if (!same) { lx = x; ly = y; lz = z; }
+    // Kutulu blokların boş kısmından geçen ışın "önceki hücre" sayılmaz (üstüne ya da yanına koyma için)
+    const boxed = !!t && t !== WATER && t !== LAVA && !isPlant(t) && !!(BOXES[t] || BOXFN[t]);
+    if (!same && !boxed) { lx = x; ly = y; lz = z; }
   }
   if (!hl) return;
   hl.visible = !!target;
