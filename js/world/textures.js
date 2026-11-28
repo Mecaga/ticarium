@@ -23,6 +23,7 @@ import * as kk from './textures/karakol_tiles.js';
 import * as mal from './textures/malikane_tiles.js';
 import { TOOL_MAP, toolImage } from './textures/map.js';
 import { iconTexture, PNG_NAME, ICON_ITEM } from './textures/blockmap.js';
+import * as wood from './textures/wood_icons.js';
 
 export { hash };
 // [klasör adı, Türkçe ad, modül]. PNG yolu: textures/<klasör>/<doku adı>.png
@@ -58,6 +59,8 @@ export const tileNames = TILE_NAMES;
 export const categoryOf = n => CAT[n] || 'diger';
 
 export const FACE_TILES = {};
+export const ICON_PX = {};   // atlas dışı ikonlar: numara -> (x, y) => renk | null
+for (const id in wood.iconPx) ICON_PX[id] = wood.iconPx[id];
 const FLAT = new Set();
 for (const [dir, , m] of MODS) {
   for (const id in m.faces) {
@@ -124,6 +127,17 @@ function queueToolIcon(t) {
 
 export function iconURL(t) {
   if (icons.has(t)) return icons.get(t);
+  const ic = iconCanvas(t);
+  if (ic) {
+    const c = document.createElement('canvas');
+    c.width = c.height = 32;
+    const g = c.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    g.drawImage(ic, 0, 0, 32, 32);
+    const u = c.toDataURL();
+    icons.set(t, u);
+    return u;
+  }
   const bn = PNG_NAME[Number(t)] || ICON_ITEM[Number(t)];
   if (bn) {
     const tex = iconTexture(bn);
@@ -175,4 +189,25 @@ export function iconURL(t) {
   const u = c.toDataURL();
   icons.set(t, u);
   return u;
+}
+
+// Atlas dışı 16x16 ikonlar (ahşap yapılar). Önbelleklenir.
+const ovCv = new Map();
+export const hasIcon = t => ICON_PX[Number(t)] !== undefined;
+export function iconCanvas(t) {
+  const id = Number(t), px = ICON_PX[id];
+  if (!px) return null;
+  if (ovCv.has(id)) return ovCv.get(id);
+  const c = document.createElement('canvas');
+  c.width = c.height = 16;
+  const g = c.getContext('2d'), img = g.createImageData(16, 16), d = img.data;
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const col = px(x, y);
+    if (!col) continue;
+    const i = (y * 16 + x) * 4;
+    d[i] = col[0]; d[i + 1] = col[1]; d[i + 2] = col[2]; d[i + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  ovCv.set(id, c);
+  return c;
 }
